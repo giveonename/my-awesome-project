@@ -1,0 +1,194 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+.batch-review-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+  padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
+}
+
+// Loading
+.batch-review-loading {
+  padding: $spacing-lg;
+}
+
+// Empty
+.batch-review-empty {
+  @include flex-center;
+  padding: 120rpx $spacing-xl;
+}
+
+.batch-review-empty-text {
+  font-size: $font-body-size;
+  color: $text-tertiary;
+}
+
+// Header
+.batch-review-header {
+  padding: $spacing-lg $spacing-lg $spacing-sm;
+}
+
+.batch-review-title {
+  font-size: $font-h2-size;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.batch-review-subtitle {
+  font-size: $font-body-small-size;
+  color: $text-tertiary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+// Select All
+.batch-review-select-all {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+}
+
+.batch-review-checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid $color-gray-300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+
+  &--checked {
+    background: $color-primary;
+    border-color: $color-primary;
+  }
+}
+
+.batch-review-checkbox-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 700;
+}
+
+.batch-review-select-all-text {
+  font-size: $font-body-size;
+  color: $text-secondary;
+}
+
+// Grid
+.batch-review-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+}
+
+.batch-review-card {
+  width: calc((100% - 16rpx) / 3);
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+  transition: all 150ms ease;
+
+  &--selected {
+    box-shadow: 0 0 0 3rpx $color-primary;
+  }
+}
+
+.batch-review-card-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: $color-gray-50;
+}
+
+.batch-review-card-img {
+  width: 100%;
+  height: 100%;
+}
+
+.batch-review-card-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: $color-gray-100;
+}
+
+.batch-review-card-check {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+
+  &--active {
+    background: $color-primary;
+  }
+}
+
+.batch-review-card-check-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 700;
+}
+
+.batch-review-card-info {
+  padding: 8rpx 12rpx 12rpx;
+}
+
+.batch-review-card-name {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: $text-primary;
+  @include ellipsis(1);
+  display: block;
+}
+
+.batch-review-card-color {
+  font-size: 18rpx;
+  color: $text-tertiary;
+  margin-top: 2rpx;
+  display: block;
+}
+
+// Footer
+.batch-review-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: $spacing-md $spacing-lg calc($spacing-md + env(safe-area-inset-bottom));
+  background: $card-bg;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+
+.batch-review-save-btn {
+  @include flex-center;
+  height: 88rpx;
+  border-radius: $radius-pill;
+  background: $color-accent-gradient;
+  box-shadow: $shadow-md;
+  transition: all 150ms ease;
+
+  &:active { transform: scale(0.97); }
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.batch-review-save-btn-text {
+  font-size: $font-body-size;
+  font-weight: 600;
+  color: #fff;
+}

@@ -61,9 +61,8 @@ graphify*
 .graphify*
 
 # Temporary debug files
-temp_*.py
-temp_*.json
-_debug*.png
+temp_*
+_debug*
 test_official_person.png
 test123.txt
 blazer_resp.json
@@ -72,8 +71,11 @@ items_response.json
 src.txt
 src_oss.txt
 w.js
-wf*.js
-write*.js
+wf.js
+wf2.js
+wf3.js
+write.js
+write_test.js
 write_files.bat
 findings.md
 progress.md
@@ -81,3 +83,6 @@ task_plan.md
 SYSTEM_AUDIT_REPORT.md
 pic/
 skills-lock.json
+backend/_debug*.py
+.mimocode/
+.swc/

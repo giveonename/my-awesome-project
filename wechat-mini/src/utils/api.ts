@@ -320,6 +320,38 @@ export function createHelpReply(requestId: string, data: HelpReplyData): Promise
   return request<HelpReplyItem>(`/community/help-requests/${requestId}/replies`, { method: 'POST', data })
 }
 
+// ===== Complete Outfit API =====
+
+export interface CompleteOutfitGroup {
+  category: string
+  label: string
+  reason: string
+  products: {
+    title: string
+    pic_url: string
+    price: string
+    original_price: string
+    volume: string
+    shop_title: string
+    item_url: string
+    category_name: string
+    related_items: { thumbnail_url?: string; name?: string }[]
+  }[]
+}
+
+export interface CompleteOutfitResponse {
+  groups: CompleteOutfitGroup[]
+  selected_items: { id: string; name: string; thumbnail_url?: string; category: string }[]
+  keyword_used: string
+}
+
+export function completeOutfit(itemIds: string[], targetCategory?: string): Promise<CompleteOutfitResponse> {
+  return request<CompleteOutfitResponse>('/products/complete-outfit', {
+    method: 'POST',
+    data: { item_ids: itemIds, target_category: targetCategory || '' },
+  })
+}
+
 // ===== Virtual Try-On API =====
 
 export interface TryOnRequest {

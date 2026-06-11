@@ -613,3 +613,166 @@
   font-weight: 600;
   color: #fff;
 }
+
+// ===== Search Bar =====
+
+.suggest-search-bar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-xs $spacing-lg;
+  margin-bottom: $spacing-xs;
+}
+
+.suggest-search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 14rpx 24rpx;
+  background: $color-gray-50;
+  border-radius: $radius-pill;
+  border: 1.5rpx solid $color-gray-200;
+}
+
+.suggest-search-input {
+  flex: 1;
+  font-size: 26rpx;
+  color: $text-primary;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.suggest-search-btn {
+  padding: 14rpx 28rpx;
+  background: $color-primary;
+  border-radius: $radius-pill;
+  flex-shrink: 0;
+}
+
+.suggest-search-btn-text {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+// ===== Outfit Builder (补全搭配) =====
+
+.suggest-outfit-builder {
+  padding: $spacing-sm $spacing-lg;
+}
+
+.suggest-outfit-builder-hint {
+  font-size: 24rpx;
+  color: $text-tertiary;
+  margin-bottom: $spacing-sm;
+}
+
+.suggest-outfit-items-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: $spacing-md;
+}
+
+.suggest-outfit-item {
+  width: calc((100% - 48rpx) / 5);
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: $color-gray-50;
+  position: relative;
+  transition: transform 0.15s;
+
+  &:active { transform: scale(0.92); }
+
+  &--selected {
+    border: 3rpx solid $color-primary;
+    box-shadow: 0 0 0 3rpx rgba($color-primary, 0.25);
+  }
+}
+
+.suggest-outfit-item-img {
+  width: 100%;
+  height: 100%;
+}
+
+.suggest-outfit-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: $color-gray-100;
+}
+
+.suggest-outfit-item-check {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background: $color-primary;
+  @include flex-center;
+}
+
+.suggest-outfit-item-check-text {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: 700;
+}
+
+.suggest-outfit-action {
+  @include flex-center;
+  padding: $spacing-sm;
+  background: $color-accent-gradient;
+  border-radius: $radius-pill;
+  box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.3);
+  @include press-scale;
+}
+
+.suggest-outfit-action-text {
+  font-size: $font-body-size;
+  font-weight: 600;
+  color: #fff;
+}
+
+// ===== Outfit Groups (分组结果) =====
+
+.suggest-outfit-groups {
+  padding: $spacing-sm 0;
+}
+
+.suggest-outfit-group {
+  margin-bottom: $spacing-lg;
+}
+
+.suggest-outfit-group-header {
+  padding: 0 $spacing-lg $spacing-xs;
+}
+
+.suggest-outfit-group-label {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.suggest-outfit-group-reason {
+  font-size: 22rpx;
+  color: $text-tertiary;
+  margin-left: $spacing-xs;
+}
+
+.suggest-outfit-group-scroll {
+  white-space: nowrap;
+}
+
+.suggest-outfit-group-products {
+  display: inline-flex;
+  gap: $spacing-sm;
+  padding: 0 $spacing-lg;
+}
+
+.suggest-outfit-group-card {
+  width: 280rpx;
+  flex-shrink: 0;
+}

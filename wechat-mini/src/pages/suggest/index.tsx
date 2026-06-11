@@ -1,7 +1,7 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useReachBottom, usePullDownRefresh } from '@tarojs/taro'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { api, resolveImageUrl } from '../../utils/api'
+import { api, resolveImageUrl, completeOutfit, CompleteOutfitGroup } from '../../utils/api'
 import OutfitCard from '../../components/OutfitCard'
 import OutfitCardEnhanced from '../../components/OutfitCardEnhanced'
 import ProductCard from '../../components/ProductCard'
@@ -141,7 +141,6 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
   const [loadingMore, setLoadingMore] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const [totalCount, setTotalCount] = useState(0)
   const [showItemPicker, setShowItemPicker] = useState(false)
   const [wardrobeItems, setWardrobeItems] = useState<any[]>([])
   const [activeCategory, setActiveCategory] = useState('all')
@@ -149,22 +148,35 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
   const [activeItemName, setActiveItemName] = useState('')
   const [keywordUsed, setKeywordUsed] = useState('')
 
+  // 补全搭配模式
+  const [outfitMode, setOutfitMode] = useState(false)
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  const [outfitGroups, setOutfitGroups] = useState<CompleteOutfitGroup[]>([])
+  const [outfitLoading, setOutfitLoading] = useState(false)
+
+  // 搜索输入
+  const [searchInput, setSearchInput] = useState('')
+
+  // 补全搭配分类筛选
+  const [outfitCatFilter, setOutfitCatFilter] = useState('all')
+
   const loadGaps = useCallback(async () => {
     try {
       const data = await api.get<any>('/products/gaps')
       setGaps(data.gaps || [])
-      setTotalCount(data.total_items || 0)
     } catch (err) { console.error('Load gaps failed:', err) }
   }, [])
 
-  const loadProducts = useCallback(async (reset: boolean = false, opts?: { gapCat?: string; scene?: string; itemId?: string }) => {
+  const loadProducts = useCallback(async (reset: boolean = false, opts?: { gapCat?: string; scene?: string; itemId?: string; keyword?: string }) => {
     if (reset) { setLoading(true); setProducts([]); setPage(1) }
     else { if (loadingMore || !hasMore) return; setLoadingMore(true) }
     const currentPage = reset ? 1 : page + 1
     try {
       const params: Record<string, string> = { page: String(currentPage), page_size: '20' }
       const effectiveItemId = opts?.itemId || activeItemId
-      if (effectiveItemId) {
+      if (opts?.keyword) {
+        params.keyword = opts.keyword
+      } else if (effectiveItemId) {
         params.item_id = effectiveItemId
       } else {
         if (opts?.gapCat || activeGap) params.gap_category = opts?.gapCat || activeGap
@@ -177,7 +189,10 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
       setPage(currentPage)
       setHasMore(data.has_more || false)
       setKeywordUsed(data.keyword_used || '')
-    } catch (err) { console.error('Load products failed:', err) }
+    } catch (err) {
+      console.error('Load products failed:', err)
+      if (reset) Taro.showToast({ title: '加载失败，请重试', icon: 'none' })
+    }
     finally { setLoading(false); setLoadingMore(false) }
   }, [page, hasMore, loadingMore, activeGap, activeScene, activeItemId])
 
@@ -187,6 +202,55 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
       setWardrobeItems(data.items || [])
     } catch (err) { console.error('Load wardrobe items failed:', err) }
   }, [])
+
+  const handleToggleOutfitMode = useCallback(() => {
+    if (outfitMode) {
+      setOutfitMode(false)
+      setSelectedItemIds([])
+      setOutfitGroups([])
+    } else {
+      setOutfitMode(true)
+      setProducts([])
+      setOutfitGroups([])
+      setSelectedItemIds([])
+    }
+  }, [outfitMode])
+
+  const handleToggleItem = useCallback((itemId: string) => {
+    setSelectedItemIds(prev => {
+      if (prev.includes(itemId)) return prev.filter(id => id !== itemId)
+      if (prev.length >= 3) return prev // 最多选 3 件
+      return [...prev, itemId]
+    })
+  }, [])
+
+  const handleCompleteOutfit = useCallback(async () => {
+    if (selectedItemIds.length === 0) return
+    setOutfitLoading(true)
+    try {
+      const data = await completeOutfit(selectedItemIds)
+      setOutfitGroups(data.groups || [])
+      setKeywordUsed(data.keyword_used || '')
+    } catch (err) {
+      console.error('Complete outfit failed:', err)
+      Taro.showToast({ title: '补全搭配失败，请重试', icon: 'none' })
+    } finally {
+      setOutfitLoading(false)
+    }
+  }, [selectedItemIds])
+
+  const handleSearch = useCallback(() => {
+    const kw = searchInput.trim()
+    if (!kw) return
+    setActiveGap('')
+    setActiveScene('')
+    setActiveItemId('')
+    setActiveItemName('')
+    setOutfitMode(false)
+    setSelectedItemIds([])
+    setOutfitGroups([])
+    loadProducts(true, { keyword: kw })
+  }, [searchInput, loadProducts])
 
   // Single init effect: load gaps, wardrobe, and products in correct mode
   useEffect(() => {
@@ -224,7 +288,8 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
 
   const GAP_ICONS: Record<string, string> = {
     top: icons['shirt'], bottom: icons['shirt'], dress: icons['shirt'],
-    shoes: icons['shirt'], outerwear: icons['shirt'], accessories: icons['briefcase'],
+    shoes: icons['footprints'] || icons['shirt'], outerwear: icons['shirt'],
+    accessories: icons['gem'] || icons['briefcase'],
   }
 
   const [activeScene, setActiveScene] = useState('')
@@ -253,14 +318,151 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
     : wardrobeItems.filter((it: any) => (CAT_MAP[activeCategory] || []).includes(it.type))
 
   const getRelatedItems = () => {
-    if (wardrobeItems.length === 0) return []
-    const shuffled = [...wardrobeItems].sort(() => 0.5 - Math.random())
-    return shuffled.slice(0, 2)
+    return []
   }
 
   return (
     <View className='suggest-body'>
-      {gaps.length > 0 && (
+      {/* 场景标签 + 补全搭配入口 */}
+      <View className='suggest-scene-tags'>
+        <ScrollView scrollX className='suggest-scene-scroll' enhanced showScrollbar={false}>
+          <View className='suggest-scene-list'>
+            <View
+              className={`suggest-scene-chip ${outfitMode ? 'suggest-scene-chip--active' : ''}`}
+              onClick={handleToggleOutfitMode}
+            >
+              <Text className='suggest-scene-chip-text'>{outfitMode ? '退出补全' : '补全搭配'}</Text>
+            </View>
+            {!outfitMode && SCENE_TAGS.map((tag) => (
+              <View
+                key={tag.keyword}
+                className={`suggest-scene-chip ${activeScene === tag.keyword ? 'suggest-scene-chip--active' : ''}`}
+                onClick={() => handleSceneTap(tag)}
+              >
+                <Text className='suggest-scene-chip-text'>{tag.label}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* 搜索输入框 */}
+      {!outfitMode && (
+        <View className='suggest-search-bar'>
+          <View className='suggest-search-input-wrap'>
+            <input
+              className='suggest-search-input'
+              type='text'
+              placeholder='搜索搭配单品，如"约会连衣裙"'
+              value={searchInput}
+              onInput={(e) => setSearchInput(e.detail.value)}
+              onConfirm={handleSearch}
+              confirmType='search'
+            />
+          </View>
+          {searchInput.trim() && (
+            <View className='suggest-search-btn' onClick={handleSearch}>
+              <Text className='suggest-search-btn-text'>搜索</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* 补全搭配模式：多选衣物 */}
+      {outfitMode && (
+        <View className='suggest-outfit-builder'>
+          <Text className='suggest-outfit-builder-hint'>选择 1-3 件衣物，AI 帮你找搭配</Text>
+          <ScrollView scrollX className='suggest-wardrobe-cats' enhanced showScrollbar={false}>
+            <View className='suggest-wardrobe-cats-list'>
+              {CAT_FILTER.map((cat) => (
+                <View key={cat.key} className={`suggest-wardrobe-cat ${outfitCatFilter === cat.key ? 'suggest-wardrobe-cat--active' : ''}`} onClick={() => setOutfitCatFilter(cat.key)}>
+                  <Text className='suggest-wardrobe-cat-text'>{cat.label}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+          <View className='suggest-outfit-items-grid'>
+            {(outfitCatFilter === 'all'
+              ? wardrobeItems
+              : wardrobeItems.filter((it: any) => (CAT_MAP[outfitCatFilter] || []).includes(it.type))
+            ).slice(0, 30).map((item: any) => (
+              <View
+                key={item.id}
+                className={`suggest-outfit-item ${selectedItemIds.includes(item.id) ? 'suggest-outfit-item--selected' : ''}`}
+                onClick={() => handleToggleItem(item.id)}
+              >
+                {item.thumbnail_url ? (
+                  <CachedImage className='suggest-outfit-item-img' src={resolveImageUrl(item.thumbnail_url) || ''} mode='aspectFill' />
+                ) : (
+                  <View className='suggest-outfit-item-placeholder'><Text>{'\uD83D\uDC55'}</Text></View>
+                )}
+                {selectedItemIds.includes(item.id) && (
+                  <View className='suggest-outfit-item-check'>
+                    <Text className='suggest-outfit-item-check-text'>{'\u2713'}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+          {selectedItemIds.length > 0 && (
+            <View className='suggest-outfit-action' onClick={handleCompleteOutfit}>
+              <Text className='suggest-outfit-action-text'>
+                {outfitLoading ? '搜索中...' : `找搭配（已选 ${selectedItemIds.length } 件）`}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {wardrobeItems.length < 5 && !loading && (
+        <View className='suggest-cold-start'>
+          <View className='suggest-cold-start-glow' />
+          <View className='suggest-cold-start-icon-wrap'>
+            <Image src={icons['camera']} className='suggest-cold-start-icon' style={{width: '72rpx', height: '72rpx'}} />
+          </View>
+          <Text className='suggest-cold-start-title'>多上传几件衣服吧</Text>
+          <Text className='suggest-cold-start-desc'>衣橱至少需要 5 件衣物，AI 才能为你推荐搭配灵感</Text>
+          <View className='suggest-cold-start-btn press-scale' onClick={() => Taro.navigateTo({ url: '/pages/parse/index' })}>
+            <Image src={icons['camera']} style={{width: '36rpx', height: '36rpx', marginRight: '12rpx'}} />
+            <Text className='suggest-cold-start-btn-text'>拍照上传</Text>
+          </View>
+        </View>
+      )}
+
+      {/* 补全搭配结果：按品类分组 */}
+      {outfitMode && outfitGroups.length > 0 && (
+        <View className='suggest-outfit-groups'>
+          {outfitGroups.map((group) => (
+            <View key={group.category} className='suggest-outfit-group'>
+              <View className='suggest-outfit-group-header'>
+                <Text className='suggest-outfit-group-label'>{group.label}</Text>
+                <Text className='suggest-outfit-group-reason'>{group.reason}</Text>
+              </View>
+              <ScrollView scrollX className='suggest-outfit-group-scroll' enhanced showScrollbar={false}>
+                <View className='suggest-outfit-group-products'>
+                  {group.products.map((product, idx) => (
+                    <View key={idx} className='suggest-outfit-group-card'>
+                      <ProductCard
+                        title={product.title}
+                        picUrl={product.pic_url}
+                        price={product.price}
+                        originalPrice={product.original_price}
+                        volume={product.volume}
+                        shopTitle={product.shop_title}
+                        itemUrl={product.item_url}
+                        relatedItems={product.related_items}
+                        index={idx}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {wardrobeItems.length >= 5 && gaps.length > 0 && !outfitMode && (
         <View className='suggest-gaps'>
           <View className='suggest-gaps-header'>
             <Text className='suggest-gaps-icon'>{'\uD83D\uDCA1'}</Text>
@@ -279,9 +481,11 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
         </View>
       )}
 
-      <View className='suggest-wardrobe-toggle' onClick={() => setShowItemPicker(!showItemPicker)}>
-        <Text className='suggest-wardrobe-toggle-text'>{`\u5DF2\u4E0A\u4F20 ${totalCount} \u4EF6\u8863\u670D ${showItemPicker ? '\u25B2' : '\u25BC'}`}</Text>
-      </View>
+      {!outfitMode && (
+        <View className='suggest-wardrobe-toggle' onClick={() => setShowItemPicker(!showItemPicker)}>
+          <Text className='suggest-wardrobe-toggle-text'>{`\u5DF2\u4E0A\u4F20 ${wardrobeItems.length} \u4EF6\u8863\u670D ${showItemPicker ? '\u25B2' : '\u25BC'}`}</Text>
+        </View>
+      )}
 
       {showItemPicker && (
         <View className='suggest-wardrobe-panel'>
@@ -321,20 +525,20 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
 
       {activeItemId && (
         <View className='suggest-active-item-banner'>
-          <Text className='suggest-active-item-text'>{'\u2728 \u4E3A\u4F60\u641C\u7D22\uFF1A'}{keywordUsed || '\u57FA\u4E8E\u8863\u7269\u642D\u914D'}</Text>
+          <Text className='suggest-active-item-text'>{'\u2728 \u57FA\u4E8E\u300C'}{activeItemName || '\u8863\u7269'}{'\u300D\u627E\u642D\u914D'}</Text>
           <Text className='suggest-active-item-clear' onClick={() => {
             setActiveItemId('')
             setActiveItemName('')
             loadProducts(true)
-          }}>{'\u6E05\u9664'}</Text>
+          }}>{'\u00D7'}</Text>
         </View>
       )}
-      {keywordUsed && !activeItemId && (
+      {keywordUsed && !activeItemId && !searchInput.trim() && (
         <View className='suggest-keyword-banner'>
-          <Text className='suggest-keyword-text'>{'\uD83D\uDD0D \u641C\u7D22\uFF1A'}{keywordUsed}</Text>
+          <Text className='suggest-keyword-text'>{'\uD83D\uDCA1 '}{keywordUsed}</Text>
         </View>
       )}
-      {loading ? (
+      {!outfitMode && (loading ? (
         <View className='suggest-product-grid'>
           <View className='suggest-product-col'><View className='skel-card skel-card--medium' /><View className='skel-card skel-card--short' /></View>
           <View className='suggest-product-col'><View className='skel-card skel-card--tall' /><View className='skel-card skel-card--medium' /></View>
@@ -352,28 +556,29 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
             ))}
           </View>
         </View>
+      ) : wardrobeItems.length >= 5 ? (
+        <View className='suggest-cold-start'>
+          <View className='suggest-cold-start-glow' />
+          <View className='suggest-cold-start-icon-wrap'>
+            <Image src={icons['sparkles']} className='suggest-cold-start-icon' style={{width: '72rpx', height: '72rpx'}} />
+          </View>
+          <Text className='suggest-cold-start-title'>暂无推荐商品</Text>
+          <Text className='suggest-cold-start-desc'>换个场景试试，或选择一件衣物找搭配</Text>
+        </View>
       ) : (
         <View className='suggest-cold-start'>
           <View className='suggest-cold-start-glow' />
           <View className='suggest-cold-start-icon-wrap'>
             <Image src={icons['sparkles']} className='suggest-cold-start-icon' style={{width: '72rpx', height: '72rpx'}} />
           </View>
-          <Text className='suggest-cold-start-title'>
-            {totalCount > 0 ? '暂无推荐商品' : '你的 AI 造型师已就位'}
-          </Text>
-          <Text className='suggest-cold-start-desc'>
-            {totalCount > 0
-              ? '多添加些衣物，AI 才能更精准地推荐'
-              : '上传你的第一件衣服，解锁无限穿搭灵感'}
-          </Text>
-          {totalCount === 0 && (
-            <View className='suggest-cold-start-btn press-scale' onClick={() => Taro.navigateTo({ url: '/pages/parse/index' })}>
-              <Image src={icons['camera']} style={{width: '36rpx', height: '36rpx', marginRight: '12rpx'}} />
-              <Text className='suggest-cold-start-btn-text'>拍照上传</Text>
-            </View>
-          )}
+          <Text className='suggest-cold-start-title'>你的 AI 造型师已就位</Text>
+          <Text className='suggest-cold-start-desc'>上传你的第一件衣服，解锁无限穿搭灵感</Text>
+          <View className='suggest-cold-start-btn press-scale' onClick={() => Taro.navigateTo({ url: '/pages/parse/index' })}>
+            <Image src={icons['camera']} style={{width: '36rpx', height: '36rpx', marginRight: '12rpx'}} />
+            <Text className='suggest-cold-start-btn-text'>拍照上传</Text>
+          </View>
         </View>
-      )}
+      ))}
 
       {loadingMore && (
         <View className='suggest-load-more'>
@@ -503,9 +708,13 @@ export default function SuggestPage() {
 
   // 下拉刷新
   usePullDownRefresh(() => {
-    fetchOutfits(true).then(() => {
+    if (activeTab === 'ai') {
+      fetchOutfits(true).then(() => Taro.stopPullDownRefresh())
+    } else if (activeTab === 'product') {
+      loadProducts(true).then(() => Taro.stopPullDownRefresh())
+    } else {
       Taro.stopPullDownRefresh()
-    })
+    }
   })
 
   const handleLike = useCallback((id: string) => {

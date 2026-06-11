@@ -20,6 +20,7 @@ export default defineAppConfig({
     'pages/membership/index',
     'pages/outfit-detail/index',
     'pages/item-select/index',
+    'pages/batch-review/index',
   ],
   requiredPrivateInfos: ['getLocation'],
   permission: {

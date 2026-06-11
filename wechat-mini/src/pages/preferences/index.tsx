@@ -6,6 +6,7 @@ import { COLOR_MAP, COLOR_LABELS_CN } from '../../constants'
 import './index.scss'
 
 interface PreferencesData {
+  gender: string | null
   color_favorites: string[]
   color_avoid: string[]
   style_profile: Record<string, number>
@@ -19,6 +20,13 @@ interface PreferencesData {
   prefer_underused_items: boolean
   variety_level: string
 }
+
+const GENDER_OPTIONS = [
+  { key: 'male', label: '男' },
+  { key: 'female', label: '女' },
+  { key: 'non-binary', label: '其他' },
+  { key: 'prefer-not-to-say', label: '不想说' },
+]
 
 const STYLE_LABELS: Record<string, string> = {
   casual: '休闲',
@@ -169,6 +177,23 @@ export default function PreferencesPage() {
             <Text className='style-slider-value'>{prefs.style_profile?.[key] ?? 50}</Text>
           </View>
         ))}
+      </View>
+
+      {/* Gender */}
+      <View className='prefs-section'>
+        <Text className='prefs-section-title'>性别</Text>
+        <Text className='prefs-section-desc'>影响搭配推荐的品类和风格</Text>
+        <View className='option-grid'>
+          {GENDER_OPTIONS.map(opt => (
+            <View
+              key={opt.key}
+              className={`option-chip ${prefs.gender === opt.key ? 'option-chip--active' : ''}`}
+              onClick={() => savePreferences({ gender: opt.key })}
+            >
+              <Text className='option-chip-text'>{opt.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* Favorite Colors */}

@@ -1,4 +1,4 @@
-﻿import { View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useCallback } from 'react'
 import CachedImage from '../CachedImage'
@@ -14,6 +14,7 @@ interface ProductCardProps {
   shopTitle?: string
   itemUrl?: string
   relatedItems?: { thumbnail_url?: string; name?: string }[]
+  reason?: string
   index?: number
 }
 
@@ -26,6 +27,7 @@ export default function ProductCard({
   shopTitle,
   itemUrl,
   relatedItems = [],
+  reason,
   index = 0,
 }: ProductCardProps) {
 
@@ -89,6 +91,9 @@ export default function ProductCard({
       {/* Info */}
       <View className='pc-info'>
         <Text className='pc-title'>{title}</Text>
+        {reason && (
+          <Text className='pc-reason'>{reason}</Text>
+        )}
         <View className='pc-price-row'>
           <Text className='pc-price'>¥{price}</Text>
           {originalPrice && parseFloat(originalPrice) > parseFloat(price) && (

@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
+from app.api.batch import router as batch_router
 from app.api.chat import router as chat_router
 from app.api.community import router as community_router
 from app.api.virtual_tryon import router as virtual_tryon_router
@@ -40,3 +41,4 @@ api_router.include_router(chat_router)
 api_router.include_router(community_router)
 api_router.include_router(virtual_tryon_router)
 api_router.include_router(products_router)
+api_router.include_router(batch_router)

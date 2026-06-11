@@ -6,6 +6,7 @@ import './index.scss'
 import { icons } from '../../constants/icons'
 
 type ParseState = 'idle' | 'scanning' | 'result' | 'saving' | 'error' | 'success'
+type BatchState = 'idle' | 'selecting' | 'uploading' | 'processing' | 'done'
 
 interface ParsedItem {
   name: string
@@ -78,6 +79,12 @@ export default function ParsePage() {
 
   // --- Multi-select state for garment cards ---
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
+
+  // --- Batch upload state ---
+  const [batchState, setBatchState] = useState<BatchState>('idle')
+  const [batchFiles, setBatchFiles] = useState<string[]>([])
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
+  const [batchId, setBatchId] = useState('')
 
   const toggleSelect = useCallback((idx: number) => {
     setSelectedIndices(prev => {
@@ -200,6 +207,101 @@ export default function ParsePage() {
     setErrorMsg('')
     setLoadingText('')
     setSelectedIndices(new Set())
+    setBatchState('idle')
+    setBatchFiles([])
+    setBatchId('')
+  }, [])
+
+  // --- Batch upload handlers ---
+  const handleBatchSelect = useCallback(async () => {
+    try {
+      const res = await Taro.chooseMedia({
+        count: 9,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+      })
+      if (!res.tempFiles?.length) return
+      const paths = res.tempFiles.map(f => f.tempFilePath)
+      setBatchFiles(paths)
+      setBatchState('selecting')
+    } catch (err) {
+      console.log('User cancelled batch selection')
+    }
+  }, [])
+
+  const handleBatchRemove = useCallback((idx: number) => {
+    setBatchFiles(prev => prev.filter((_, i) => i !== idx))
+  }, [])
+
+  const handleBatchStart = useCallback(async () => {
+    if (batchFiles.length === 0) return
+    setBatchState('uploading')
+    setBatchProgress({ current: 0, total: batchFiles.length })
+
+    try {
+      const API_BASE = require('../../env').API_BASE
+      const token = Taro.getStorageSync('access_token') || ''
+      const sceneType = activeTab === 'outfit' ? 'avatar' : 'commodity'
+
+      // Upload first file to create the batch
+      const firstResult = await new Promise<any>((resolve, reject) => {
+        Taro.uploadFile({
+          url: `${API_BASE}/items/batch-parse`,
+          filePath: batchFiles[0],
+          name: 'files',
+          formData: { scene_types: sceneType },
+          header: { Authorization: `Bearer ${token}` },
+          success: (resp) => {
+            if (resp.statusCode === 200) {
+              resolve(JSON.parse(resp.data))
+            } else {
+              reject(new Error(`Upload failed: ${resp.statusCode}`))
+            }
+          },
+          fail: reject,
+        })
+      })
+
+      const batchIdResult = firstResult.batch_id
+      setBatchId(batchIdResult)
+      setBatchProgress({ current: 1, total: batchFiles.length })
+
+      // Upload remaining files
+      for (let i = 1; i < batchFiles.length; i++) {
+        setBatchProgress({ current: i + 1, total: batchFiles.length })
+        await new Promise<void>((resolve, reject) => {
+          Taro.uploadFile({
+            url: `${API_BASE}/items/batch-parse`,
+            filePath: batchFiles[i],
+            name: 'files',
+            formData: {
+              scene_types: sceneType,
+              batch_id: batchIdResult,
+            },
+            header: { Authorization: `Bearer ${token}` },
+            success: (resp) => {
+              if (resp.statusCode === 200) resolve()
+              else reject(new Error(`Upload failed: ${resp.statusCode}`))
+            },
+            fail: reject,
+          })
+        })
+      }
+
+      setBatchState('processing')
+      Taro.setStorageSync('pending_batch_id', batchIdResult)
+      Taro.showToast({ title: '已提交识别，完成后会通知你', icon: 'none', duration: 3000 })
+
+    } catch (err) {
+      console.error('Batch upload failed:', err)
+      Taro.showToast({ title: '上传失败，请重试', icon: 'none' })
+      setBatchState('idle')
+    }
+  }, [batchFiles, activeTab])
+
+  const handleBatchGoExplore = useCallback(() => {
+    Taro.switchTab({ url: '/pages/wardrobe/index' })
   }, [])
 
   const handleSaveItems = useCallback(async () => {
@@ -360,6 +462,72 @@ export default function ParsePage() {
               <View className='parse-feature-pill'>
                 <Image src={icons['zap']} className='parse-feature-icon' style={{ width: '28rpx', height: '28rpx' }} />
                 <Text className='parse-feature-text'>批量入库</Text>
+              </View>
+            </View>
+
+            {/* Batch upload entry */}
+            <View className='parse-batch-entry' onClick={handleBatchSelect}>
+              <Image src={icons['layers'] || icons['shirt']} className='parse-batch-icon' style={{ width: '36rpx', height: '36rpx' }} />
+              <Text className='parse-batch-text'>批量上传（最多 9 张）</Text>
+            </View>
+          </View>
+        )}
+
+        {/* ======== Batch: Selecting ======== */}
+        {batchState === 'selecting' && (
+          <View className='parse-batch-selecting animate-fade-in-up'>
+            <Text className='parse-batch-title'>已选 {batchFiles.length} 张照片</Text>
+            <View className='parse-batch-grid'>
+              {batchFiles.map((file, idx) => (
+                <View key={idx} className='parse-batch-thumb'>
+                  <Image src={file} className='parse-batch-thumb-img' mode='aspectFill' />
+                  <View className='parse-batch-thumb-remove' onClick={() => handleBatchRemove(idx)}>
+                    <Text className='parse-batch-thumb-remove-text'>{'\u00D7'}</Text>
+                  </View>
+                </View>
+              ))}
+              {batchFiles.length < 9 && (
+                <View className='parse-batch-thumb parse-batch-thumb--add' onClick={handleBatchSelect}>
+                  <Text className='parse-batch-thumb-add-text'>+</Text>
+                </View>
+              )}
+            </View>
+            <View className='parse-batch-actions'>
+              <View className='parse-batch-btn' onClick={() => { setBatchState('idle'); setBatchFiles([]) }}>
+                <Text className='parse-batch-btn-text'>取消</Text>
+              </View>
+              <View className='parse-batch-btn parse-batch-btn--primary' onClick={handleBatchStart}>
+                <Text className='parse-batch-btn-text parse-batch-btn-text--primary'>开始识别</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ======== Batch: Uploading ======== */}
+        {batchState === 'uploading' && (
+          <View className='parse-batch-uploading animate-fade-in-up'>
+            <View className='parse-loading-ring'>
+              <View className='parse-loading-ring-inner' />
+            </View>
+            <Text className='parse-batch-upload-text'>上传中 {batchProgress.current}/{batchProgress.total}...</Text>
+          </View>
+        )}
+
+        {/* ======== Batch: Processing ======== */}
+        {batchState === 'processing' && (
+          <View className='parse-batch-processing animate-fade-in-up'>
+            <View className='parse-hero-ring' />
+            <View className='parse-hero-inner'>
+              <Image src={icons['sparkles']} className='parse-hero-icon' style={{ width: '64rpx', height: '64rpx' }} />
+              <Text className='parse-hero-title'>正在识别中</Text>
+              <Text className='parse-hero-desc'>预计需要 1-3 分钟，你可以先去逛逛</Text>
+            </View>
+            <View className='parse-batch-actions'>
+              <View className='parse-batch-btn' onClick={handleBatchGoExplore}>
+                <Text className='parse-batch-btn-text'>先去逛逛</Text>
+              </View>
+              <View className='parse-batch-btn parse-batch-btn--primary' onClick={handleBatchGoExplore}>
+                <Text className='parse-batch-btn-text parse-batch-btn-text--primary'>去衣橱等</Text>
               </View>
             </View>
           </View>
