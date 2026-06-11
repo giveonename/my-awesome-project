@@ -1,0 +1,442 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+// ===== Page Layout =====
+
+.diy-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: $bg-page-default;
+  overflow: hidden;
+}
+
+// ===== Header =====
+
+.diy-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.diy-back {
+  padding: 16rpx;
+  @include press-scale;
+}
+
+.diy-back-icon {
+  font-size: 40rpx;
+  color: $text-primary;
+}
+
+.diy-header-title {
+  @include text-h3;
+}
+
+.diy-header-right {
+  min-width: 72rpx;
+  text-align: right;
+}
+
+.diy-header-count {
+  @include text-caption;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+// ===== Canvas Area =====
+
+.diy-canvas-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.diy-canvas-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  // 网格纹理
+  background-image:
+    linear-gradient($color-gray-200 1px, transparent 1px),
+    linear-gradient(90deg, $color-gray-200 1px, transparent 1px);
+  background-size: 48rpx 48rpx;
+  opacity: 0.5;
+}
+
+.diy-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+// ===== Canvas Item (MovableView) =====
+
+.diy-canvas-item {
+  width: 160rpx;
+  height: 160rpx;
+  position: absolute;
+}
+
+.diy-canvas-item-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: $card-bg;
+  box-shadow: $shadow-md;
+  position: relative;
+  transition: box-shadow $transition-fast, transform $transition-fast;
+}
+
+.diy-canvas-item--active .diy-canvas-item-inner {
+  box-shadow: $shadow-lg, $shadow-focus;
+  transform: scale(1.05);
+}
+
+.diy-canvas-item-img {
+  width: 100%;
+  height: 100%;
+}
+
+.diy-canvas-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: $color-gray-100;
+}
+
+.diy-canvas-item-emoji {
+  font-size: 48rpx;
+  opacity: 0.4;
+}
+
+.diy-canvas-item-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4rpx 0;
+  background: rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.diy-canvas-item-label-text {
+  font-size: $font-tag-size;
+  color: #FFFFFF;
+}
+
+.diy-canvas-item-remove {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: $color-danger;
+  border-radius: 50%;
+  @include flex-center;
+  box-shadow: $shadow-sm;
+  z-index: 10;
+}
+
+.diy-canvas-item-remove-text {
+  font-size: 18rpx;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+// ===== Canvas Empty Hint =====
+
+.diy-canvas-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  @include flex-column;
+  @include flex-center;
+  gap: $spacing-sm;
+  pointer-events: none;
+}
+
+.diy-canvas-hint-icon {
+  font-size: 64rpx;
+  opacity: 0.4;
+}
+
+.diy-canvas-hint-text {
+  @include text-body-small;
+  color: $text-tertiary;
+}
+
+// ===== FABs =====
+
+.diy-fabs {
+  position: absolute;
+  right: $spacing-md;
+  top: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  z-index: 10;
+}
+
+.diy-fab {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  @include flex-center;
+  box-shadow: $shadow-md;
+  @include press-scale;
+
+  &--clear {
+    background: $card-bg;
+    border: 2rpx solid $color-gray-300;
+  }
+
+  &--ai {
+    background: $color-accent-gradient;
+  }
+}
+
+.diy-fab--tryon {
+  background: linear-gradient(135deg, #6C5CE7, #A29BFE);
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.4);
+}
+
+.diy-fab-icon {
+  font-size: 36rpx;
+}
+
+// ===== Bottom Drawer =====
+
+.diy-drawer {
+  flex-shrink: 0;
+  background: $card-bg;
+  border-radius: $radius-xl $radius-xl 0 0;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.08);
+  transition: height $transition-slow;
+  height: 45vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+
+  &--expanded {
+    height: 60vh;
+  }
+}
+
+// ===== Drawer Handle =====
+
+.diy-drawer-handle {
+  @include flex-center;
+  padding: 16rpx 0 8rpx;
+  flex-shrink: 0;
+}
+
+.diy-drawer-handle-bar {
+  width: 64rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: $color-gray-300;
+}
+
+// ===== Drawer Category Tabs =====
+
+.diy-drawer-tabs {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.diy-drawer-tabs-inner {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 8rpx $spacing-lg $spacing-sm;
+}
+
+.diy-drawer-tab {
+  padding: 10rpx 28rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all $transition-fast;
+  @include press-scale;
+
+  &--active {
+    background: $color-accent-gradient;
+  }
+}
+
+.diy-drawer-tab-text {
+  font-size: $font-body-small-size;
+  color: $text-secondary;
+  font-weight: 500;
+
+  .diy-drawer-tab--active & {
+    color: $text-on-primary;
+  }
+}
+
+// ===== Drawer Scroll =====
+
+.diy-drawer-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.diy-drawer-loading,
+.diy-drawer-empty {
+  @include flex-center;
+  padding: $spacing-xl 0;
+}
+
+.diy-drawer-loading-text,
+.diy-drawer-empty-text {
+  @include text-body-small;
+  color: $text-tertiary;
+}
+
+// ===== Drawer Item Grid =====
+
+.diy-drawer-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 $spacing-sm;
+  gap: $spacing-xs;
+}
+
+.diy-drawer-item {
+  width: calc((100% - 24rpx) / 3);
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: $card-bg;
+  box-shadow: $shadow-sm;
+  position: relative;
+  @include press-scale;
+
+  &--on-canvas {
+    opacity: 0.5;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.diy-drawer-item-img {
+  width: 100%;
+  height: 180rpx;
+  display: block;
+}
+
+.diy-drawer-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 180rpx;
+  background: $color-gray-100;
+}
+
+.diy-drawer-item-name {
+  @include text-caption;
+  padding: 6rpx 8rpx;
+  display: block;
+  text-align: center;
+  @include ellipsis(1);
+}
+
+.diy-drawer-item-badge {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 32rpx;
+  height: 32rpx;
+  background: $color-primary;
+  border-radius: 50%;
+  @include flex-center;
+}
+
+.diy-drawer-item-badge-text {
+  font-size: 18rpx;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+// ===== Drawer Save Button =====
+
+.diy-drawer-save {
+  @include btn-primary;
+  margin: $spacing-sm $spacing-lg;
+  height: 80rpx;
+  line-height: 80rpx;
+  flex-shrink: 0;
+  box-shadow: $shadow-md;
+}
+
+.diy-drawer-save-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}
+
+// ===== AI Result Modal =====
+
+.diy-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  @include flex-center;
+}
+
+.diy-modal {
+  background: $card-bg;
+  border-radius: $radius-xl;
+  padding: $spacing-xl $spacing-lg;
+  margin: 0 $spacing-xl;
+  text-align: center;
+  box-shadow: $shadow-lg;
+}
+
+.diy-modal-icon {
+  font-size: 64rpx;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.diy-modal-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.diy-modal-text {
+  @include text-body;
+  color: $text-secondary;
+  display: block;
+  margin-bottom: $spacing-lg;
+  line-height: 1.6;
+}
+
+.diy-modal-btn {
+  @include btn-primary;
+  display: inline-block;
+  padding: 16rpx 64rpx;
+}
+
+.diy-modal-btn-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}

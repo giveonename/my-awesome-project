@@ -13,6 +13,12 @@ def _get_image_signing_key() -> bytes:
 
 
 def sign_image_url(path: str, expiry_seconds: int = DEFAULT_EXPIRY_SECONDS) -> str:
+    """Sign an image URL and return a relative API path.
+
+    When a public base URL is needed (e.g. for DashScope), the caller should
+    ensure OSS or another public hosting path is used instead of tunnel URLs.
+    """
+    settings = get_settings()
     expires = int(time.time()) + expiry_seconds
 
     message = f"{path}:{expires}"

@@ -47,6 +47,11 @@ class ClothingItem(Base):
     medium_path: Mapped[str | None] = mapped_column(String(500))
     image_hash: Mapped[str | None] = mapped_column(String(16), index=True)  # pHash hex string
 
+    # OSS public URLs (populated after upload to Alibaba Cloud OSS)
+    public_url: Mapped[str | None] = mapped_column(String(1000))
+    public_url_medium: Mapped[str | None] = mapped_column(String(1000))
+    public_url_thumbnail: Mapped[str | None] = mapped_column(String(1000))
+
     # Classification
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     subtype: Mapped[str | None] = mapped_column(String(50))
@@ -84,6 +89,10 @@ class ClothingItem(Base):
 
     # AI description (human-readable caption)
     ai_description: Mapped[str | None] = mapped_column(Text)
+
+    # Source scene: how the item was uploaded
+    source_scene: Mapped[str] = mapped_column(String(20), default="commodity")  # "commodity" | "avatar"
+    tryon_ready: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # User metadata
     name: Mapped[str | None] = mapped_column(String(100))
@@ -176,3 +185,4 @@ class ItemImage(Base):
 
     # Relationships
     item: Mapped["ClothingItem"] = relationship("ClothingItem", back_populates="additional_images")
+

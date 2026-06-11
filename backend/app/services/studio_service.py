@@ -234,7 +234,7 @@ class StudioService:
         self.db.add(feedback)
 
         original.status = OutfitStatus.rejected
-        original.responded_at = datetime.utcnow()
+        original.responded_at = datetime.now(UTC)
 
         if effective_date is not None:
             await self._apply_wear_tracking(user.id, [i.id for i in ordered], effective_date)

@@ -24,6 +24,7 @@ class TextGenerationResult(BaseModel):
 
 class ClothingTags(BaseModel):
     type: str = "unknown"
+    name: str | None = None
     subtype: str | None = None
     primary_color: str | None = None
     colors: list[str] = []
@@ -314,8 +315,8 @@ class AIService:
             # Auto-orient based on EXIF
             img = ImageOps.exif_transpose(img)
 
-            # Resize to max 512x512 for faster AI processing
-            max_size = 512
+            # Resize to max 1024x1024 for better detail recognition
+            max_size = 1024
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
             # Convert to JPEG bytes
@@ -410,6 +411,13 @@ class AIService:
         tags = ClothingTags()
         tags.raw_response = response_text
 
+        # Parse name (Chinese name, free text)
+        tags.name = data.get("name") if data.get("name") else None
+        # Parse description (Chinese description, free text)
+        tags.description = data.get("description") if data.get("description") else None
+        # Parse brand
+        tags.brand = data.get("brand") if data.get("brand") else None
+
         item_type = validate_value(data.get("type"), VALID_TYPES)
         if item_type:
             tags.type = item_type
@@ -430,6 +438,155 @@ class AIService:
         logger.info(
             f"Parsed tags: type={tags.type}, color={tags.primary_color}, pattern={tags.pattern}"
         )
+        return tags
+
+    def _parse_tags_list_from_response(self, response_text: str) -> list[ClothingTags]:
+        """Parse a JSON array response into a list of ClothingTags.
+        
+        Handles multiple formats:
+        - JSON array: [{"type":...}, {"type":...}]
+        - Single object (backward compat): {"type":...}
+        - Markdown-wrapped JSON
+        """
+        def extract_json_array(text: str) -> list[dict] | None:
+            # Try direct parse
+            try:
+                parsed = json.loads(text.strip())
+                if isinstance(parsed, list):
+                    return [item for item in parsed if isinstance(item, dict)]
+                elif isinstance(parsed, dict):
+                    return [parsed]
+            except json.JSONDecodeError:
+                pass
+
+            # Try markdown-wrapped
+            json_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(1))
+                    if isinstance(parsed, list):
+                        return [item for item in parsed if isinstance(item, dict)]
+                    elif isinstance(parsed, dict):
+                        return [parsed]
+                except json.JSONDecodeError:
+                    pass
+
+            # Try finding array brackets or object braces
+            # First try array
+            start_idx = text.find("[")
+            if start_idx != -1:
+                bracket_count = 0
+                for i, char in enumerate(text[start_idx:], start_idx):
+                    if char == "[":
+                        bracket_count += 1
+                    elif char == "]":
+                        bracket_count -= 1
+                        if bracket_count == 0:
+                            json_str = text[start_idx : i + 1]
+                            try:
+                                parsed = json.loads(json_str)
+                                if isinstance(parsed, list):
+                                    return [item for item in parsed if isinstance(item, dict)]
+                            except json.JSONDecodeError:
+                                break
+
+            # Fallback: single object
+            start_idx = text.find("{")
+            if start_idx != -1:
+                brace_count = 0
+                for i, char in enumerate(text[start_idx:], start_idx):
+                    if char == "{":
+                        brace_count += 1
+                    elif char == "}":
+                        brace_count -= 1
+                        if brace_count == 0:
+                            json_str = text[start_idx : i + 1]
+                            try:
+                                parsed = json.loads(json_str)
+                                if isinstance(parsed, dict):
+                                    return [parsed]
+                            except json.JSONDecodeError:
+                                break
+            return None
+
+        items_data = extract_json_array(response_text)
+        if not items_data:
+            logger.warning(f"Could not parse JSON array from AI response: {response_text[:200]}")
+            return [ClothingTags(raw_response=response_text)]
+
+        results = []
+        for idx, data in enumerate(items_data):
+            tags = self._parse_single_item(data, response_text)
+            # Use AI-provided confidence if available, otherwise use computed
+            ai_confidence = data.get("confidence")
+            if ai_confidence is not None:
+                try:
+                    ai_conf = float(ai_confidence)
+                    # Blend: 60% AI self-assessment + 40% tag completeness
+                    tags.confidence = round(0.6 * ai_conf + 0.4 * tags.confidence, 2)
+                except (ValueError, TypeError):
+                    pass
+            results.append(tags)
+            logger.info(
+                f"Parsed item {idx + 1}/{len(items_data)}: type={tags.type}, "
+                f"color={tags.primary_color}, confidence={tags.confidence}"
+            )
+
+        return results
+
+    def _parse_single_item(self, data: dict, raw_response: str = "") -> ClothingTags:
+        """Parse a single item dict into ClothingTags (shared by single and multi parsers)."""
+        COLOR_ALIASES: dict[str, str] = {
+            "grey": "gray", "light grey": "gray", "light gray": "gray",
+            "dark grey": "gray", "dark gray": "gray", "off-white": "cream",
+            "ivory": "cream", "wine": "burgundy", "maroon": "burgundy",
+            "forest green": "green", "dark blue": "navy", "royal blue": "blue",
+            "sky blue": "light-blue", "baby blue": "light-blue", "camel": "tan",
+            "khaki": "tan", "rust": "orange", "coral": "pink", "rose": "pink",
+            "mauve": "purple", "lavender": "purple", "mustard": "yellow",
+            "gold": "yellow", "silver": "gray", "charcoal": "gray",
+        }
+
+        def validate_value(value: str | None, valid_set: set) -> str | None:
+            if value is None:
+                return None
+            value_lower = value.lower().strip()
+            if value_lower in valid_set:
+                return value_lower
+            alias = COLOR_ALIASES.get(value_lower)
+            if alias and alias in valid_set:
+                return alias
+            return None
+
+        def validate_list(values: list, valid_set: set) -> list:
+            if not values:
+                return []
+            return [v.lower().strip() for v in values if v and v.lower().strip() in valid_set]
+
+        tags = ClothingTags()
+        tags.raw_response = raw_response
+
+        tags.name = data.get("name") if data.get("name") else None
+        tags.description = data.get("description") if data.get("description") else None
+        tags.brand = data.get("brand") if data.get("brand") else None
+
+        item_type = validate_value(data.get("type"), VALID_TYPES)
+        if item_type:
+            tags.type = item_type
+        else:
+            tags.type = "unknown"
+
+        tags.subtype = data.get("subtype") if data.get("subtype") else None
+        tags.primary_color = validate_value(data.get("primary_color"), VALID_COLORS)
+        tags.colors = validate_list(data.get("colors", []), VALID_COLORS)
+        tags.pattern = validate_value(data.get("pattern"), VALID_PATTERNS)
+        tags.material = validate_value(data.get("material"), VALID_MATERIALS)
+        tags.formality = validate_value(data.get("formality"), VALID_FORMALITY)
+        tags.style = validate_list(data.get("style", []), VALID_STYLES)
+        tags.season = validate_list(data.get("season", []), VALID_SEASONS)
+        tags.fit = validate_value(data.get("fit"), VALID_FIT)
+        tags.confidence = compute_tag_completeness(tags)
+
         return tags
 
     async def _call_with_fallback(
@@ -551,6 +708,84 @@ class AIService:
 
         return tags
 
+    async def analyze_image_multi(self, image_path: str | Path) -> list[ClothingTags]:
+        """Analyze an image for multiple clothing items.
+        
+        The prompt now instructs the model to output a JSON array.
+        This method parses all items and filters out low-confidence / non-clothing results.
+        
+        Falls back to single-item parsing if array parsing fails.
+        """
+        image_base64 = self._preprocess_image(image_path)
+
+        messages_tags = [
+            {"role": "system", "content": TAGGING_PROMPT},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
+                    },
+                ],
+            },
+        ]
+
+        last_error = None
+
+        # Single API call — the prompt now returns an array with inline descriptions
+        content, err, logprobs_content = await self._call_with_fallback(
+            messages_tags, "tags_multi", request_logprobs=False
+        )
+
+        if err and not content:
+            raise err
+
+        if not content:
+            raise RuntimeError("No response from AI for multi-item analysis")
+
+        # Parse the response (handles both array and single-object formats)
+        all_tags = self._parse_tags_list_from_response(content)
+
+        # Filter out items that are clearly not clothing or have very low confidence
+        MIN_CONFIDENCE = 0.25
+        valid_tags: list[ClothingTags] = []
+        for tag in all_tags:
+            if tag.type == "unknown" and tag.confidence < MIN_CONFIDENCE:
+                logger.info(f"Filtering out low-confidence item: type={tag.type}, confidence={tag.confidence}")
+                continue
+            valid_tags.append(tag)
+
+        if not valid_tags:
+            # If everything was filtered out, return the first item anyway (better than nothing)
+            logger.warning("All items filtered out, returning first item as fallback")
+            valid_tags = [all_tags[0]] if all_tags else [ClothingTags(raw_response=content)]
+
+        # For items missing descriptions (some models may skip the description field),
+        # generate descriptions in background
+        for tag in valid_tags:
+            if not tag.description or len(tag.description.strip()) < 10:
+                try:
+                    item_info = f"{tag.name or tag.type}, {tag.primary_color or ''}, {tag.material or ''}"
+                    desc_prompt = DESCRIPTION_PROMPT.replace("{item_info}", item_info)
+                    desc_content, _, _ = await self._call_with_fallback(
+                        [{"role": "user", "content": desc_prompt}],
+                        "description",
+                        use_vision_model=False,
+                    )
+                    if desc_content:
+                        tag.description = desc_content.strip().strip('"')
+                except Exception as e:
+                    logger.warning(f"Failed to generate description for {tag.type}: {e}")
+                    # Keep existing description or None — not critical
+
+        logger.info(
+            f"Multi-item analysis complete: found {len(valid_tags)} items "
+            f"(types: {[t.type for t in valid_tags]})"
+        )
+
+        return valid_tags
+
     async def check_health(self) -> dict:
         """Check health of all configured AI endpoints."""
         endpoints_health = []
@@ -630,11 +865,24 @@ class AIService:
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
+        return await self.chat_completion(messages, return_metadata=return_metadata)
 
+    async def chat_completion(
+        self,
+        messages: list[dict],
+        return_metadata: bool = False,
+    ) -> str | TextGenerationResult:
+        """Send a multi-turn conversation to the AI and return the response.
+        
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys.
+                      The first message should be the system prompt.
+            return_metadata: If True, return TextGenerationResult with model info.
+        """
         last_error = None
 
         for endpoint in self._endpoints:
-            logger.info(f"Trying text generation via {endpoint.name}")
+            logger.info(f"Trying chat completion via {endpoint.name}")
 
             async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 for attempt in range(self.settings.ai_max_retries):
@@ -656,7 +904,7 @@ class AIService:
                         used_model = data.get("model", endpoint.text_model)
                         content = data["choices"][0]["message"]["content"]
                         logger.info(
-                            f"Text generation successful via {endpoint.name} (model: {used_model})"
+                            f"Chat completion successful via {endpoint.name} (model: {used_model})"
                         )
 
                         if return_metadata:

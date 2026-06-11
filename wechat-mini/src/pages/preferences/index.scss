@@ -1,0 +1,222 @@
+// ============================================================
+//  Wardrowbe Preferences Page — Fresh & Modern UI
+//  Purple-indigo palette, consistent with app-wide design system
+// ============================================================
+
+// ===== Color Tokens =====
+$bg-page: #F8F7FF;
+$text-primary: #1E1B4B;
+$text-secondary: #94A3B8;
+$accent-primary: #6366f1;
+$accent-secondary: #8b5cf6;
+$accent-light: #E8E5FF;
+$card-bg: #FFFFFF;
+$card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
+
+.prefs-page {
+  min-height: 100vh;
+  background: $bg-page;
+}
+
+.prefs-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.prefs-loading-text {
+  font-size: 30px;
+  color: $text-secondary;
+}
+
+// ===== Section Cards =====
+.prefs-section {
+  background: $card-bg;
+  padding: 28px 24px;
+  margin: 0 0 16px;
+  box-shadow: $card-shadow;
+}
+
+.prefs-section-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: $text-primary;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.prefs-section-desc {
+  font-size: 24px;
+  color: $text-secondary;
+  display: block;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+// ===== Style Sliders =====
+.style-slider-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.style-slider-label {
+  font-size: 26px;
+  color: $text-primary;
+  width: 80px;
+  font-weight: 500;
+}
+
+.style-slider {
+  flex: 1;
+  margin: 0 16px;
+  // Note: range input styling is limited in mini programs
+  // The purple theme will apply to the track where supported
+}
+
+.style-slider-value {
+  font-size: 24px;
+  color: $accent-primary;
+  width: 50px;
+  text-align: right;
+  font-weight: 600;
+}
+
+// ===== Color Grid =====
+.color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.color-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.color-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.color-option--selected .color-circle {
+  border-color: $accent-primary;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px $accent-primary;
+}
+
+.color-name {
+  font-size: 20px;
+  color: $text-secondary;
+}
+
+// ===== Option Chips =====
+.option-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.option-chip {
+  padding: 12px 24px;
+  background: $accent-light;
+  border-radius: 20px;
+  transition: all 0.15s ease;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.option-chip--active {
+  background: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.option-chip-text {
+  font-size: 26px;
+  color: $accent-primary;
+  font-weight: 500;
+}
+
+.option-chip--active .option-chip-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+// ===== Toggle Switch =====
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle-label {
+  font-size: 28px;
+  color: $text-primary;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.toggle-desc {
+  font-size: 22px;
+  color: $text-secondary;
+}
+
+.toggle-switch {
+  width: 96px;
+  height: 52px;
+  border-radius: 26px;
+  background: #CBD5E1;
+  position: relative;
+  padding: 4px;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch--on {
+  background: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%);
+}
+
+.toggle-knob {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: #fff;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  transition: left 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-switch--on .toggle-knob {
+  left: 48px;
+}
+
+// ===== Saving State =====
+.prefs-saving {
+  text-align: center;
+  padding: 16px;
+}
+
+.prefs-saving-text {
+  font-size: 24px;
+  color: $accent-primary;
+  font-weight: 500;
+}
+
+.prefs-bottom-spacer {
+  height: 60px;
+}

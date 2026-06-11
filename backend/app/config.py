@@ -41,17 +41,26 @@ class Settings(BaseSettings):
     oidc_client_secret: str | None = None
     oidc_mobile_client_id: str | None = None
 
+    # Authentication - WeChat Mini Program
+    wechat_appid: str | None = Field(default=None)
+    wechat_secret: str | None = Field(default=None)
+
     # AI Service (OpenAI-compatible API - supports Ollama, OpenAI, etc.)
     ai_base_url: str = Field(default="")
     ai_api_key: str | None = Field(default=None)
     ai_vision_model: str = Field(default="gpt-4o")  # comma-separated for model rotation
     ai_text_model: str = Field(default="gpt-4o")  # comma-separated for model rotation
-    ai_timeout: int = Field(default=120)
+    ai_timeout: int = Field(default=180)
     ai_max_retries: int = Field(default=3)
     ai_max_tokens: int = Field(default=8000)
 
-    # Weather
+    # Weather - Open-Meteo (fallback)
     openmeteo_url: str = Field(default="https://api.open-meteo.com/v1")
+    openmeteo_fallback_url: str | None = Field(default=None)
+
+    # Weather - QWeather / 和风天气 (primary for China)
+    qweather_api_host: str | None = Field(default=None)
+    qweather_api_key: str | None = Field(default=None)
 
     # Notifications - default ntfy channel (used when user has none configured)
     ntfy_server: str | None = None
@@ -66,6 +75,31 @@ class Settings(BaseSettings):
     # Storage
     storage_path: str = Field(default="/data/wardrobe")
     max_upload_size_mb: int = Field(default=10)
+
+    # Alibaba Cloud DashScope - Virtual Try-On (OutfitAnyone)
+    dashscope_api_key: str | None = Field(default=None)
+    dashscope_tryon_model: str = Field(default="aitryon-plus")  # "aitryon" or "aitryon-plus"
+    dashscope_refine_model: str = Field(default="aitryon-refiner")
+    dashscope_parse_model: str = Field(default="aitryon-parsing-v1")
+    dashscope_base_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1")
+    virtual_tryon_timeout: int = Field(default=120)  # seconds to wait for result
+
+    # Alibaba Cloud Vision Intelligence - Image Preprocessing
+    aliyun_access_key_id: str | None = Field(default=None)
+    aliyun_access_key_secret: str | None = Field(default=None)
+    aliyun_vision_endpoint: str = Field(default="imageseg.cn-shanghai.aliyuncs.com")
+
+    # Alibaba Cloud OSS - Image Storage
+    aliyun_oss_bucket: str | None = Field(default=None)
+    aliyun_oss_endpoint: str | None = Field(default=None)
+    aliyun_oss_region: str | None = Field(default=None)
+    aliyun_oss_public_url: str | None = Field(default=None)  # e.g. https://bucket.oss-cn-chengdu.aliyuncs.com
+
+    # Taobao Union API
+    taobao_app_key: str | None = Field(default=None)
+    taobao_app_secret: str | None = Field(default=None)
+    taobao_adzone_id: str | None = Field(default=None)
+    taobao_material_id: int = Field(default=17004)
 
     # Background removal
     bg_removal_provider: str = Field(default="rembg")  # "rembg" or "http"
@@ -94,11 +128,12 @@ class Settings(BaseSettings):
             )
 
         oidc_configured = oidc_issuer and oidc_client
+        wechat_configured = bool(self.wechat_appid and self.wechat_secret)
         is_dev = self.debug and self.secret_key == DEFAULT_SECRET_KEY
-        if not oidc_configured and not is_dev:
+        if not oidc_configured and not wechat_configured and not is_dev:
             return (
                 "No authentication method configured. "
-                "Set OIDC_ISSUER_URL + OIDC_CLIENT_ID, or enable DEBUG mode."
+                "Set OIDC_ISSUER_URL + OIDC_CLIENT_ID, WECHAT_APPID + WECHAT_SECRET, or enable DEBUG mode."
             )
 
         return None
@@ -108,9 +143,13 @@ class Settings(BaseSettings):
             return "dev"
         if self.oidc_issuer_url and self.oidc_client_id:
             return "oidc"
+        if self.wechat_appid and self.wechat_secret:
+            return "wechat"
         return "unknown"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+

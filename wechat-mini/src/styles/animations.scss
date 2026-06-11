@@ -1,0 +1,234 @@
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// AI 扫描光束动画（核心交互）
+@keyframes scan {
+  0% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(800rpx);
+    opacity: 0.3;
+  }
+}
+
+// AI 光环脉冲
+@keyframes aiPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+// 卡片进场动画（带延迟，符合 ui-ux-pro-max stagger 30-50ms 规范）
+@for $i from 1 through 10 {
+  .animate-fade-in-up-#{$i} {
+    animation: fadeInUp 0.4s ease-out forwards;
+    animation-delay: #{$i * 0.05}s;
+    opacity: 0;
+  }
+}
+
+// 普通淡入上移
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+// 淡入
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+// 从底部滑入
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+// 从底部滑出
+.animate-slide-down {
+  animation: slideDown 0.3s ease-in forwards;
+}
+
+// 缩放进入
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+// 脉冲效果
+.animate-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+// 骨架屏闪烁
+.animate-shimmer {
+  background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-200 50%, $color-gray-100 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: $radius-sm;
+}
+
+// AI扫描光效（用于加载状态）
+.ai-glow {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, $color-ai-glow, transparent 70%);
+  animation: aiPulse 2s ease-in-out infinite;
+}
+
+// 悬浮按钮动画
+@keyframes floatUp {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10rpx);
+  }
+}
+
+.float-animation {
+  animation: floatUp 3s ease-in-out infinite;
+}
+
+// 按压缩放（符合 ui-ux-pro-max 150-300ms 规范）
+.press-scale {
+  transition: transform 150ms ease;
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+// 渐变背景动画
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-animate {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+// AI 解析扫描线（60fps，transform-only 保证 GPU 加速）
+@keyframes parseScan {
+  0% {
+    top: -8rpx;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% + 8rpx);
+    opacity: 0;
+  }
+}
+
+// 扫描线光晕扩散
+@keyframes scanGlow {
+  0% {
+    box-shadow: 0 0 20rpx rgba(155, 143, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 60rpx rgba(155, 143, 255, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 20rpx rgba(155, 143, 255, 0.3);
+  }
+}
+
+// 解析进度条脉冲
+@keyframes progressPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}

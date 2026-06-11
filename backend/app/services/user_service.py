@@ -123,5 +123,41 @@ class UserService:
         await self.db.flush()
 
 
+    async def sync_from_wechat(self, openid: str, nickname: str | None, avatar_url: str | None) -> tuple[User, bool]:
+        """
+        Sync user from WeChat Mini Program.
+        Creates user if not exists, updates if exists.
+        Returns (user, is_new_user).
+        """
+        external_id = f"wechat:{openid}"
+        user = await self.get_by_external_id(external_id, load_preferences=False)
+
+        if user is None:
+            # Create new user with a synthetic email
+            email = f"{openid}@wechat.local"
+            display_name = nickname or f"微信用户{openid[-6:]}"
+            user = User(
+                external_id=external_id,
+                email=email,
+                display_name=display_name,
+                avatar_url=avatar_url,
+                last_login_at=datetime.now(UTC),
+            )
+            self.db.add(user)
+            await self.db.flush()
+            await self.db.refresh(user)
+            return user, True
+        else:
+            # Update existing user
+            if nickname:
+                user.display_name = nickname
+            if avatar_url:
+                user.avatar_url = avatar_url
+            user.last_login_at = datetime.now(UTC)
+            await self.db.flush()
+            await self.db.refresh(user)
+            return user, False
+
+
 class UserEmailConflictError(Exception):
     pass

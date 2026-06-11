@@ -88,3 +88,21 @@ class AuthConfigOIDC(BaseModel):
 class AuthConfigResponse(BaseModel):
     oidc: AuthConfigOIDC
     dev_mode: bool = False
+    wechat_enabled: bool = False
+
+
+class WeChatLoginRequest(BaseModel):
+    code: str = Field(..., description="wx.login() code from WeChat Mini Program")
+    nickname: str | None = Field(None, max_length=100, description="User nickname (optional)")
+    avatar_url: str | None = Field(None, description="User avatar URL (optional)")
+
+
+class WeChatLoginResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    display_name: str
+    is_new_user: bool
+    onboarding_completed: bool
+    access_token: str = Field(..., description="JWT token for API authentication")

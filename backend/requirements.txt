@@ -21,6 +21,16 @@ httpx>=0.26.0
 pillow>=10.2.0
 pillow-heif>=0.14.0
 
+# Background removal
+
+# Alibaba Cloud Vision Intelligence SDK
+alibabacloud_tea_openapi>=0.4.0
+alibabacloud_imageseg20191230>=4.0.0
+alibabacloud_facebody20191230>=6.0.0
+alibabacloud_tea_util>=0.3.14
+oss2>=2.19.0
+alibabacloud_credentials>=1.0.8
+
 # Background jobs
 redis>=5.0.1
 arq>=0.25.0

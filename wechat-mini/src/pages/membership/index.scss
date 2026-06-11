@@ -1,0 +1,248 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+.membership-page { min-height: 100vh; background: $bg-page-default; padding-bottom: 200rpx; }
+
+.membership-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+}
+
+.membership-back { padding: 16rpx; }
+.membership-back-icon { font-size: 40rpx; color: $text-primary; }
+.membership-header-title { @include text-h3; }
+.membership-header-placeholder { width: 72rpx; }
+
+// Hero
+.membership-hero {
+  @include flex-column;
+  align-items: center;
+  padding: $spacing-xl $spacing-lg;
+  background: $color-accent-gradient;
+}
+
+.membership-hero-icon { font-size: 80rpx; margin-bottom: $spacing-sm; }
+.membership-hero-title { font-size: $font-h2-size; font-weight: 700; color: #fff; }
+.membership-hero-sub { font-size: $font-body-small-size; color: rgba(255,255,255,0.8); margin-top: 8rpx; }
+
+// Benefits
+.membership-benefits {
+  margin: $spacing-md $spacing-lg;
+  @include card-base;
+  padding: $spacing-md;
+}
+
+.membership-benefits-title { @include text-h3; display: block; margin-bottom: $spacing-md; }
+
+.membership-benefits-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.membership-benefit-item {
+  width: 33.33%;
+  @include flex-column;
+  align-items: center;
+  padding: $spacing-sm 0;
+}
+
+.membership-benefit-icon { font-size: 40rpx; margin-bottom: 8rpx; }
+.membership-benefit-label { @include text-caption; color: $text-secondary; }
+
+// Plans
+.membership-plans {
+  margin: $spacing-md $spacing-lg;
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.membership-plan {
+  flex: 1;
+  @include card-base;
+  padding: $spacing-md;
+  position: relative;
+  border: 3rpx solid transparent;
+  transition: border-color 150ms ease;
+
+  &--selected { border-color: $color-primary; }
+  &--highlight { background: linear-gradient(180deg, #F5F3FF, #fff); }
+  &:active { transform: scale(0.97); transition: transform 150ms ease; }
+}
+
+.membership-plan-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  background: $tag-badge-red;
+  border-radius: 0 $radius-lg 0 $radius-sm;
+  padding: 4rpx 12rpx;
+}
+
+.membership-plan-badge-text { font-size: 16rpx; color: #fff; font-weight: 600; }
+
+.membership-plan-label { @include text-body-small; font-weight: 600; display: block; margin-bottom: 8rpx; }
+
+.membership-plan-price-row { display: flex; align-items: baseline; gap: 4rpx; margin-bottom: $spacing-sm; }
+.membership-plan-price { font-size: $font-h2-size; font-weight: 700; color: $color-primary; }
+.membership-plan-period { @include text-caption; color: $text-tertiary; }
+
+.membership-plan-features { @include flex-column; gap: 8rpx; }
+
+.membership-plan-feature { display: flex; align-items: center; gap: 8rpx; }
+.membership-plan-check { font-size: $font-caption-size; color: $color-success; font-weight: 700; }
+.membership-plan-feature-text { @include text-caption; color: $text-secondary; }
+
+// Subscribe
+.membership-subscribe {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: $spacing-md $spacing-lg;
+  margin-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  @include btn-primary;
+  height: 96rpx;
+  line-height: 96rpx;
+  z-index: 100;
+}
+
+.membership-subscribe-text { font-size: $font-body-size; color: $text-on-primary; font-weight: 700; }
+
+// Terms
+.membership-terms {
+  text-align: center;
+  padding: $spacing-sm $spacing-lg;
+  margin-top: $spacing-md;
+}
+
+.membership-terms-text { @include text-caption; color: $text-tertiary; }
+// Current Status
+.membership-current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0;
+  margin-bottom: 8rpx;
+}
+
+.membership-current-badge {
+  background: linear-gradient(135deg, $color-gray-100, $color-gray-200);
+  border-radius: $radius-pill;
+  padding: 8rpx 32rpx;
+  margin-bottom: 8rpx;
+}
+
+.membership-current-badge-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.membership-current-desc {
+  font-size: 24rpx;
+  color: $text-tertiary;
+}
+
+// Free Features
+.membership-free-features {
+  padding: 32rpx;
+  margin: 24rpx 32rpx;
+  background: $color-gray-50;
+  border-radius: $radius-lg;
+}
+
+.membership-free-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 20rpx;
+}
+
+.membership-free-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.membership-free-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.membership-free-check {
+  font-size: 28rpx;
+  color: $color-success;
+  font-weight: 700;
+}
+
+.membership-free-text {
+  font-size: 26rpx;
+  color: $text-secondary;
+}
+
+// Current Status
+.membership-current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0;
+  margin-bottom: 8rpx;
+}
+
+.membership-current-badge {
+  background: linear-gradient(135deg, $color-gray-100, $color-gray-200);
+  border-radius: $radius-pill;
+  padding: 8rpx 32rpx;
+  margin-bottom: 8rpx;
+}
+
+.membership-current-badge-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.membership-current-desc {
+  font-size: 24rpx;
+  color: $text-tertiary;
+}
+
+// Free Features
+.membership-free-features {
+  padding: 32rpx;
+  margin: 24rpx 32rpx;
+  background: $color-gray-50;
+  border-radius: $radius-lg;
+}
+
+.membership-free-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 20rpx;
+}
+
+.membership-free-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.membership-free-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.membership-free-check {
+  font-size: 28rpx;
+  color: $color-success;
+  font-weight: 700;
+}
+
+.membership-free-text {
+  font-size: 26rpx;
+  color: $text-secondary;
+}

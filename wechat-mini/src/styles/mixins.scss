@@ -1,0 +1,238 @@
+@import './tokens.scss';
+
+// ===== 文字样式混入 =====
+
+@mixin text-h1 {
+  font-size: $font-h1-size;
+  font-weight: $font-h1-weight;
+  line-height: $font-h1-line-height;
+  color: $text-primary;
+}
+
+@mixin text-h2 {
+  font-size: $font-h2-size;
+  font-weight: $font-h2-weight;
+  line-height: $font-h2-line-height;
+  color: $text-primary;
+}
+
+@mixin text-h3 {
+  font-size: $font-h3-size;
+  font-weight: $font-h3-weight;
+  line-height: $font-h3-line-height;
+  color: $text-primary;
+}
+
+@mixin text-body {
+  font-size: $font-body-size;
+  font-weight: $font-body-weight;
+  line-height: $font-body-line-height;
+  color: $text-primary;
+}
+
+@mixin text-body-small {
+  font-size: $font-body-small-size;
+  font-weight: $font-body-small-weight;
+  line-height: $font-body-small-line-height;
+  color: $text-secondary;
+}
+
+@mixin text-caption {
+  font-size: $font-caption-size;
+  font-weight: $font-caption-weight;
+  line-height: $font-caption-line-height;
+  color: $text-secondary;
+}
+
+@mixin text-tag {
+  font-size: $font-tag-size;
+  font-weight: $font-tag-weight;
+  line-height: $font-tag-line-height;
+}
+
+// ===== 卡片混入 =====
+
+@mixin card-base {
+  background: $card-bg;
+  border-radius: $card-border-radius;
+  box-shadow: $card-shadow;
+  transition: box-shadow $transition-normal;
+}
+
+@mixin card-hover {
+  box-shadow: $card-shadow-hover;
+}
+
+@mixin card-compact {
+  background: $card-bg;
+  border-radius: $radius-md;
+  box-shadow: $shadow-sm;
+  transition: box-shadow $transition-normal;
+}
+
+// ===== Unified Card System =====
+// Use these mixins for all page-level cards to ensure consistency.
+
+@mixin unified-card($interactive: true) {
+  background: $card-bg;
+  border-radius: $radius-lg;    // 32rpx — standard for all content cards
+  box-shadow: $card-shadow;     // consistent depth
+  overflow: hidden;
+
+  @if $interactive {
+    transition: transform $transition-fast, box-shadow $transition-fast;
+
+    &:active {
+      transform: scale(0.97);
+      box-shadow: $card-shadow-hover;
+    }
+  }
+}
+
+@mixin unified-card-glass {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.6);
+  border-radius: 28rpx;
+  box-shadow:
+    0 4rpx 20rpx rgba(0, 0, 0, 0.05),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.8);
+}
+
+@mixin unified-card-inner-padding {
+  padding: $spacing-sm $spacing-md;
+}
+
+// ===== 按钮混入 =====
+
+@mixin btn-primary {
+  background: $color-accent-gradient;
+  color: $text-on-primary;
+  border-radius: $radius-pill;
+  border: none;
+  text-align: center;
+  font-weight: 600;
+  height: 88rpx;
+  line-height: 88rpx;
+  transition: opacity $transition-fast, transform $transition-fast;
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.97);
+  }
+}
+
+@mixin btn-secondary {
+  background: $card-bg;
+  color: $text-primary;
+  border-radius: $radius-pill;
+  border: 2rpx solid $color-gray-200;
+  text-align: center;
+  font-weight: 500;
+  transition: background $transition-fast;
+
+  &:active {
+    background: $color-gray-50;
+  }
+}
+
+@mixin btn-ghost {
+  background: transparent;
+  color: $color-primary;
+  border-radius: $radius-sm;
+  border: none;
+  text-align: center;
+  font-weight: 500;
+  transition: background $transition-fast;
+
+  &:active {
+    background: $color-primary-50;
+  }
+}
+
+// ===== 弹窗混入 =====
+
+@mixin popup-base {
+  background: $card-bg;
+  border-radius: $radius-popup $radius-popup 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+// ===== 分割线 =====
+
+@mixin divider {
+  height: 1rpx;
+  background: $color-gray-200;
+}
+
+@mixin divider-indented($left: 72rpx) {
+  height: 1rpx;
+  background: $color-gray-200;
+  margin-left: $left;
+}
+
+// ===== 溢出省略 =====
+
+@mixin ellipsis($lines: 1) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  @if $lines == 1 {
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+  }
+}
+
+// ===== Flex 快捷 =====
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== 按压缩放反馈 =====
+
+@mixin press-scale($scale: 0.96) {
+  transition: transform $transition-fast;
+  &:active {
+    transform: scale($scale);
+  }
+}
+
+// ===== 骨架屏占位 =====
+
+@mixin skeleton($width: 100%, $height: 40rpx) {
+  width: $width;
+  height: $height;
+  background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-200 50%, $color-gray-100 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: $radius-sm;
+}
+
+// ===== AI 扫描光束 =====
+
+@mixin scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40rpx;
+  background: linear-gradient(to bottom, rgba(155, 143, 255, 0), rgba(155, 143, 255, 0.6));
+  animation: scan 2s linear infinite alternate;
+}

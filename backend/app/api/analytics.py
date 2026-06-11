@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +13,28 @@ from app.models.outfit import Outfit, OutfitStatus, UserFeedback
 from app.models.user import User
 from app.utils.auth import get_current_user
 from app.utils.signed_urls import sign_image_url
+
+# 颜色英文→中文映射（用于 AI 洞察生成）
+COLOR_CN = {
+    "black": "黑色", "white": "白色", "gray": "灰色", "grey": "灰色",
+    "navy": "藏青色", "blue": "蓝色", "light-blue": "浅蓝色",
+    "red": "红色", "burgundy": "酒红色", "pink": "粉色",
+    "green": "绿色", "olive": "橄榄绿", "yellow": "黄色",
+    "orange": "橙色", "purple": "紫色", "brown": "棕色",
+    "tan": "卡其色", "beige": "米色", "cream": "奶油色",
+    "gold": "金色", "silver": "银色", "khaki": "卡其色",
+    "maroon": "栗色", "teal": "青色", "charcoal": "炭灰色", "wine": "酒红色",
+}
+
+# 衣物类型英文→中文映射
+TYPE_CN = {
+    "shirt": "衬衫", "t-shirt": "T恤", "blouse": "衬衫", "top": "上衣",
+    "pants": "裤子", "jeans": "牛仔裤", "skirt": "裙子", "shorts": "短裤",
+    "dress": "连衣裙", "jacket": "夹克", "coat": "外套",
+    "sweater": "毛衣", "hoodie": "卫衣", "blazer": "西装外套",
+    "shoes": "鞋子", "sneakers": "运动鞋", "boots": "靴子",
+    "accessories": "配饰", "hat": "帽子", "bag": "包",
+}
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -83,7 +105,7 @@ async def get_analytics(
     days: int = Query(30, ge=7, le=365, description="Number of days for trends"),
 ) -> AnalyticsResponse:
     # Calculate date ranges
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
@@ -318,23 +340,24 @@ async def get_analytics(
     insights = []
 
     if total_items == 0:
-        insights.append("Start by adding some items to your wardrobe!")
+        insights.append("衣橱还是空的，先添加一些衣物开始吧！")
     else:
         # Wardrobe insights
         if len(never_worn) > 0:
             insights.append(
-                f"You have {len(never_worn)} items you've never worn. Consider styling them!"
+                f"你有 {len(never_worn)} 件从未穿过的衣物，试试给它们搭配一下吧！"
             )
 
         # Color insights
         if color_distribution:
-            top_color = color_distribution[0].color
+            top_color_en = color_distribution[0].color
+            top_color = COLOR_CN.get(top_color_en, top_color_en)
             if color_distribution[0].percentage > 40:
                 insights.append(
-                    f"Your wardrobe is heavy on {top_color} ({color_distribution[0].percentage}%). Consider adding variety!"
+                    f"你的衣橱中 {top_color} 占比 {color_distribution[0].percentage}%，可以考虑添置一些其他颜色的单品。"
                 )
             elif len(color_distribution) <= 3 and ready_items > 10:
-                insights.append("Your wardrobe has limited color variety. Explore new colors!")
+                insights.append("你的衣橱颜色种类偏少，可以尝试添加一些新颜色的衣物！")
 
         # Type insights
         if type_distribution:
@@ -352,23 +375,23 @@ async def get_analytics(
                 ratio = tops / bottoms
                 if ratio > 3:
                     insights.append(
-                        "You have many more tops than bottoms. Consider adding pants or skirts!"
+                        "上装远多于下装，建议添置几条裤子或裙子。"
                     )
                 elif ratio < 0.5:
-                    insights.append("You have more bottoms than tops. Consider adding some shirts!")
+                    insights.append("下装多于上装，可以考虑添加一些上衣。")
 
         # Outfit insights
         if acceptance_rate is not None:
             if acceptance_rate > 80:
-                insights.append(f"Great taste! You accept {acceptance_rate:.0f}% of suggestions.")
+                insights.append(f"品味不错！你采纳了 {acceptance_rate:.0f}% 的搭配推荐。")
             elif acceptance_rate < 50:
                 insights.append(
-                    "You reject many suggestions. Consider updating your style preferences."
+                    "你拒绝了较多推荐，可以尝试更新风格偏好来获得更精准的搭配。"
                 )
 
         if outfits_this_week == 0 and total_outfits > 0:
             insights.append(
-                "You haven't generated any outfits this week. Try getting a suggestion!"
+                "本周还没有搭配记录，试试去获取今日穿搭推荐吧！"
             )
 
     return AnalyticsResponse(

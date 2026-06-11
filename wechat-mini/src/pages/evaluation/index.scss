@@ -1,0 +1,443 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+// ===== Page =====
+
+.ev-page {
+  height: 100vh;
+  background: $bg-page-default;
+  overflow: hidden;
+}
+
+// ===== IDLE: Landing =====
+
+.ev-landing {
+  height: 100vh;
+}
+
+.ev-hero {
+  position: relative;
+  padding: 100rpx $spacing-lg $spacing-xl;
+  overflow: hidden;
+}
+
+.ev-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1A1A2E 0%, #2D2D44 40%, #3D3D5C 100%);
+  z-index: -1;
+}
+
+.ev-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.ev-hero-label {
+  font-size: $font-tag-size;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.ev-hero-title {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.ev-hero-subtitle {
+  font-size: $font-body-size;
+  color: rgba(255, 255, 255, 0.7);
+  display: block;
+}
+
+// Feature Cards
+.ev-features {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-lg;
+}
+
+.ev-feature-card {
+  flex: 1;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  box-shadow: $shadow-sm;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+  @include press-scale;
+}
+
+.ev-feature-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-icon;
+  @include flex-center;
+  margin: 0 auto $spacing-sm;
+}
+
+.ev-feature-icon {
+  font-size: 36rpx;
+}
+
+.ev-feature-title {
+  @include text-body;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.ev-feature-desc {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// Start Button
+.ev-start-area {
+  padding: $spacing-lg;
+}
+
+.ev-start-btn {
+  @include btn-primary;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  box-shadow: $shadow-lg;
+}
+
+.ev-start-btn-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}
+
+// ===== QUESTIONING: 问答态 =====
+
+.ev-quiz {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 80rpx $spacing-lg $spacing-xl;
+  background: $bg-page-default;
+}
+
+.ev-quiz-progress {
+  @include flex-between;
+  margin-bottom: $spacing-xl;
+}
+
+.ev-quiz-progress-bar {
+  flex: 1;
+  height: 8rpx;
+  background: $color-gray-200;
+  border-radius: 4rpx;
+  margin-right: $spacing-md;
+  overflow: hidden;
+}
+
+.ev-quiz-progress-fill {
+  height: 100%;
+  background: $color-accent-gradient;
+  border-radius: 4rpx;
+  transition: width 0.4s ease;
+}
+
+.ev-quiz-progress-text {
+  @include text-caption;
+  color: $text-tertiary;
+  flex-shrink: 0;
+}
+
+.ev-quiz-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ev-quiz-question {
+  @include text-h2;
+  margin-bottom: $spacing-xl;
+}
+
+.ev-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.ev-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border: 2rpx solid transparent;
+  transition: all $transition-fast;
+  opacity: 0;
+  animation: fadeInUp 0.3s ease-out forwards;
+
+  &:active {
+    border-color: $color-primary;
+    background: $color-primary-50;
+    transform: scale(0.97);
+  }
+}
+
+.ev-quiz-option-icon {
+  font-size: 40rpx;
+}
+
+.ev-quiz-option-label {
+  @include text-body;
+  font-weight: 500;
+}
+
+// ===== ANALYZING: 毛玻璃解析 =====
+
+.ev-analyzing {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+
+.ev-analyzing-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1A1A2E 0%, #2D2D44 40%, #3D3D5C 100%);
+}
+
+.ev-analyzing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ev-analyzing-content {
+  position: relative;
+  z-index: 10;
+  @include flex-column;
+  @include flex-center;
+  height: 100%;
+  gap: $spacing-lg;
+}
+
+.ev-analyzing-ring {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(155, 143, 255, 0.3);
+  @include flex-center;
+  animation: breathe 2s ease-in-out infinite;
+}
+
+.ev-analyzing-ring-inner {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(155, 143, 255, 0.6);
+  animation: breathe 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+    box-shadow: 0 0 20rpx rgba(155, 143, 255, 0.2);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+    box-shadow: 0 0 60rpx rgba(155, 143, 255, 0.5);
+  }
+}
+
+.ev-analyzing-title {
+  font-size: $font-h3-size;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.ev-analyzing-text {
+  font-size: $font-body-size;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+// ===== RESULT: 风格报告 =====
+
+.ev-result-scroll {
+  height: 100vh;
+}
+
+.ev-result-hero {
+  position: relative;
+  padding: 100rpx $spacing-lg $spacing-xl;
+  overflow: hidden;
+}
+
+.ev-result-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1A1A2E 0%, #2D2D44 40%, #3D3D5C 100%);
+  z-index: -1;
+}
+
+.ev-result-hero-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.ev-result-hero-label {
+  font-size: $font-tag-size;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.ev-result-hero-title {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: block;
+  margin-bottom: $spacing-xs;
+}
+
+.ev-result-hero-tag {
+  font-size: $font-body-size;
+  color: $color-primary-light;
+  font-weight: 500;
+  display: block;
+}
+
+// Cards
+.ev-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin: $spacing-sm $spacing-lg;
+  box-shadow: $shadow-sm;
+}
+
+.ev-card-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+// Color Palette
+.ev-color-palette {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: center;
+}
+
+.ev-color-swatch {
+  @include flex-column;
+  @include flex-center;
+  gap: 8rpx;
+}
+
+.ev-color-circle {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  box-shadow: $shadow-sm;
+  border: 3rpx solid rgba(255, 255, 255, 0.8);
+}
+
+.ev-color-name {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+}
+
+// Bubbles
+.ev-bubble {
+  margin-bottom: $spacing-sm;
+  padding: $spacing-md;
+  border-radius: $radius-lg;
+
+  &--strength {
+    background: $color-primary-50;
+    border: 2rpx solid $color-primary-100;
+  }
+
+  &--suggestion {
+    background: #FFF8E1;
+    border: 2rpx solid #FFECB3;
+  }
+
+  &--summary {
+    background: $color-gray-50;
+    border: 2rpx solid $color-gray-200;
+  }
+}
+
+.ev-bubble-text {
+  @include text-body;
+  color: $text-primary;
+  line-height: 1.6;
+  display: block;
+}
+
+// Actions
+.ev-result-actions {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+}
+
+.ev-result-action-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: $radius-pill;
+
+  &--primary {
+    background: $color-accent-gradient;
+    box-shadow: $shadow-md;
+  }
+
+  &--secondary {
+    background: $card-bg;
+    border: 2rpx solid $color-gray-200;
+  }
+}
+
+.ev-result-action-text {
+  font-size: $font-body-size;
+  font-weight: 600;
+  color: $text-primary;
+
+  &--primary {
+    color: $text-on-primary;
+  }
+}

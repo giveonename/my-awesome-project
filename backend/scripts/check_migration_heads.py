@@ -51,7 +51,8 @@ def main() -> int:
         print(f"OK: Single migration head: {heads.pop()}")
 
     if errors:
-        print(f"\n{errors} error(s) found. Merge the migration heads before deploying.")
+        print(f"
+{errors} error(s) found. Merge the migration heads before deploying.")
         return 1
     return 0
 

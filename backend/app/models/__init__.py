@@ -1,3 +1,5 @@
+from app.models.body_profile import BodyProfile
+from app.models.community import HelpReply, HelpRequest
 from app.models.family import Family, FamilyInvite
 from app.models.item import ClothingItem, ItemHistory, ItemImage, WashHistory
 from app.models.learning import (
@@ -13,6 +15,9 @@ from app.models.schedule import Schedule
 from app.models.user import User
 
 __all__ = [
+    "BodyProfile",
+    "HelpRequest",
+    "HelpReply",
     "Family",
     "FamilyInvite",
     "User",

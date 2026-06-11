@@ -17,21 +17,28 @@ class BackgroundRemovalProvider(ABC):
 
 
 class RembgProvider(BackgroundRemovalProvider):
-    def __init__(self, model: str = "u2net"):
-        self.model = model
-        self._session = None
-
-    def _get_session(self):
-        if self._session is None:
-            from rembg import new_session
-
-            self._session = new_session(self.model)
-        return self._session
+    """Stub – rembg has been removed. Raises an error directing callers to Aliyun."""
 
     def remove(self, image: Image.Image) -> Image.Image:
-        from rembg import remove
+        raise RuntimeError(
+            "rembg removed, use AliyunVisionService.segment_commodity instead"
+        )
 
-        return remove(image, session=self._get_session())
+
+class AliyunVisionProvider(BackgroundRemovalProvider):
+    """Background removal via Aliyun SegmentCommodity API."""
+
+    def remove(self, image: Image.Image) -> Image.Image:
+        from app.services.aliyun_vision_service import get_vision_service
+
+        buf = BytesIO()
+        image.save(buf, format="PNG")
+        buf.seek(0)
+
+        service = get_vision_service()
+        result_bytes = service.segment_commodity(buf.getvalue())
+
+        return Image.open(BytesIO(result_bytes)).convert("RGBA")
 
 
 class HttpProvider(BackgroundRemovalProvider):
@@ -71,12 +78,17 @@ def get_provider() -> BackgroundRemovalProvider:
     provider_type = settings.bg_removal_provider
 
     if provider_type == "rembg":
-        _provider = RembgProvider(model=settings.bg_removal_model)
+        logger.warning("BG_REMOVAL_PROVIDER=rembg is deprecated; switching to aliyun")
+        _provider = AliyunVisionProvider()
+    elif provider_type == "aliyun":
+        _provider = AliyunVisionProvider()
     elif provider_type == "http":
         if not settings.bg_removal_url:
             raise ValueError("BG_REMOVAL_URL is required when BG_REMOVAL_PROVIDER=http")
         _provider = HttpProvider(url=settings.bg_removal_url, api_key=settings.bg_removal_api_key)
     else:
-        raise ValueError(f"Unknown BG_REMOVAL_PROVIDER: {provider_type}. Use 'rembg' or 'http'.")
+        raise ValueError(
+            f"Unknown BG_REMOVAL_PROVIDER: {provider_type}. Use 'aliyun' or 'http'."
+        )
 
     return _provider

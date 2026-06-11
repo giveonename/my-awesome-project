@@ -90,7 +90,11 @@ class WeatherOverrideRequest(BaseModel):
 
 
 class SuggestRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     occasion: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
     @field_validator("occasion")
     @classmethod
@@ -188,6 +192,7 @@ class OutfitResponse(BaseModel):
     reasoning: str | None = None
     style_notes: str | None = None
     highlights: list[str] | None = None
+    care_note: str | None = None
     weather: dict | None = None
     items: list[OutfitItemResponse]
     feedback: FeedbackSummary | None = None
@@ -329,10 +334,12 @@ def outfit_to_response(
         )
 
     highlights = None
+    care_note = None
     if outfit.ai_raw_response and isinstance(outfit.ai_raw_response, dict):
         raw_highlights = outfit.ai_raw_response.get("highlights")
         if raw_highlights and isinstance(raw_highlights, list):
             highlights = raw_highlights
+        care_note = outfit.ai_raw_response.get("care_note")
 
     family_ratings_list = None
     family_rating_average = None
@@ -368,6 +375,7 @@ def outfit_to_response(
         reasoning=outfit.reasoning,
         style_notes=outfit.style_notes,
         highlights=highlights,
+        care_note=care_note,
         weather=outfit.weather_data,
         items=items,
         feedback=feedback_summary,
@@ -400,7 +408,7 @@ async def suggest_outfit(
             condition_code=0,
             is_day=True,
             uv_index=0,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
     service = RecommendationService(db)
@@ -421,6 +429,7 @@ async def suggest_outfit(
             include_items=request.include_items,
             time_of_day=request.time_of_day,
         )
+        await db.commit()
     except InsufficientWardrobeError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -562,8 +571,14 @@ async def accept_outfit(
             detail={"message": "Outfit not found", "error_code": "OUTFIT_NOT_FOUND"},
         )
 
+    if outfit.status not in (OutfitStatus.pending, OutfitStatus.sent):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": f"Outfit is already {outfit.status}", "error_code": "OUTFIT_ALREADY_RESPONDED"},
+        )
+
     outfit.status = OutfitStatus.accepted
-    outfit.responded_at = datetime.utcnow()
+    outfit.responded_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(outfit)
 
@@ -597,8 +612,14 @@ async def reject_outfit(
             detail={"message": "Outfit not found", "error_code": "OUTFIT_NOT_FOUND"},
         )
 
+    if outfit.status not in (OutfitStatus.pending, OutfitStatus.sent):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": f"Outfit is already {outfit.status}", "error_code": "OUTFIT_ALREADY_RESPONDED"},
+        )
+
     outfit.status = OutfitStatus.rejected
-    outfit.responded_at = datetime.utcnow()
+    outfit.responded_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(outfit)
 
@@ -677,7 +698,7 @@ async def submit_feedback(
     if request.accepted is not None:
         feedback.accepted = request.accepted
         outfit.status = OutfitStatus.accepted if request.accepted else OutfitStatus.rejected
-        outfit.responded_at = datetime.utcnow()
+        outfit.responded_at = datetime.now(UTC)
 
     if request.rating is not None:
         feedback.rating = request.rating
@@ -687,6 +708,11 @@ async def submit_feedback(
         feedback.style_rating = request.style_rating
     if request.comment is not None:
         feedback.comment = request.comment
+    if request.worn and feedback.worn_at:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": "Outfit already marked as worn", "error_code": "ALREADY_WORN"},
+        )
     if request.worn and not feedback.worn_at:
         user_today = get_user_today(current_user)
         feedback.worn_at = user_today
@@ -1235,4 +1261,95 @@ async def delete_family_rating(
         )
 
     await db.delete(rating)
-    await db.flush()
+    await db.commit()
+
+
+# ===== Outfit Evaluate =====
+
+class EvaluateRequest(BaseModel):
+    image_url: str = Field(..., description="URL of the outfit image to evaluate")
+
+
+class RadarDimension(BaseModel):
+    label: str
+    value: int = Field(ge=0, le=100)
+
+
+class EvaluateResponse(BaseModel):
+    score: float = Field(ge=0, le=10)
+    feedback: str
+    strengths: list[str] = []
+    suggestions: list[str] = []
+    radar: list[RadarDimension] = []
+
+
+@router.post("/evaluate", response_model=EvaluateResponse)
+async def evaluate_outfit(
+    request: EvaluateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> EvaluateResponse:
+    """Evaluate an outfit image using AI."""
+    from app.services.ai_service import AIService
+
+    ai_service = AIService(db)
+
+    prompt = """你是一位专业的穿搭评分师。请从以下5个维度对这套穿搭打分（0-100分）：
+1. 色彩搭配
+2. 身材修饰
+3. 风格统一
+4. 场合适宜度
+5. 当季流行
+
+请用 JSON 格式返回：
+{
+  "score": 综合得分(0-10),
+  "feedback": "总体点评（2-3句话）",
+  "strengths": ["优点1", "优点2"],
+  "suggestions": ["建议1", "建议2"],
+  "radar": [
+    {"label": "色彩搭配", "value": 80},
+    {"label": "身材修饰", "value": 70},
+    {"label": "风格统一", "value": 75},
+    {"label": "场合适宜", "value": 65},
+    {"label": "当季流行", "value": 60}
+  ]
+}"""
+
+    try:
+        result = await ai_service.analyze_image(
+            image_url=request.image_url,
+            prompt=prompt,
+            user=current_user,
+        )
+
+        import json
+
+        # Try to parse JSON from AI response
+        parsed = json.loads(result)
+
+        return EvaluateResponse(
+            score=parsed.get("score", 7.0),
+            feedback=parsed.get("feedback", "整体搭配不错"),
+            strengths=parsed.get("strengths", []),
+            suggestions=parsed.get("suggestions", []),
+            radar=[
+                RadarDimension(label=d["label"], value=d["value"])
+                for d in parsed.get("radar", [])
+            ],
+        )
+    except Exception as e:
+        logger.warning(f"AI evaluation failed, returning default: {e}")
+        return EvaluateResponse(
+            score=7.0,
+            feedback="AI 暂时无法详细分析，但这套搭配看起来还不错",
+            strengths=["整体配色协调"],
+            suggestions=["可以尝试搭配一些配饰"],
+            radar=[
+                RadarDimension(label="色彩搭配", value=70),
+                RadarDimension(label="身材修饰", value=65),
+                RadarDimension(label="风格统一", value=75),
+                RadarDimension(label="场合适宜", value=60),
+                RadarDimension(label="当季流行", value=55),
+            ],
+        )

@@ -1,0 +1,424 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+// ===== Page =====
+
+.ac-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+}
+
+// ===== Header =====
+
+.ac-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+}
+
+.ac-header-back {
+  padding: 16rpx;
+  @include press-scale;
+}
+
+.ac-header-back-icon {
+  font-size: 40rpx;
+  color: $text-primary;
+}
+
+.ac-header-title {
+  @include text-h3;
+}
+
+.ac-header-placeholder {
+  width: 72rpx;
+}
+
+// ===== Loading =====
+
+.ac-loading {
+  @include flex-column;
+  @include flex-center;
+  height: 100vh;
+  gap: $spacing-md;
+}
+
+.ac-loading-glow {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, $color-ai-glow, transparent 70%);
+  animation: aiPulse 2s ease-in-out infinite;
+}
+
+.ac-loading-text {
+  @include text-body;
+  color: $text-secondary;
+}
+
+// ===== Empty =====
+
+.ac-empty {
+  @include flex-column;
+  @include flex-center;
+  height: 100vh;
+  padding: $spacing-xl;
+  text-align: center;
+}
+
+.ac-empty-icon {
+  font-size: 96rpx;
+  margin-bottom: $spacing-md;
+}
+
+.ac-empty-title {
+  @include text-h3;
+  margin-bottom: $spacing-xs;
+}
+
+.ac-empty-desc {
+  @include text-body-small;
+  color: $text-tertiary;
+}
+
+// ===== Overview Cards =====
+
+.ac-overview {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+}
+
+.ac-overview-card {
+  flex: 1;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  text-align: center;
+  box-shadow: $shadow-sm;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.ac-overview-icon {
+  font-size: 36rpx;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.ac-overview-value {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: $color-primary;
+  display: block;
+  margin-bottom: 4rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-overview-label {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}
+
+// ===== Card Container =====
+
+.ac-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin: $spacing-sm $spacing-lg;
+  box-shadow: $shadow-sm;
+}
+
+.ac-card-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+// ===== AI Insights =====
+
+.ac-insight {
+  background: $color-primary-50;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-left: 6rpx solid $color-primary;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.ac-insight-text {
+  @include text-body-small;
+  color: $text-primary;
+  line-height: 1.6;
+}
+
+// ===== Stacked Bar =====
+
+.ac-stacked {
+  width: 100%;
+}
+
+.ac-stacked-bar {
+  display: flex;
+  height: 32rpx;
+  border-radius: $radius-pill;
+  overflow: hidden;
+  margin-bottom: $spacing-md;
+}
+
+.ac-stacked-segment {
+  height: 100%;
+  min-width: 4rpx;
+  transition: width 0.6s ease-out;
+}
+
+.ac-stacked-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm $spacing-md;
+}
+
+.ac-stacked-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.ac-stacked-legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+}
+
+.ac-stacked-legend-name {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+}
+
+.ac-stacked-legend-pct {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+  font-weight: 600;
+}
+
+// ===== Color Palette =====
+
+.ac-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  justify-content: center;
+}
+
+.ac-palette-swatch {
+  @include flex-column;
+  @include flex-center;
+  gap: 6rpx;
+  opacity: 0;
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+.ac-palette-circle {
+  border-radius: 50%;
+  box-shadow: $shadow-sm;
+  border: 3rpx solid rgba(255, 255, 255, 0.8);
+}
+
+.ac-palette-name {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+  text-align: center;
+}
+
+.ac-palette-count {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+  font-weight: 600;
+}
+
+// ===== Heatmap =====
+
+.ac-heatmap {
+  @include flex-column;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.ac-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8rpx;
+  width: fit-content;
+}
+
+.ac-heatmap-cell {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-xs;
+  transition: background 0.3s ease;
+
+  &--0 {
+    background: $color-gray-100;
+  }
+
+  &--1 {
+    background: rgba(124, 111, 235, 0.2);
+  }
+
+  &--2 {
+    background: rgba(124, 111, 235, 0.5);
+  }
+
+  &--3 {
+    background: $color-primary;
+  }
+}
+
+.ac-heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.ac-heatmap-legend-text {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}
+
+// ===== Learning Profile =====
+
+.ac-learning-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+}
+
+.ac-learning-stat {
+  @include flex-column;
+  @include flex-center;
+  padding: $spacing-md;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+  text-align: center;
+}
+
+.ac-learning-stat-value {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-learning-stat-label {
+  @include text-caption;
+  color: $text-tertiary;
+  margin-top: 4rpx;
+}
+
+// ===== Learned Insights =====
+
+.ac-insight {
+  background: $color-primary-50;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-left: 6rpx solid $color-primary;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.ac-insight-header {
+  @include flex-between;
+  margin-bottom: 8rpx;
+}
+
+.ac-insight-title {
+  @include text-body;
+  font-weight: 600;
+}
+
+.ac-insight-confidence {
+  @include text-caption;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+.ac-insight-desc {
+  @include text-body-small;
+  color: $text-secondary;
+  line-height: 1.6;
+}
+
+// ===== Wear Items =====
+
+.ac-wear-item {
+  @include flex-between;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx solid $color-gray-100;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.ac-wear-img {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: $color-gray-100;
+  @include flex-center;
+  flex-shrink: 0;
+}
+
+.ac-wear-thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.ac-wear-emoji {
+  font-size: 36rpx;
+  opacity: 0.4;
+}
+
+.ac-wear-info {
+  flex: 1;
+  margin: 0 $spacing-sm;
+}
+
+.ac-wear-type {
+  @include text-body;
+  font-weight: 500;
+  display: block;
+}
+
+.ac-wear-name {
+  @include text-caption;
+  color: $text-tertiary;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.ac-wear-count {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ac-wear-count-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: $color-primary;
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-wear-count-label {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}

@@ -1,0 +1,375 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+// ===== Page =====
+
+.body-profile-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+  padding-bottom: 200rpx;
+}
+
+// ===== Header =====
+
+.bp-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+}
+
+.bp-back { padding: 16rpx; @include press-scale; }
+.bp-back-icon { font-size: 40rpx; color: $text-primary; }
+.bp-header-title { @include text-h3; }
+.bp-header-placeholder { width: 72rpx; }
+
+// ===== Loading =====
+
+.bp-loading {
+  @include flex-center;
+  padding: 120rpx 0;
+}
+
+.bp-loading-text {
+  @include text-body;
+  color: $text-tertiary;
+}
+
+// ===== Progress =====
+
+.bp-progress {
+  padding: $spacing-md $spacing-lg;
+}
+
+.bp-progress-bar {
+  height: 8rpx;
+  background: $color-primary-100;
+  border-radius: 4rpx;
+  margin-bottom: 8rpx;
+}
+
+.bp-progress-fill {
+  height: 100%;
+  background: $color-accent-gradient;
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
+}
+
+.bp-progress-text {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// ===== Step =====
+
+.bp-step {
+  padding: 0 $spacing-lg;
+}
+
+// ===== Card =====
+
+.bp-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-sm;
+}
+
+.bp-card-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.bp-card-desc {
+  @include text-caption;
+  color: $text-tertiary;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+// ===== Section =====
+
+.bp-section {
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.bp-label {
+  @include text-body;
+  font-weight: 600;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.bp-divider {
+  height: 1rpx;
+  background: $color-gray-100;
+  margin: $spacing-md 0;
+}
+
+// ===== Value Display =====
+
+.bp-value-display {
+  @include flex-center;
+  gap: 4rpx;
+  margin-bottom: $spacing-sm;
+}
+
+.bp-value-num {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: $color-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-value-unit {
+  font-size: $font-body-size;
+  color: $text-tertiary;
+  margin-top: 16rpx;
+}
+
+// ===== Photo =====
+
+.bp-photo-area {
+  width: 100%;
+  height: 420rpx;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: $color-gray-50;
+  border: 2rpx dashed $color-gray-200;
+  margin-bottom: $spacing-md;
+}
+
+.bp-photo-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.bp-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bp-photo-placeholder-title {
+  font-size: $font-body-size;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 8rpx;
+}
+
+.bp-photo-placeholder-desc {
+  font-size: $font-caption-size;
+  color: $text-tertiary;
+}
+
+// ===== Slider =====
+
+.bp-slider { margin: 0; }
+
+.bp-slider-range {
+  @include flex-between;
+  margin-top: 8rpx;
+}
+
+.bp-slider-label {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// ===== Grid Options =====
+
+.bp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.bp-option {
+  width: calc((100% - 32rpx) / 3);
+  background: $color-gray-50;
+  border: 2rpx solid $color-gray-200;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  transition: all $transition-fast;
+
+  &--active {
+    border-color: $color-primary;
+    background: $color-primary-50;
+    box-shadow: $shadow-focus;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.bp-option-icon {
+  font-size: 48rpx;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.bp-option-label {
+  @include text-body-small;
+  font-weight: 600;
+  display: block;
+}
+
+.bp-option-desc {
+  @include text-caption;
+  color: $text-tertiary;
+  display: block;
+  margin-top: 4rpx;
+}
+
+// ===== Chips =====
+
+.bp-chip-row {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.bp-chip-wrap {
+  flex-wrap: wrap;
+}
+
+.bp-chip {
+  padding: 16rpx 28rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all $transition-fast;
+  @include press-scale;
+
+  &--active {
+    background: $color-accent-gradient;
+  }
+}
+
+.bp-chip-text {
+  font-size: $font-body-small-size;
+  color: $text-primary;
+  font-weight: 500;
+
+  .bp-chip--active & {
+    color: $text-on-primary;
+    font-weight: 600;
+  }
+}
+
+// ===== Skin Tone =====
+
+.bp-skin-row {
+  display: flex;
+  gap: $spacing-lg;
+  justify-content: space-around;
+  margin-top: $spacing-sm;
+}
+
+.bp-skin-item {
+  @include flex-column;
+  align-items: center;
+  gap: 8rpx;
+  @include press-scale;
+
+  &--active .bp-skin-circle {
+    border: 4rpx solid $color-primary;
+    transform: scale(1.15);
+    box-shadow: $shadow-focus;
+  }
+}
+
+.bp-skin-circle {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  border: 3rpx solid $color-gray-300;
+  transition: all $transition-fast;
+}
+
+.bp-skin-label {
+  @include text-caption;
+  color: $text-secondary;
+}
+
+// ===== Tip =====
+
+.bp-tip {
+  display: flex;
+  gap: $spacing-sm;
+  background: #FFF8E1;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin: $spacing-md $spacing-lg;
+}
+
+.bp-tip-icon { font-size: 32rpx; }
+
+.bp-tip-text {
+  @include text-body-small;
+  color: $text-secondary;
+  flex: 1;
+  line-height: 1.6;
+}
+
+// ===== Actions =====
+
+.bp-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $card-bg;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+  z-index: 10;
+}
+
+.bp-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: $radius-pill;
+  font-weight: 600;
+
+  &--primary {
+    @include btn-primary;
+  }
+
+  &--secondary {
+    @include btn-secondary;
+  }
+
+  &--loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+}
+
+.bp-btn-text {
+  font-size: $font-body-size;
+  font-weight: 600;
+
+  .bp-btn--primary & {
+    color: $text-on-primary;
+  }
+
+  .bp-btn--secondary & {
+    color: $text-primary;
+  }
+}

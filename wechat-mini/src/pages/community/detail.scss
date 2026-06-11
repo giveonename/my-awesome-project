@@ -1,0 +1,342 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+// ===== Page =====
+
+.cd-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== Header =====
+
+.cd-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+  flex-shrink: 0;
+}
+
+.cd-back { padding: 16rpx; @include press-scale; }
+.cd-back-icon { font-size: 40rpx; color: $text-primary; }
+.cd-header-title { @include text-h3; }
+.cd-header-placeholder { width: 72rpx; }
+
+// ===== Scroll =====
+
+.cd-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+// ===== Loading / Empty =====
+
+.cd-loading {
+  @include flex-center;
+  padding: 120rpx 0;
+}
+
+.cd-loading-text {
+  @include text-body;
+  color: $text-tertiary;
+}
+
+.cd-empty {
+  @include flex-column;
+  @include flex-center;
+  padding: 120rpx $spacing-xl;
+  text-align: center;
+}
+
+.cd-empty-icon { font-size: 80rpx; margin-bottom: $spacing-md; }
+.cd-empty-text { @include text-body; color: $text-tertiary; }
+
+// ===== Request Card =====
+
+.cd-request {
+  background: $card-bg;
+  padding: $spacing-lg;
+  margin: $spacing-sm $spacing-lg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+}
+
+.cd-request-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.cd-request-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: $color-accent-gradient;
+  @include flex-center;
+  margin-right: $spacing-sm;
+}
+
+.cd-request-avatar-text {
+  font-size: 32rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.cd-request-user-info { flex: 1; }
+.cd-request-username { @include text-body; font-weight: 600; display: block; }
+.cd-request-time { @include text-caption; color: $text-tertiary; display: block; margin-top: 2rpx; }
+
+.cd-request-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.cd-request-desc {
+  @include text-body;
+  color: $text-secondary;
+  line-height: 1.6;
+  display: block;
+}
+
+// Reference Images
+.cd-request-images {
+  white-space: nowrap;
+  margin-top: $spacing-md;
+}
+
+.cd-request-images-list {
+  display: inline-flex;
+  gap: $spacing-sm;
+}
+
+.cd-request-image {
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: $radius-md;
+  flex-shrink: 0;
+}
+
+// ===== Replies =====
+
+.cd-replies {
+  padding: $spacing-sm $spacing-lg;
+}
+
+.cd-replies-title {
+  @include text-h3;
+  display: block;
+  margin-bottom: $spacing-md;
+}
+
+.cd-replies-empty {
+  @include flex-center;
+  padding: $spacing-xl 0;
+}
+
+.cd-replies-empty-text {
+  @include text-body-small;
+  color: $text-tertiary;
+}
+
+// Single Reply
+.cd-reply {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-sm;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.cd-reply-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.cd-reply-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: $color-primary-100;
+  @include flex-center;
+  margin-right: $spacing-sm;
+}
+
+.cd-reply-avatar-text {
+  font-size: 24rpx;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+.cd-reply-user-info {
+  flex: 1;
+}
+
+.cd-reply-username { @include text-body-small; font-weight: 600; display: block; }
+.cd-reply-time { @include text-caption; color: $text-tertiary; display: block; }
+
+.cd-reply-accepted {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: $color-primary-50;
+}
+
+.cd-reply-accepted-text {
+  font-size: $font-tag-size;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+.cd-reply-content {
+  @include text-body;
+  color: $text-primary;
+  line-height: 1.6;
+  display: block;
+}
+
+.cd-reply-items {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.cd-reply-item {
+  padding: 8rpx 20rpx;
+  background: $color-gray-50;
+  border-radius: $radius-sm;
+  border: 1rpx solid $color-gray-200;
+}
+
+.cd-reply-item-text {
+  @include text-caption;
+  color: $text-secondary;
+}
+
+// ===== Form (Create Mode) =====
+
+.cd-form {
+  padding: $spacing-md $spacing-lg;
+}
+
+.cd-form-group {
+  margin-bottom: $spacing-lg;
+}
+
+.cd-form-label {
+  @include text-body;
+  font-weight: 600;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.cd-form-input-wrap {
+  background: $card-bg;
+  border-radius: $radius-md;
+  border: 2rpx solid $color-gray-200;
+}
+
+.cd-form-input {
+  width: 100%;
+  padding: $spacing-md;
+  font-size: $font-body-size;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.cd-form-textarea-wrap {
+  background: $card-bg;
+  border-radius: $radius-md;
+  border: 2rpx solid $color-gray-200;
+}
+
+.cd-form-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  padding: $spacing-md;
+  font-size: $font-body-size;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+// Chips
+.cd-chip-row {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.cd-chip {
+  padding: 14rpx 28rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all $transition-fast;
+  @include press-scale;
+
+  &--active {
+    background: $color-accent-gradient;
+  }
+}
+
+.cd-chip-text {
+  font-size: $font-body-small-size;
+  color: $text-primary;
+  font-weight: 500;
+
+  .cd-chip--active & {
+    color: $text-on-primary;
+    font-weight: 600;
+  }
+}
+
+// ===== Bottom Bar =====
+
+.cd-bottom-bar {
+  flex-shrink: 0;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $card-bg;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.cd-reply-btn {
+  @include btn-primary;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: $radius-pill;
+  box-shadow: $shadow-md;
+}
+
+.cd-reply-btn-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}
+
+.cd-submit-btn {
+  @include btn-primary;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: $radius-pill;
+  box-shadow: $shadow-md;
+
+  &--loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+}
+
+.cd-submit-btn-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}

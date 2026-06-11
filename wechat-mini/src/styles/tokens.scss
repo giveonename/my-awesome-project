@@ -1,0 +1,110 @@
+// ===== 主色调（柔和紫罗兰，低饱和度高级感） =====
+$color-primary: #7C6FEB;           // 主色紫（柔和）
+$color-primary-light: #9B8FFF;     // 亮紫（渐变起点）
+$color-primary-dark: #6358D1;      // 深紫（按压态）
+$color-primary-50: #F3F1FE;        // 极浅紫（背景高亮）
+$color-primary-100: #E8E4FD;       // 浅紫（tag 背景）
+$color-accent-gradient: linear-gradient(135deg, #9B8FFF, #7C6FEB);
+
+// ===== 中性色阶 =====
+$color-gray-50: #FAFAFA;
+$color-gray-100: #F5F5F5;
+$color-gray-200: #EEEEEE;
+$color-gray-300: #E0E0E0;
+$color-gray-400: #BDBDBD;
+$color-gray-500: #9E9E9E;
+$color-gray-600: #757575;
+$color-gray-700: #616161;
+$color-gray-800: #424242;
+$color-gray-900: #333333;
+
+// ===== 背景 =====
+$bg-home-gradient: linear-gradient(180deg, #FFF0E6 0%, #FFE8F0 40%, #F5F0FF 100%);
+$bg-profile-gradient: linear-gradient(180deg, #EDE0F5 0%, #D8E8F0 100%);
+$bg-page-default: #F7F8FA;          // 极浅灰白
+
+// ===== 卡片 =====
+$card-bg: #FFFFFF;
+$card-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04), 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
+$card-shadow-hover: 0 4rpx 12rpx rgba(0, 0, 0, 0.06), 0 16rpx 40rpx rgba(0, 0, 0, 0.10);
+$card-border-radius: 32rpx;         // 大卡片圆角
+$card-inner-border-radius: 24rpx;
+
+// ===== 语义化阴影 =====
+$shadow-xs: 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
+$shadow-sm: 0 2rpx 6rpx rgba(0, 0, 0, 0.05), 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+$shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.06), 0 12rpx 32rpx rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.08), 0 24rpx 64rpx rgba(0, 0, 0, 0.12);
+$shadow-focus: 0 0 0 4rpx rgba(124, 111, 235, 0.2);  // 主色聚焦光环
+
+// ===== 文字 =====
+$text-primary: #333333;            // 主文字
+$text-secondary: #666666;          // 副文字
+$text-tertiary: #999999;           // 辅助文字
+$text-on-primary: #FFFFFF;          // 主色上的文字
+$text-placeholder: #BDBDBD;        // 占位符文字
+
+// ===== 功能色 =====
+$color-success: #34C759;           // iOS 风格绿
+$color-warning: #FF9500;           // iOS 风格橙
+$color-danger: #FF3B30;            // iOS 风格红
+$color-info: #5AC8FA;              // iOS 风格蓝
+$color-ai-glow: rgba(155, 143, 255, 0.35);  // AI 光效
+
+// ===== 标签/徽章 =====
+$tag-ai-bg: linear-gradient(135deg, #9B8FFF, #B8AEFF);
+$tag-vip-bg: linear-gradient(135deg, #1A1A2E, #2D2D44);
+$tag-badge-red: #FF4757;
+
+// ===== 圆角体系 =====
+$radius-xs: 8rpx;        // 极小元素（角标、迷你标签）
+$radius-sm: 16rpx;       // 小按钮、标签、输入框
+$radius-md: 24rpx;       // 中卡片
+$radius-lg: 32rpx;       // 大卡片
+$radius-xl: 40rpx;       // 超大卡片、弹窗面板
+$radius-pill: 999rpx;    // 胶囊按钮
+$radius-popup: 36rpx;    // 弹窗
+$radius-circle: 50%;     // 头像、悬浮按钮
+$radius-icon: 20rpx;     // 图标容器
+
+// ===== 间距体系 =====
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
+$spacing-2xl: 64rpx;
+
+// ===== 字体层级 =====
+$font-h1-size: 44rpx;
+$font-h1-weight: 700;
+$font-h1-line-height: 1.3;
+
+$font-h2-size: 36rpx;
+$font-h2-weight: 700;
+$font-h2-line-height: 1.3;
+
+$font-h3-size: 32rpx;
+$font-h3-weight: 600;
+$font-h3-line-height: 1.4;
+
+$font-body-size: 28rpx;
+$font-body-weight: 400;
+$font-body-line-height: 1.6;       // 提升行高到 1.6，更易读
+
+$font-body-small-size: 26rpx;
+$font-body-small-weight: 400;
+$font-body-small-line-height: 1.5;
+
+$font-caption-size: 24rpx;
+$font-caption-weight: 400;
+$font-caption-line-height: 1.4;
+
+$font-tag-size: 22rpx;
+$font-tag-weight: 500;
+$font-tag-line-height: 1.0;
+
+// ===== 交互规范 =====
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+$transition-slow: 400ms ease-out;

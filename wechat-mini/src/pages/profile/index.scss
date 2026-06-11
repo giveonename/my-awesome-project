@@ -1,0 +1,376 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+.profile-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+}
+
+// ===================== Header =====================
+
+.profile-header {
+  background: $bg-profile-gradient;
+  border-radius: 0 0 $radius-xl $radius-xl;
+  padding: 80rpx $spacing-lg 48rpx;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -60rpx;
+    right: -40rpx;
+    width: 240rpx;
+    height: 240rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(155, 143, 255, 0.2), transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.profile-header-content {
+  @include flex-column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-loading-text {
+  @include text-body;
+  color: $text-secondary;
+  padding: 40rpx 0;
+}
+
+.profile-avatar {
+  width: 130rpx;
+  height: 130rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4rpx solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8rpx 32rpx rgba(99, 102, 241, 0.2);
+  margin-bottom: $spacing-md;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.profile-avatar-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.profile-avatar-emoji {
+  font-size: 60rpx;
+}
+
+.profile-name {
+  font-size: $font-h2-size;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: $spacing-sm;
+}
+
+.profile-stats {
+  display: flex;
+  gap: $spacing-xl;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: $radius-pill;
+  padding: 16rpx 40rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-stat {
+  @include flex-column;
+  align-items: center;
+}
+
+.profile-stat-num {
+  font-size: $font-h3-size;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.profile-stat-label {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+  margin-top: 2rpx;
+}
+
+// ===================== Membership Banner =====================
+
+.membership-banner {
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+  border-radius: $radius-lg;
+  margin: $spacing-md $spacing-lg 0;
+  padding: $spacing-md $spacing-lg;
+  @include flex-between;
+  box-shadow: 0 8rpx 24rpx rgba(26, 26, 46, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -20rpx;
+    right: -20rpx;
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(192, 132, 252, 0.3), transparent 70%);
+  }
+}
+
+.membership-banner-left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  position: relative;
+  z-index: 1;
+}
+
+.membership-banner-diamond {
+  font-size: 48rpx;
+  filter: drop-shadow(0 2rpx 8rpx rgba(192, 132, 252, 0.4));
+}
+
+.membership-banner-info {
+  @include flex-column;
+}
+
+.membership-banner-title {
+  font-size: $font-body-small-size;
+  color: #fff;
+  font-weight: 600;
+}
+
+.membership-banner-sub {
+  font-size: $font-caption-size;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4rpx;
+}
+
+.membership-banner-btn {
+  border: 2rpx solid rgba(192, 132, 252, 0.5);
+  border-radius: $radius-pill;
+  padding: 10rpx 28rpx;
+  position: relative;
+  z-index: 1;
+  transition: all 150ms ease;
+
+  &:active {
+    background: rgba(192, 132, 252, 0.15);
+    transform: scale(0.96);
+  }
+}
+
+.membership-banner-btn-text {
+  font-size: $font-caption-size;
+  color: $color-primary-light;
+  font-weight: 500;
+}
+
+// ===================== Quick Icons =====================
+
+.quick-icons {
+  @include card-base;
+  display: flex;
+  justify-content: space-around;
+  padding: $spacing-lg $spacing-md;
+  margin: $spacing-md $spacing-lg 0;
+}
+
+.quick-icon-item {
+  @include flex-column;
+  @include flex-center;
+  gap: 10rpx;
+  transition: transform 150ms ease;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.quick-icon-emoji {
+  font-size: 48rpx;
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-primary-50;
+  border-radius: $radius-lg;
+}
+
+.quick-icon-label {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+// ===================== Family Section =====================
+
+.family-section {
+  margin: $spacing-md $spacing-lg 0;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: $shadow-sm;
+}
+
+.family-header {
+  @include flex-between;
+  margin-bottom: $spacing-md;
+}
+
+.family-title {
+  @include text-body;
+  font-weight: 600;
+}
+
+.family-count {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+.family-members {
+  display: flex;
+  gap: $spacing-md;
+  overflow-x: auto;
+}
+
+.family-member {
+  @include flex-column;
+  @include flex-center;
+  gap: 6rpx;
+  min-width: 100rpx;
+}
+
+.family-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: $color-accent-gradient;
+  @include flex-center;
+}
+
+.family-avatar-text {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.family-name {
+  @include text-caption;
+  font-weight: 500;
+  @include ellipsis(1);
+  max-width: 100rpx;
+  text-align: center;
+}
+
+.family-role {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}
+
+// ===================== Menu Groups =====================
+
+.menu-group {
+  @include card-base;
+  margin: $spacing-md $spacing-lg 0;
+  overflow: hidden;
+  padding: 4rpx 0;
+}
+
+.menu-item {
+  @include flex-between;
+  padding: $spacing-md $spacing-lg;
+  transition: background 150ms ease;
+
+  &:active {
+    background: $color-gray-50;
+  }
+}
+
+.menu-item-left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.menu-item-text-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item-desc {
+  font-size: 22rpx;
+  color: $text-tertiary;
+  margin-top: 4rpx;
+}
+
+.menu-item-icon {
+  font-size: 36rpx;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-primary-50;
+  border-radius: $radius-md;
+}
+
+.menu-item-label {
+  font-size: $font-body-size;
+  color: $text-primary;
+  font-weight: 500;
+}
+
+.menu-item-arrow {
+  font-size: 32rpx;
+  color: $text-tertiary;
+  font-weight: 300;
+}
+
+.menu-divider {
+  @include divider-indented(96rpx);
+}
+
+// ===================== Logout =====================
+
+.logout-btn {
+  margin: $spacing-lg $spacing-lg 0;
+  @include card-base;
+  height: 96rpx;
+  @include flex-center;
+  transition: background 150ms ease;
+
+  &:active {
+    background: rgba(255, 59, 48, 0.04);
+  }
+}
+
+.logout-text {
+  font-size: $font-body-size;
+  color: $color-danger;
+  font-weight: 500;
+}
+
+// ===================== Version =====================
+
+.version {
+  text-align: center;
+  padding: $spacing-lg 0 $spacing-sm;
+}
+
+.version-text {
+  @include text-caption;
+  color: $text-tertiary;
+}
+

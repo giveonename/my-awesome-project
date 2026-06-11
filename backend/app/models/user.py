@@ -12,6 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.body_profile import BodyProfile
     from app.models.family import Family
     from app.models.item import ClothingItem
     from app.models.learning import UserLearningProfile
@@ -73,4 +74,7 @@ class User(Base):
     )
     learning_profile: Mapped[Optional["UserLearningProfile"]] = relationship(
         "UserLearningProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    body_profile: Mapped[Optional["BodyProfile"]] = relationship(
+        "BodyProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )

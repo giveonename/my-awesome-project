@@ -59,3 +59,25 @@ CLAUDE.md
 deploy.sh
 graphify*
 .graphify*
+
+# Temporary debug files
+temp_*.py
+temp_*.json
+_debug*.png
+test_official_person.png
+test123.txt
+blazer_resp.json
+items_response.json
+*.b64
+src.txt
+src_oss.txt
+w.js
+wf*.js
+write*.js
+write_files.bat
+findings.md
+progress.md
+task_plan.md
+SYSTEM_AUDIT_REPORT.md
+pic/
+skills-lock.json

@@ -1,0 +1,158 @@
+@import './styles/tokens.scss';
+@import './styles/mixins.scss';
+@import './styles/animations.scss';
+
+page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+  font-size: $font-body-size;
+  font-weight: $font-body-weight;
+  line-height: $font-body-line-height;
+  color: $text-primary;
+  background-color: $bg-page-default;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 全局容器
+.container {
+  padding: $spacing-md $spacing-lg;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+// 主色按钮
+.btn-primary {
+  @include btn-primary;
+  padding: 20rpx 40rpx;
+  font-size: $font-body-size;
+
+  &::after {
+    border: none;
+  }
+}
+
+// 次要按钮
+.btn-secondary {
+  @include btn-secondary;
+  padding: 20rpx 40rpx;
+  font-size: $font-body-size;
+
+  &::after {
+    border: none;
+  }
+}
+
+// 幽灵按钮
+.btn-ghost {
+  @include btn-ghost;
+  padding: 20rpx 40rpx;
+  font-size: $font-body-size;
+
+  &::after {
+    border: none;
+  }
+}
+
+// 卡片基础样式
+.card {
+  @include card-base;
+  padding: $spacing-md;
+  margin: $spacing-sm $spacing-lg;
+}
+
+// 紧凑卡片
+.card-compact {
+  @include card-compact;
+  padding: $spacing-sm;
+  margin: $spacing-xs $spacing-lg;
+}
+
+// 区块标题
+.section-title {
+  @include text-h2;
+  padding: $spacing-md $spacing-lg $spacing-sm;
+}
+
+// 分割线
+.divider {
+  @include divider;
+}
+
+// 辅助文字
+.text-secondary {
+  color: $text-secondary;
+  font-size: $font-body-small-size;
+}
+
+.text-tertiary {
+  color: $text-tertiary;
+  font-size: $font-caption-size;
+}
+
+// 标签基础样式
+.tag {
+  @include text-tag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-sm;
+  background: $color-primary-100;
+  color: $color-primary;
+}
+
+.tag--ai {
+  background: $tag-ai-bg;
+  color: $text-on-primary;
+}
+
+.tag--vip {
+  background: $tag-vip-bg;
+  color: $text-on-primary;
+}
+
+// 隐藏滚动条
+::-webkit-scrollbar {
+  display: none;
+}
+
+// 全局loading
+.loading-global {
+  @include flex-center;
+  padding: $spacing-xl 0;
+}
+
+.loading-global-text {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// 空状态通用
+.empty-state {
+  @include flex-center;
+  @include flex-column;
+  padding: 120rpx $spacing-lg;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 96rpx;
+  margin-bottom: $spacing-md;
+}
+
+.empty-state-title {
+  @include text-h3;
+  margin-bottom: $spacing-xs;
+}
+
+.empty-state-desc {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// 聚焦光环（输入框、可交互元素）
+.focus-ring {
+  &:focus {
+    box-shadow: $shadow-focus;
+  }
+}

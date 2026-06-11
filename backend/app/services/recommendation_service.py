@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -585,7 +586,7 @@ class RecommendationService:
             )
             self.db.add(outfit_item)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(outfit)
 
         result = await self.db.execute(
@@ -715,10 +716,13 @@ class RecommendationService:
                         scheduled_date=scheduled_date,
                     )
 
-        # Fetch scoring context
-        recently_worn_dates = await self._get_recently_worn_dates(user)
-        good_pairs = await self._get_good_item_pairs(user.id)
-        learned_prefs = await self._get_learned_preferences(user.id, occasion=occasion)
+        # Fetch scoring context in parallel (independent queries)
+        recently_worn_dates, good_pairs, learned_prefs, worn_combinations = await asyncio.gather(
+            self._get_recently_worn_dates(user),
+            self._get_good_item_pairs(user.id),
+            self._get_learned_preferences(user.id, occasion=occasion),
+            self._get_recently_worn_outfit_combinations(user, days=7),
+        )
         if learned_prefs:
             logger.info(
                 f"Using learned preferences for user {user.id}: {list(learned_prefs.keys())}"
@@ -742,8 +746,6 @@ class RecommendationService:
 
         # Format enriched prompt
         items_text, number_map = self._format_items_for_prompt(scored, good_pairs, user_today)
-
-        worn_combinations = await self._get_recently_worn_outfit_combinations(user, days=7)
 
         preferences_text = self._format_preferences_for_prompt(
             preferences,

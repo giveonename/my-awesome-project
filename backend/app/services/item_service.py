@@ -70,6 +70,12 @@ class ItemService:
         if filters.needs_wash is not None:
             query = query.where(ClothingItem.needs_wash == filters.needs_wash)
 
+        # Source scene and tryon filters
+        if filters.source_scene is not None:
+            query = query.where(ClothingItem.source_scene == filters.source_scene)
+        if filters.tryon_ready is not None:
+            query = query.where(ClothingItem.tryon_ready == filters.tryon_ready)
+
         # Search filter
         if filters.search:
             search_term = f"%{filters.search}%"

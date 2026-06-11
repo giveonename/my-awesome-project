@@ -1,0 +1,615 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+.suggest-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+}
+
+// ===================== Top Tabs =====================
+
+.suggest-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48rpx;
+  padding: 24rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.suggest-tab {
+  position: relative;
+  padding: 8rpx 0;
+  @include press-scale;
+}
+
+.suggest-tab-text {
+  font-size: $font-body-size;
+  color: $text-secondary;
+  font-weight: 500;
+
+  .suggest-tab--active & {
+    color: $text-primary;
+    font-weight: 700;
+  }
+}
+
+.suggest-tab-indicator {
+  position: absolute;
+  bottom: -4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 6rpx;
+  border-radius: 3rpx;
+  background: $color-accent-gradient;
+}
+
+// ===================== Body =====================
+
+.suggest-body {
+  padding: $spacing-sm;
+}
+
+// ===================== Waterfall Layout =====================
+
+.suggest-waterfall {
+  display: flex;
+  gap: $spacing-sm;
+  padding: 0 $spacing-xs;
+}
+
+.suggest-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+// ===================== Skeleton Cards =====================
+
+.skel-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-50 50%, $color-gray-100 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  &--tall {
+    height: 520rpx;
+
+    &::before {
+      content: '';
+      display: block;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  &--medium {
+    height: 440rpx;
+
+    &::before {
+      content: '';
+      display: block;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  &--short {
+    height: 380rpx;
+
+    &::before {
+      content: '';
+      display: block;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+    }
+  }
+}
+
+// ===================== Load More =====================
+
+.suggest-load-more {
+  @include flex-center;
+  gap: 12rpx;
+  padding: $spacing-xl 0;
+}
+
+.suggest-load-more-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: $color-primary;
+  animation: progressPulse 1.2s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+// ===================== End =====================
+
+.suggest-end {
+  text-align: center;
+  padding: $spacing-xl 0;
+}
+
+.suggest-end-text {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// ===================== Refresh Button =====================
+
+.suggest-refresh-btn {
+  @include flex-center;
+  margin: $spacing-lg $spacing-lg $spacing-md;
+  padding: $spacing-sm;
+  background: $card-bg;
+  border-radius: $radius-pill;
+  box-shadow: $shadow-sm;
+  @include press-scale;
+}
+
+.suggest-refresh-text {
+  @include text-body-small;
+  color: $color-primary;
+  font-weight: 500;
+}
+
+// ===================== Empty State =====================
+
+.suggest-empty {
+  @include flex-column;
+  @include flex-center;
+  padding: 120rpx $spacing-xl;
+  text-align: center;
+}
+
+.suggest-empty-icon {
+  font-size: 96rpx;
+  margin-bottom: $spacing-md;
+}
+
+.suggest-empty-title {
+  @include text-h3;
+  margin-bottom: $spacing-xs;
+}
+
+.suggest-empty-desc {
+  @include text-body-small;
+  color: $text-tertiary;
+  margin-bottom: $spacing-lg;
+  line-height: 1.6;
+}
+
+.suggest-empty-btn {
+  @include btn-primary;
+  display: inline-flex;
+  padding: 20rpx 56rpx;
+}
+
+.suggest-empty-btn-text {
+  font-size: $font-body-size;
+  color: $text-on-primary;
+  font-weight: 600;
+}
+
+// ---- AI Chat Entry Banner ----
+
+.suggest-ai-chat-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 32rpx 24rpx;
+  padding: 24rpx 28rpx;
+  background: linear-gradient(135deg, rgba(124, 111, 235, 0.08), rgba(155, 143, 255, 0.04));
+  border: 2rpx solid rgba(124, 111, 235, 0.12);
+  border-radius: $radius-md;
+  transition: transform 150ms ease, background 150ms ease;
+
+  &:active {
+    transform: scale(0.98);
+    background: linear-gradient(135deg, rgba(124, 111, 235, 0.12), rgba(155, 143, 255, 0.08));
+  }
+}
+
+.suggest-ai-chat-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.suggest-ai-chat-banner-icon {
+  font-size: 44rpx;
+}
+
+.suggest-ai-chat-banner-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.suggest-ai-chat-banner-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.suggest-ai-chat-banner-desc {
+  font-size: 22rpx;
+  color: $text-tertiary;
+  margin-top: 2rpx;
+}
+
+.suggest-ai-chat-banner-arrow {
+  font-size: 36rpx;
+  color: $text-tertiary;
+  font-weight: 300;
+}
+
+
+// ===== Wardrobe Gaps =====
+
+.suggest-gaps {
+  padding: $spacing-xs $spacing-lg $spacing-sm;
+}
+
+.suggest-gaps-header {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.suggest-gaps-icon {
+  font-size: 24rpx;
+}
+
+.suggest-gaps-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.suggest-gaps-scroll {
+  white-space: nowrap;
+}
+
+.suggest-gaps-list {
+  display: inline-flex;
+  gap: 12rpx;
+}
+
+.suggest-gap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 10rpx 20rpx;
+  background: #fff;
+  border-radius: $radius-pill;
+  border: 1.5rpx solid $color-gray-200;
+  transition: all 150ms ease;
+
+  &:active { transform: scale(0.95); }
+
+  &--active {
+    background: $color-primary-50;
+    border-color: $color-primary;
+  }
+}
+
+.suggest-gap-chip-icon {
+  font-size: 22rpx;
+}
+
+.suggest-gap-chip-label {
+  font-size: 22rpx;
+  font-weight: 500;
+  color: $text-secondary;
+
+  .suggest-gap-chip--active & {
+    color: $color-primary;
+    font-weight: 600;
+  }
+}
+
+// ===== Wardrobe Toggle =====
+
+.suggest-wardrobe-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4rpx $spacing-lg 12rpx;
+  padding: 10rpx 0;
+}
+
+.suggest-wardrobe-toggle-text {
+  font-size: 24rpx;
+  color: $color-primary;
+  font-weight: 500;
+}
+
+// ===== Wardrobe Panel =====
+
+.suggest-wardrobe-panel {
+  margin: 0 $spacing-lg $spacing-md;
+  background: #fff;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+  overflow: hidden;
+  max-height: 500rpx;
+  animation: fadeInUp 0.25s ease-out;
+}
+
+.suggest-wardrobe-cats {
+  white-space: nowrap;
+  border-bottom: 1rpx solid $color-gray-200;
+}
+
+.suggest-wardrobe-cats-list {
+  display: inline-flex;
+  gap: 0;
+  padding: 0 $spacing-xs;
+}
+
+.suggest-wardrobe-cat {
+  padding: 14rpx 20rpx;
+  border-bottom: 3rpx solid transparent;
+  transition: all 150ms ease;
+
+  &--active {
+    border-bottom-color: $color-primary;
+  }
+}
+
+.suggest-wardrobe-cat-text {
+  font-size: 24rpx;
+  color: $text-secondary;
+  font-weight: 500;
+  white-space: nowrap;
+
+  .suggest-wardrobe-cat--active & {
+    color: $color-primary;
+    font-weight: 600;
+  }
+}
+
+.suggest-wardrobe-items-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  padding: 12rpx;
+  max-height: 380rpx;
+  overflow-y: auto;
+}
+
+.suggest-wardrobe-item {
+  width: calc((100% - 48rpx) / 6);
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: $color-gray-50;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &--active {
+    border: 3rpx solid #7C6FEB;
+    box-shadow: 0 0 0 3rpx rgba(124, 111, 235, 0.25);
+  }
+}
+
+.suggest-wardrobe-item-img {
+  width: 100%;
+  height: 100%;
+}
+
+.suggest-wardrobe-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: $color-gray-100;
+}
+
+// ===== Active Item / Keyword Banner =====
+
+.suggest-active-item-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin: 0 $spacing-xs $spacing-xs;
+  background: linear-gradient(135deg, #f0ebff 0%, #e8f4ff 100%);
+  border-radius: $radius-md;
+}
+
+.suggest-active-item-text {
+  font-size: $font-body-small-size;
+  color: #7C6FEB;
+  font-weight: 500;
+}
+
+.suggest-active-item-clear {
+  font-size: $font-caption-size;
+  color: $color-gray-500;
+  padding: 6rpx 16rpx;
+  background: #FFFFFF;
+  border-radius: $radius-pill;
+}
+
+.suggest-keyword-banner {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  margin: 0 $spacing-xs $spacing-xs;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+}
+
+.suggest-keyword-text {
+  font-size: $font-body-small-size;
+  color: $color-gray-600;
+}
+
+// ===== Product Grid =====
+
+.suggest-product-grid {
+  display: flex;
+  gap: $spacing-xs;
+  padding: 0 $spacing-xs;
+}
+
+.suggest-product-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+// ===== Scene Tags =====
+
+.suggest-scene-tags {
+  margin-bottom: $spacing-md;
+}
+
+.suggest-scene-scroll {
+  white-space: nowrap;
+}
+
+.suggest-scene-list {
+  display: inline-flex;
+  gap: $spacing-sm;
+  padding: 0 2rpx;
+}
+
+.suggest-scene-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 60rpx;
+  padding: 0 28rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all $transition-fast;
+  @include press-scale;
+
+  &--active {
+    background: $color-accent-gradient;
+    box-shadow: $shadow-focus;
+  }
+}
+
+.suggest-scene-chip-text {
+  font-size: 26rpx;
+  color: $text-primary;
+  white-space: nowrap;
+
+  .suggest-scene-chip--active & {
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+// ===== Cold Start Empty State =====
+.suggest-cold-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 48rpx 120rpx;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.suggest-cold-start-glow {
+  position: absolute;
+  top: -60rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 111, 235, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.suggest-cold-start-icon-wrap {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #EDE5FF 0%, #F5E6FF 50%, #FFF0F5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(124, 111, 235, 0.15);
+  animation: coldStartPulse 3s ease-in-out infinite;
+}
+
+@keyframes coldStartPulse {
+  0%, 100% { box-shadow: 0 16rpx 48rpx rgba(124, 111, 235, 0.15); }
+  50% { box-shadow: 0 16rpx 64rpx rgba(124, 111, 235, 0.25); }
+}
+
+.suggest-cold-start-icon {
+  display: block;
+  filter: brightness(0.8);
+}
+
+.suggest-cold-start-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.suggest-cold-start-desc {
+  font-size: 26rpx;
+  color: $text-tertiary;
+  line-height: 1.5;
+  margin-bottom: 48rpx;
+  max-width: 420rpx;
+}
+
+.suggest-cold-start-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  padding: 0 64rpx;
+  background: $color-accent-gradient;
+  border-radius: 100rpx;
+  box-shadow: 0 8rpx 32rpx rgba(124, 111, 235, 0.3);
+  animation: coldStartBtnBreath 2.5s ease-in-out infinite;
+}
+
+@keyframes coldStartBtnBreath {
+  0%, 100% { box-shadow: 0 8rpx 32rpx rgba(124, 111, 235, 0.3); }
+  50% { box-shadow: 0 8rpx 48rpx rgba(124, 111, 235, 0.5); }
+}
+
+.suggest-cold-start-btn-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #fff;
+}

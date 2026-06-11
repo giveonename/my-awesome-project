@@ -1,0 +1,587 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+// ===== Overlay =====
+.vtm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease-out;
+}
+
+// ===== Modal =====
+.vtm-modal {
+  position: relative;
+  width: 680rpx;
+  max-height: 90vh;
+  background: $card-bg;
+  border-radius: 32rpx;
+  overflow: hidden;
+  animation: scaleIn 0.3s ease-out;
+}
+
+.vtm-close {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  z-index: 10;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vtm-close-icon {
+  font-size: 28rpx;
+  color: $text-secondary;
+}
+
+// ===== Loading State =====
+.vtm-loading {
+  padding: 80rpx 48rpx 64rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.vtm-loading-glow {
+  position: absolute;
+  top: -100rpx;
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, $color-ai-glow, transparent 70%);
+  animation: vtmPulse 2s ease-in-out infinite;
+}
+
+.vtm-loading-ring {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba($color-primary, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40rpx;
+  position: relative;
+}
+
+.vtm-loading-ring-inner {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 6rpx solid transparent;
+  border-top-color: $color-primary;
+  border-right-color: $color-primary-light;
+  animation: vtmSpin 1.2s linear infinite;
+}
+
+.vtm-loading-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.vtm-loading-desc {
+  font-size: 26rpx;
+  color: $text-secondary;
+  margin-bottom: 24rpx;
+}
+
+.vtm-loading-time {
+  font-size: 24rpx;
+  color: $text-tertiary;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8rpx;
+}
+
+.vtm-loading-hint {
+  font-size: 24rpx;
+  color: $color-primary;
+  margin-bottom: 32rpx;
+}
+
+.vtm-loading-dots {
+  display: flex;
+  gap: 12rpx;
+}
+
+.vtm-loading-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: $color-primary;
+  animation: vtmDotPulse 1.4s ease-in-out infinite;
+
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+// ===== Result State =====
+.vtm-result {
+  padding: 40rpx 32rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vtm-result-header {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.vtm-result-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.vtm-result-badge {
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  background: $tag-ai-bg;
+}
+
+.vtm-result-badge-text {
+  font-size: 20rpx;
+  color: white;
+  font-weight: 500;
+}
+
+.vtm-result-image-wrap {
+  width: 100%;
+  border-radius: 24rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+  background: #f8f8fa;
+}
+
+.vtm-result-image {
+  width: 100%;
+  display: block;
+}
+
+.vtm-result-time {
+  font-size: 22rpx;
+  color: $text-tertiary;
+  margin-bottom: 32rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.vtm-result-actions {
+  display: flex;
+  gap: 20rpx;
+  width: 100%;
+  margin-bottom: 24rpx;
+}
+
+.vtm-result-btn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vtm-result-btn--ghost {
+  background: transparent;
+  border: 2rpx solid rgba($color-primary, 0.3);
+}
+
+.vtm-result-btn--primary {
+  background: $color-accent-gradient;
+  box-shadow: $shadow-md;
+}
+
+.vtm-result-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $text-primary;
+
+  .vtm-result-btn--primary & {
+    color: $text-on-primary;
+  }
+}
+
+.vtm-result-retry {
+  padding: 16rpx 0;
+}
+
+.vtm-result-retry-text {
+  font-size: 26rpx;
+  color: $text-secondary;
+}
+
+// ===== Error State =====
+.vtm-error {
+  padding: 80rpx 48rpx 64rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.vtm-error-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.vtm-error-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.vtm-error-desc {
+  font-size: 26rpx;
+  color: $text-secondary;
+  margin-bottom: 40rpx;
+  line-height: 1.5;
+}
+
+.vtm-error-actions {
+  display: flex;
+  gap: 20rpx;
+  width: 100%;
+}
+
+// ===== Animations =====
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes vtmSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes vtmPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+@keyframes vtmDotPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.2); }
+}
+
+// ===== Photo Guide =====
+
+.vtm-photo-guide {
+  display: flex;
+  gap: 16rpx;
+  width: 100%;
+  margin-bottom: 40rpx;
+}
+
+.vtm-photo-guide-card {
+  flex: 1;
+  background: $color-gray-50;
+  border-radius: $radius-lg;
+  padding: 20rpx;
+  border: 2rpx solid $color-gray-100;
+}
+
+.vtm-photo-guide-card--warn {
+  border-color: #fde2e2;
+  background: #fff7f7;
+}
+
+.vtm-photo-guide-card-title {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 8rpx;
+  display: block;
+}
+
+.vtm-photo-guide-card-text {
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: $text-secondary;
+  display: block;
+}
+
+// ===== Body Photo Prompt =====
+.vtm-photo-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 48rpx 48rpx;
+  text-align: center;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.vtm-photo-prompt-icon-wrap {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #EDE5FF 0%, #F5E6FF 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.vtm-photo-prompt-icon {
+  display: block;
+}
+
+.vtm-photo-prompt-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.vtm-photo-prompt-desc {
+  font-size: 24rpx;
+  color: $text-tertiary;
+  line-height: 1.5;
+  margin-bottom: 48rpx;
+  max-width: 480rpx;
+}
+
+.vtm-photo-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  width: 100%;
+}
+
+.vtm-photo-prompt-btn {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100rpx;
+  background: $color-gray-100;
+  transition: all 0.2s ease;
+
+  &--primary {
+    background: $color-accent-gradient;
+    box-shadow: $shadow-md;
+  }
+}
+
+.vtm-photo-prompt-btn-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: $text-secondary;
+
+  .vtm-photo-prompt-btn--primary & {
+    color: #fff;
+  }
+
+  &--skip {
+    color: $text-tertiary;
+    font-weight: 400;
+  }
+}
+
+// ===== Confirm Step (Step 3) =====
+
+.vtm-confirm {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 32rpx 32rpx;
+  text-align: center;
+  overflow: hidden;
+}
+
+.vtm-confirm-glow {
+  position: absolute;
+  top: -80rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300rpx;
+  height: 300rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 111, 235, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.vtm-confirm-badge {
+  position: relative;
+  padding: 8rpx 24rpx;
+  background: #E8F5E9;
+  border-radius: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+.vtm-confirm-badge-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #2E7D32;
+}
+
+.vtm-confirm-preview {
+  width: 240rpx;
+  height: 360rpx;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  border: 3rpx solid $color-primary-100;
+  box-shadow: 0 16rpx 48rpx rgba(124, 111, 235, 0.2);
+  margin-bottom: 32rpx;
+  background: $color-gray-50;
+}
+
+.vtm-confirm-img {
+  width: 100%;
+  height: 100%;
+}
+
+.vtm-confirm-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+}
+
+.vtm-confirm-placeholder-icon {
+  font-size: 64rpx;
+}
+
+.vtm-confirm-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 8rpx;
+}
+
+.vtm-confirm-desc {
+  font-size: 24rpx;
+  color: $text-tertiary;
+  margin-bottom: 36rpx;
+}
+
+.vtm-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  width: 100%;
+}
+
+// ===== Background Selector =====
+.vtm-bg-selector {
+  width: 100%;
+  margin-top: 24rpx;
+  padding: 0 8rpx;
+}
+
+.vtm-bg-selector-title {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.vtm-bg-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.vtm-bg-list {
+  display: inline-flex;
+  gap: 20rpx;
+  padding: 8rpx 4rpx;
+}
+
+.vtm-bg-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &--active {
+    .vtm-bg-preview {
+      border-color: #7C6FEB;
+      box-shadow: 0 0 0 4rpx rgba(124, 111, 235, 0.3);
+    }
+    .vtm-bg-name {
+      color: #7C6FEB;
+      font-weight: 600;
+    }
+  }
+
+  &--loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.vtm-bg-preview {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 16rpx;
+  border: 3rpx solid #E5E5EA;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+
+  &--original {
+    background: linear-gradient(135deg, #7C6FEB 0%, #5B4FC4 100%);
+  }
+}
+
+.vtm-bg-preview-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.vtm-bg-name {
+  font-size: 22rpx;
+  color: #999;
+  max-width: 100rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtm-bg-preview-img {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 16rpx;
+  border: 3rpx solid #E5E5EA;
+}

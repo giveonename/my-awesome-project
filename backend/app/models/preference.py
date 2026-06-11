@@ -50,6 +50,16 @@ class UserPreference(Base):
     )
     excluded_combinations: Mapped[list] = mapped_column(JSONB, default=list)
 
+    # Body profile (populated during onboarding)
+    height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weight_kg: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  # slim/standard/athletic/curvy/muscular
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)  # male/female/non-binary/prefer-not-to-say
+    age_range: Mapped[str | None] = mapped_column(String(10), nullable=True)  # 18-24, 25-30, 31-40, 40+
+    style_identity: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)  # ["casual","minimalist"]
+    body_concerns: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)  # ["look-taller","look-slimmer"]
+    profession_scene: Mapped[str | None] = mapped_column(String(30), nullable=True)  # student/office/freelance/other
+
     # AI Settings - list of endpoint configs
     # Each endpoint: {url, vision_model, text_model, name, enabled}
     ai_endpoints: Mapped[list] = mapped_column(JSONB, default=list)

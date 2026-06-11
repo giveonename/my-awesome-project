@@ -1,0 +1,109 @@
+/* custom-tab-bar 样式 */
+
+:host {
+  width: 100%;
+  display: block;
+}
+
+.custom-tabbar {
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.06);
+  z-index: 9999;
+}
+
+.custom-tabbar-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  height: 100rpx;
+}
+
+.tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  height: 100%;
+}
+
+.tabbar-item--active .tabbar-item-icon {
+  transform: scale(1.1);
+}
+
+.tabbar-item--active .tabbar-item-text {
+  color: #7C6FEB;
+  font-weight: 600;
+}
+
+.tabbar-item-icon {
+  width: 48rpx;
+  height: 48rpx;
+  display: block;
+  transition: transform 150ms ease;
+}
+
+.tabbar-item-text {
+  font-size: 22rpx;
+  color: #999999;
+  transition: color 150ms ease;
+}
+
+.tabbar-safe-area {
+  width: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #FFFFFF;
+}
+
+/* Center action button (camera) */
+.tabbar-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.tabbar-center-btn {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9B8FFF 0%, #7C6FEB 40%, #6C5CE7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-top: -40rpx;
+  box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.tabbar-center-btn:active {
+  transform: scale(0.92);
+}
+
+.tabbar-center-btn-glow {
+  position: absolute;
+  top: -8rpx;
+  left: -8rpx;
+  right: -8rpx;
+  bottom: -8rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 111, 235, 0.15) 0%, transparent 70%);
+  z-index: -1;
+}
+
+.tabbar-center-icon {
+  display: block;
+  filter: brightness(10);
+}

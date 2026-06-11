@@ -1,0 +1,50 @@
+{
+  "name": "wardrowbe-mini",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wardrowbe WeChat Mini Program - AI-powered wardrobe management",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass"
+  },
+  "scripts": {
+    "detect-ip": "node get-local-ip.cjs",
+    "prebuild:weapp": "npm run detect-ip",
+    "build:weapp": "taro build --type weapp",
+    "predev:weapp": "npm run detect-ip",
+    "dev:weapp": "npm run build:weapp -- --watch"
+  },
+  "browserslist": [
+    "last 3 versions",
+    "Android >= 4.1",
+    "ios >= 8"
+  ],
+  "author": "",
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@tarojs/components": "4.2.0",
+    "@tarojs/helper": "4.2.0",
+    "@tarojs/plugin-framework-react": "4.2.0",
+    "@tarojs/plugin-platform-weapp": "4.2.0",
+    "@tarojs/react": "4.2.0",
+    "@tarojs/runtime": "4.2.0",
+    "@tarojs/shared": "4.2.0",
+    "@tarojs/taro": "4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.8.0",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/runtime": "^7.7.7",
+    "@iconify/json": "^2.2.484",
+    "@tarojs/cli": "4.2.0",
+    "@tarojs/webpack5-runner": "4.2.0",
+    "@types/react": "^18.0.0",
+    "babel-preset-taro": "4.2.0",
+    "sass": "^1.86.0",
+    "typescript": "^5.1.0",
+    "webpack": "5.91.0"
+  }
+}

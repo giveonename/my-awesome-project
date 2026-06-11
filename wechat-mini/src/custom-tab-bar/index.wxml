@@ -1,0 +1,25 @@
+<view class="custom-tabbar">
+  <view class="custom-tabbar-inner">
+    <block wx:for="{{tabs}}" wx:key="key">
+      <!-- Insert center button before suggest (index 2) -->
+      <view wx:if="{{index === 2}}" class="tabbar-center" bindtap="handleAddClick">
+        <view class="tabbar-center-btn">
+          <view class="tabbar-center-btn-glow"></view>
+          <image class="tabbar-center-icon" src="{{centerIcon}}" mode="aspectFit" style="width:52rpx;height:52rpx;" />
+        </view>
+      </view>
+      <view
+        class="tabbar-item {{selected === index ? 'tabbar-item--active' : ''}} {{animatingIdx === index ? 'tabbar-item--animating' : ''}}"
+        data-index="{{index}}"
+        bindtap="handleTabClick"
+      >
+        <view class="tabbar-item-icon-wrap">
+          <image src="{{selected === index ? item.selectedIcon : item.icon}}" class="tabbar-item-icon {{animatingIdx === index ? 'tabbar-item-icon--bounce' : ''}}" style="width: 48rpx; height: 48rpx; margin-bottom: 6rpx;" mode="aspectFit" />
+          <view wx:if="{{selected === index}}" class="tabbar-item-indicator"></view>
+        </view>
+        <text class="tabbar-item-text">{{item.text}}</text>
+      </view>
+    </block>
+  </view>
+  <view class="tabbar-safe-area"></view>
+</view>

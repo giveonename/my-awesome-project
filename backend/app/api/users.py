@@ -3,10 +3,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.body_profile import BodyProfile
 from app.models.user import User
+from app.schemas.body_profile import BodyProfileResponse, BodyProfileUpdate
 from app.services.user_service import UserService
 from app.utils.auth import get_current_user
 
@@ -102,3 +105,49 @@ async def complete_onboarding(
     await db.commit()
 
     return OnboardingCompleteResponse(onboarding_completed=True)
+
+
+# ===== Body Profile =====
+
+@router.get("/body-profile", response_model=BodyProfileResponse)
+async def get_body_profile(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> BodyProfileResponse:
+    """Get the current user's body profile."""
+    result = await db.execute(
+        select(BodyProfile).where(BodyProfile.user_id == current_user.id)
+    )
+    profile = result.scalar_one_or_none()
+
+    if not profile:
+        # Return empty profile with user_id
+        return BodyProfileResponse(user_id=current_user.id)
+
+    return BodyProfileResponse.model_validate(profile)
+
+
+@router.put("/body-profile", response_model=BodyProfileResponse)
+async def upsert_body_profile(
+    data: BodyProfileUpdate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> BodyProfileResponse:
+    """Create or update the current user's body profile."""
+    result = await db.execute(
+        select(BodyProfile).where(BodyProfile.user_id == current_user.id)
+    )
+    profile = result.scalar_one_or_none()
+
+    if not profile:
+        profile = BodyProfile(user_id=current_user.id)
+        db.add(profile)
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+
+    await db.flush()
+    await db.refresh(profile)
+
+    return BodyProfileResponse.model_validate(profile)

@@ -1,0 +1,143 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+.od-page { min-height: 100vh; background: $bg-page-default; padding-bottom: 200rpx; }
+
+.od-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+}
+
+.od-back { padding: 16rpx; }
+.od-back-icon { font-size: 40rpx; color: $text-primary; }
+.od-header-title { @include text-h3; }
+.od-header-placeholder { width: 72rpx; }
+
+// Hero
+.od-hero { position: relative; height: 600rpx; }
+.od-hero-img { width: 100%; height: 100%; }
+
+.od-ai-badge {
+  position: absolute;
+  bottom: $spacing-sm;
+  left: $spacing-sm;
+  background: $tag-ai-bg;
+  border-radius: $radius-sm;
+  padding: 6rpx 16rpx;
+}
+
+.od-ai-badge-text { font-size: $font-tag-size; color: #fff; font-weight: 600; }
+
+// Sections
+.od-section {
+  margin: $spacing-md $spacing-lg 0;
+}
+
+.od-section-title {
+  @include text-h3;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.od-card {
+  @include card-base;
+  padding: $spacing-md;
+}
+
+.od-text {
+  @include text-body;
+  color: $text-secondary;
+  line-height: 1.6;
+}
+
+.od-highlight {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.od-highlight-bullet { @include text-body; color: $color-primary; font-weight: 700; }
+
+// Items Grid
+.od-items-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.od-item {
+  width: calc((100% - 32rpx) / 3);
+  @include card-base;
+  overflow: hidden;
+
+  &:active { transform: scale(0.96); transition: transform 150ms ease; }
+}
+
+.od-item-img { width: 100%; height: 200rpx; display: block; }
+
+.od-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 200rpx;
+  background: $color-gray-200;
+}
+
+.od-item-emoji { font-size: 48rpx; opacity: 0.4; }
+
+.od-item-info { padding: 8rpx 12rpx; }
+.od-item-type { @include text-caption; color: $text-primary; font-weight: 500; display: block; }
+
+.od-item-color {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 4rpx;
+}
+
+.od-item-color-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  border: 1rpx solid #E0E0E0;
+}
+
+.od-item-color-text { @include text-caption; color: $text-tertiary; font-size: 20rpx; }
+
+// Like Bar
+.od-like-bar {
+  margin: $spacing-lg $spacing-lg 0;
+  @include card-base;
+  padding: $spacing-md;
+  @include flex-center;
+}
+
+.od-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  &:active { opacity: 0.7; }
+}
+
+.od-like-icon { font-size: 36rpx; }
+.od-like-count { @include text-h3; color: $text-secondary; }
+
+// Actions
+.od-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $card-bg;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.04);
+}
+
+.od-action-btn {
+  @include btn-primary;
+  height: 88rpx;
+  line-height: 88rpx;
+}
+
+.od-action-btn-text { font-size: $font-body-size; color: $text-on-primary; font-weight: 600; }

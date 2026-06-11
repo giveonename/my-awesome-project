@@ -24,6 +24,7 @@ class WeatherResponse(BaseModel):
     condition_code: int = Field(description="WMO weather code")
     is_day: bool = Field(description="Whether it's daytime")
     uv_index: float = Field(description="UV index")
+    city: str = Field(default="", description="City/district name")
     timestamp: str = Field(description="Timestamp of weather data")
 
 
@@ -86,6 +87,7 @@ async def get_current_weather(
         condition_code=weather.condition_code,
         is_day=weather.is_day,
         uv_index=weather.uv_index,
+        city=weather.city or "",
         timestamp=weather.timestamp.isoformat(),
     )
 
@@ -133,3 +135,4 @@ async def get_weather_forecast(
             for day in forecast
         ],
     )
+

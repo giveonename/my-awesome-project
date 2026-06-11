@@ -1,0 +1,334 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+@import '../../styles/animations.scss';
+
+// ===== Page =====
+
+.cm-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+}
+
+// ===== Header =====
+
+.cm-header {
+  @include flex-between;
+  padding: 16rpx 32rpx;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+}
+
+.cm-back { padding: 16rpx; @include press-scale; }
+.cm-back-icon { font-size: 40rpx; color: $text-primary; }
+.cm-header-title { @include text-h3; }
+.cm-header-placeholder { width: 72rpx; }
+
+// ===== Tabs =====
+
+.cm-tabs {
+  display: flex;
+  gap: 48rpx;
+  justify-content: center;
+  padding: $spacing-md 0;
+  background: $card-bg;
+}
+
+.cm-tab {
+  position: relative;
+  padding: 8rpx 0;
+  @include press-scale;
+}
+
+.cm-tab-text {
+  font-size: $font-body-size;
+  color: $text-secondary;
+  font-weight: 500;
+
+  .cm-tab--active & {
+    color: $text-primary;
+    font-weight: 700;
+  }
+}
+
+.cm-tab-indicator {
+  position: absolute;
+  bottom: -4rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 6rpx;
+  border-radius: 3rpx;
+  background: $color-accent-gradient;
+}
+
+// ===== Body =====
+
+.cm-body {
+  padding: $spacing-sm;
+}
+
+// ===== Skeleton =====
+
+.cm-skeleton-list {
+  padding: 0 $spacing-xs;
+}
+
+.cm-skeleton-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-sm;
+}
+
+.cm-skeleton-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.cm-skeleton-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  @include skeleton(64rpx, 64rpx);
+  margin-right: $spacing-sm;
+}
+
+.cm-skeleton-lines {
+  flex: 1;
+}
+
+.cm-skeleton-line {
+  @include skeleton;
+  margin-bottom: 8rpx;
+
+  &--name { width: 40%; height: 28rpx; }
+  &--time { width: 25%; height: 20rpx; }
+  &--body { width: 100%; height: 24rpx; margin-top: 12rpx; }
+  &--short { width: 60%; }
+}
+
+// ===== Card =====
+
+.cm-list {
+  padding: 0 $spacing-xs;
+}
+
+.cm-card {
+  background: $card-bg;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-sm;
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+  @include press-scale;
+}
+
+// User
+.cm-card-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.cm-card-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: $color-accent-gradient;
+  @include flex-center;
+  margin-right: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.cm-card-avatar-text {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.cm-card-user-info {
+  flex: 1;
+  @include flex-column;
+}
+
+.cm-card-username { @include text-body; font-weight: 600; }
+.cm-card-time { @include text-caption; color: $text-tertiary; margin-top: 2rpx; }
+
+// Tags
+.cm-card-tags {
+  display: flex;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+
+.cm-tag {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: $color-primary-50;
+
+  &--budget {
+    background: #FFF8E1;
+  }
+}
+
+.cm-tag-text {
+  font-size: $font-tag-size;
+  color: $color-primary;
+  font-weight: 500;
+
+  .cm-tag--budget & {
+    color: $color-warning;
+  }
+}
+
+// Content
+.cm-card-title {
+  @include text-body;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.cm-card-desc {
+  @include text-body-small;
+  color: $text-secondary;
+  line-height: 1.5;
+  display: block;
+  margin-bottom: $spacing-sm;
+  @include ellipsis(2);
+}
+
+// Footer
+.cm-card-footer {
+  @include flex-between;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-gray-100;
+}
+
+.cm-card-replies {
+  @include text-caption;
+  color: $text-secondary;
+}
+
+.cm-card-status {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  background: $color-gray-100;
+}
+
+.cm-card-status-text {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}
+
+// ===== Load More =====
+
+.cm-load-more {
+  @include flex-center;
+  gap: 12rpx;
+  padding: $spacing-xl 0;
+}
+
+.cm-load-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: $color-primary;
+  animation: progressPulse 1.2s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+// ===== Empty =====
+
+.cm-empty {
+  @include flex-column;
+  @include flex-center;
+  padding: 120rpx $spacing-xl;
+  text-align: center;
+}
+
+.cm-empty-icon {
+  font-size: 96rpx;
+  margin-bottom: $spacing-md;
+}
+
+.cm-empty-title {
+  @include text-h3;
+  margin-bottom: $spacing-xs;
+}
+
+.cm-empty-desc {
+  @include text-body-small;
+  color: $text-tertiary;
+  line-height: 1.6;
+}
+
+// ===== FAB =====
+
+.cm-fab {
+  position: fixed;
+  right: $spacing-lg;
+  bottom: 120rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: $color-accent-gradient;
+  border-radius: $radius-pill;
+  padding: 20rpx 32rpx;
+  box-shadow: $shadow-lg;
+  z-index: 100;
+}
+
+.cm-fab-icon {
+  font-size: 32rpx;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.cm-fab-text {
+  font-size: $font-body-small-size;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+// ===== Community Empty (Enhanced) =====
+
+.community-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 60rpx;
+}
+
+.community-empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.community-empty-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 12rpx;
+}
+
+.community-empty-desc {
+  font-size: 26rpx;
+  color: $text-secondary;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.community-empty-btn {
+  @include btn-primary;
+  padding: 20rpx 48rpx;
+}
+
+.community-empty-btn-text {
+  font-size: 28rpx;
+  color: #fff;
+}

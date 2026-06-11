@@ -41,12 +41,15 @@ services:
     container_name: wardrobe-backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    dns:
+      - 192.168.1.1
+      - 8.8.8.8
     environment:
       DEBUG: ${DEBUG:-false}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-wardrobe}:${POSTGRES_PASSWORD:-wardrobe}@postgres:5432/${POSTGRES_DB:-wardrobe}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-      CORS_ORIGINS: '["http://localhost:3000", "http://frontend:3000"]'
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000", "http://frontend:3000"]'}
       STORAGE_PATH: /data/wardrobe
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
@@ -60,6 +63,32 @@ services:
       NTFY_SERVER: ${NTFY_SERVER:-}
       NTFY_TOKEN: ${NTFY_TOKEN:-}
       MATTERMOST_WEBHOOK_URL: ${MATTERMOST_WEBHOOK_URL:-}
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      OPENMETEO_FALLBACK_URL: ${OPENMETEO_FALLBACK_URL:-}
+      QWEATHER_API_HOST: ${QWEATHER_API_HOST:-}
+      QWEATHER_API_KEY: ${QWEATHER_API_KEY:-}
+      # Alibaba Cloud DashScope - Virtual Try-On
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_TRYON_MODEL: ${DASHSCOPE_TRYON_MODEL:-aitryon-plus}
+      DASHSCOPE_REFINE_MODEL: ${DASHSCOPE_REFINE_MODEL:-aitryon-refiner}
+      DASHSCOPE_PARSE_MODEL: ${DASHSCOPE_PARSE_MODEL:-aitryon-parsing-v1}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/api/v1}
+      # Alibaba Cloud Vision Intelligence
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      ALIYUN_VISION_ENDPOINT: ${ALIYUN_VISION_ENDPOINT:-visual.cn-shanghai.aliyuncs.com}
+      # Alibaba Cloud OSS - Image Storage
+      ALIYUN_OSS_BUCKET: ${ALIYUN_OSS_BUCKET:-}
+      ALIYUN_OSS_ENDPOINT: ${ALIYUN_OSS_ENDPOINT:-}
+      ALIYUN_OSS_REGION: ${ALIYUN_OSS_REGION:-}
+      ALIYUN_OSS_PUBLIC_URL: ${ALIYUN_OSS_PUBLIC_URL:-}
+      # Taobao Union API
+      TAOBAO_APP_KEY: ${TAOBAO_APP_KEY:-}
+      TAOBAO_APP_SECRET: ${TAOBAO_APP_SECRET:-}
+      TAOBAO_ADZONE_ID: ${TAOBAO_ADZONE_ID:-}
+      TAOBAO_MATERIAL_ID: ${TAOBAO_MATERIAL_ID:-17004}
     volumes:
       - wardrobe_data:/data/wardrobe
     ports:
@@ -103,14 +132,32 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      DEBUG: ${DEBUG:-false}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-wardrobe}:${POSTGRES_PASSWORD:-wardrobe}@postgres:5432/${POSTGRES_DB:-wardrobe}
       REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       AI_BASE_URL: ${AI_BASE_URL:-http://host.docker.internal:11434/v1}
       AI_VISION_MODEL: ${AI_VISION_MODEL:-gpt-4o}
       AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gpt-4o}
       AI_TIMEOUT: ${AI_TIMEOUT:-120}
       AI_MAX_RETRIES: ${AI_MAX_RETRIES:-3}
+      AI_API_KEY: ${AI_API_KEY:-}
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
+      QWEATHER_API_HOST: ${QWEATHER_API_HOST:-}
+      QWEATHER_API_KEY: ${QWEATHER_API_KEY:-}
       STORAGE_PATH: /data/wardrobe
+      # Alibaba Cloud Vision + OSS
+      ALIYUN_ACCESS_KEY_ID: ${ALIYUN_ACCESS_KEY_ID:-}
+      ALIYUN_ACCESS_KEY_SECRET: ${ALIYUN_ACCESS_KEY_SECRET:-}
+      ALIYUN_OSS_BUCKET: ${ALIYUN_OSS_BUCKET:-}
+      ALIYUN_OSS_ENDPOINT: ${ALIYUN_OSS_ENDPOINT:-}
+      ALIYUN_OSS_PUBLIC_URL: ${ALIYUN_OSS_PUBLIC_URL:-}
+      # Taobao Union API
+      TAOBAO_APP_KEY: ${TAOBAO_APP_KEY:-}
+      TAOBAO_APP_SECRET: ${TAOBAO_APP_SECRET:-}
+      TAOBAO_ADZONE_ID: ${TAOBAO_ADZONE_ID:-}
+      TAOBAO_MATERIAL_ID: ${TAOBAO_MATERIAL_ID:-17004}
     volumes:
       - wardrobe_data:/data/wardrobe
     depends_on:
@@ -124,3 +171,4 @@ volumes:
   postgres_data:
   redis_data:
   wardrobe_data:
+

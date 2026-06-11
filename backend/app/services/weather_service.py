@@ -1,7 +1,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import redis.asyncio as aioredis
@@ -26,6 +26,7 @@ class WeatherData:
     is_day: bool
     uv_index: float
     timestamp: datetime
+    city: str = "" 
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -97,6 +98,11 @@ CACHE_PREFIX = "weather:"
 class WeatherService:
     def __init__(self):
         self.base_url = settings.openmeteo_url
+        self.fallback_url = settings.openmeteo_fallback_url
+
+        # Lazy-load QWeather service (import here to avoid circular imports)
+        self._qweather = None
+        self._qweather_checked = False
 
     @staticmethod
     def _cache_key(lat: float, lon: float) -> str:
@@ -138,23 +144,28 @@ class WeatherService:
         """Convert WMO weather code to human-readable condition."""
         return WMO_CODES.get(code, "unknown")
 
+    def _get_qweather(self):
+        """Lazy-init QWeather service."""
+        if not self._qweather_checked:
+            self._qweather_checked = True
+            try:
+                from app.services.weather_cn import QWeatherService
+                qws = QWeatherService()
+                if qws.is_configured():
+                    self._qweather = qws
+                    logger.info("QWeather (和风天气) configured as primary weather provider")
+                else:
+                    logger.info("QWeather not configured, using Open-Meteo")
+            except Exception as e:
+                logger.warning(f"Failed to init QWeather: {e}")
+        return self._qweather
+
     async def get_current_weather(
         self, latitude: float, longitude: float, use_cache: bool = True
     ) -> WeatherData:
         """
         Fetch current weather for a location.
-
-        Args:
-            latitude: Location latitude
-            longitude: Location longitude
-            use_cache: Whether to use cached data if available
-
-        Returns:
-            WeatherData with current conditions
-
-        Raises:
-            ValueError: If coordinates are out of bounds
-            WeatherServiceError: If API request fails
+        Priority: QWeather (和风天气) → Open-Meteo
         """
         self._validate_coordinates(latitude, longitude)
 
@@ -163,7 +174,17 @@ class WeatherService:
             if cached:
                 return cached
 
-        # Fetch from API
+        # Try QWeather first (primary for China)
+        qweather = self._get_qweather()
+        if qweather:
+            try:
+                weather = await qweather.get_current_weather(latitude, longitude)
+                await self._cache_set(latitude, longitude, weather)
+                return weather
+            except Exception as e:
+                logger.warning(f"QWeather failed, falling back to Open-Meteo: {e}")
+
+        # Fallback: Open-Meteo
         params = {
             "latitude": latitude,
             "longitude": longitude,
@@ -182,19 +203,11 @@ class WeatherService:
             "timezone": "auto",
         }
 
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            try:
-                response = await client.get(f"{self.base_url}/forecast", params=params)
-                response.raise_for_status()
-                data = response.json()
-            except httpx.HTTPError as e:
-                logger.error(f"Weather API error: {e}")
-                raise WeatherServiceError(f"Failed to fetch weather: {e}") from None
+        data = await self._fetch_with_fallback("/forecast", params)
 
         current = data.get("current", {})
         hourly = data.get("hourly", {})
 
-        # Get precipitation probability for next hour
         precip_probs = hourly.get("precipitation_probability", [])
         precip_chance = precip_probs[0] if precip_probs else 0
 
@@ -211,7 +224,7 @@ class WeatherService:
             condition_code=weather_code,
             is_day=bool(current.get("is_day", 1)),
             uv_index=current.get("uv_index", 0),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
 
         await self._cache_set(latitude, longitude, weather)
@@ -228,21 +241,32 @@ class WeatherService:
     ) -> list[DailyForecast]:
         """
         Fetch daily forecast for a location.
-
-        Args:
-            latitude: Location latitude
-            longitude: Location longitude
-            days: Number of days to forecast (1-16)
-
-        Returns:
-            List of DailyForecast objects
-
-        Raises:
-            ValueError: If coordinates are out of bounds
-            WeatherServiceError: If API request fails
+        Priority: QWeather (和风天气) → Open-Meteo
         """
         self._validate_coordinates(latitude, longitude)
 
+        # Try QWeather first
+        qweather = self._get_qweather()
+        if qweather:
+            try:
+                raw = await qweather.get_daily_forecast(latitude, longitude, min(days, 3))
+                forecasts = []
+                for item in raw:
+                    forecasts.append(
+                        DailyForecast(
+                            date=item["date"],
+                            temp_max=item["temp_max"],
+                            temp_min=item["temp_min"],
+                            precipitation_chance=item["precipitation_chance"],
+                            condition=item["condition"],
+                            condition_code=item["condition_code"],
+                        )
+                    )
+                return forecasts
+            except Exception as e:
+                logger.warning(f"QWeather forecast failed, falling back to Open-Meteo: {e}")
+
+        # Fallback: Open-Meteo
         params = {
             "latitude": latitude,
             "longitude": longitude,
@@ -256,14 +280,7 @@ class WeatherService:
             "timezone": "auto",
         }
 
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            try:
-                response = await client.get(f"{self.base_url}/forecast", params=params)
-                response.raise_for_status()
-                data = response.json()
-            except httpx.HTTPError as e:
-                logger.error(f"Weather API error: {e}")
-                raise WeatherServiceError(f"Failed to fetch forecast: {e}") from None
+        data = await self._fetch_with_fallback("/forecast", params)
 
         daily = data.get("daily", {})
         dates = daily.get("time", [])
@@ -327,8 +344,31 @@ class WeatherService:
             condition_code=tomorrow.condition_code,
             is_day=True,  # Assume daytime for outfit recommendations
             uv_index=0,  # Not available in daily forecast
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
         )
+
+    async def _fetch_with_fallback(self, endpoint: str, params: dict) -> dict:
+        """Fetch from primary URL, fall back to secondary if it fails.
+        
+        This helps in regions where the primary Open-Meteo URL may be blocked.
+        """
+        urls = [self.base_url]
+        if self.fallback_url:
+            urls.append(self.fallback_url)
+
+        last_error = None
+        for url in urls:
+            try:
+                async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                    response = await client.get(f"{url}{endpoint}", params=params)
+                    response.raise_for_status()
+                    return response.json()
+            except httpx.HTTPError as e:
+                logger.warning(f"Weather API error from {url}: {e}")
+                last_error = e
+                continue
+
+        raise WeatherServiceError(f"Failed to fetch weather data: {last_error}") from last_error
 
     async def check_health(self) -> dict:
         """Check if the weather service is available."""
@@ -342,6 +382,18 @@ class WeatherService:
                 if response.status_code == 200:
                     return {"status": "healthy", "provider": "open-meteo"}
         except Exception as e:
+            # Try fallback
+            if self.fallback_url:
+                try:
+                    async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                        response = await client.get(
+                            f"{self.fallback_url}/forecast",
+                            params={"latitude": 0, "longitude": 0, "current": "temperature_2m"},
+                        )
+                        if response.status_code == 200:
+                            return {"status": "healthy", "provider": "open-meteo-fallback"}
+                except Exception:
+                    pass
             return {"status": "unhealthy", "error": str(e)}
 
         return {"status": "unhealthy", "error": "Unknown error"}
@@ -349,3 +401,4 @@ class WeatherService:
 
 class WeatherServiceError(Exception):
     pass
+

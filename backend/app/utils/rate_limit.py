@@ -2,9 +2,8 @@ import logging
 from uuid import UUID
 
 from fastapi import HTTPException, Request, status
-from redis.asyncio import Redis
 
-from app.config import get_settings
+from app.utils.redis_lock import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -19,22 +18,18 @@ def _get_client_ip(request: Request) -> str:
 
 
 async def check_rate_limit(key: str, limit: int, window_seconds: int) -> None:
-    settings = get_settings()
     try:
-        redis = Redis.from_url(str(settings.redis_url))
-        try:
-            pipe = redis.pipeline()
-            pipe.incr(key)
-            pipe.expire(key, window_seconds)
-            results = await pipe.execute()
-            count = results[0]
-            if count > limit:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Too many requests. Please try again later.",
-                )
-        finally:
-            await redis.aclose()
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, window_seconds)
+        results = await pipe.execute()
+        count = results[0]
+        if count > limit:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please try again later.",
+            )
     except HTTPException:
         raise
     except Exception as e:

@@ -114,7 +114,8 @@ async def regenerate_all():
                 print(f"  [{item.id}] Error: {e}")
                 failed += 1
 
-        print(f"\nDone! Success: {success}, Skipped: {skipped}, Failed: {failed}")
+        print(f"
+Done! Success: {success}, Skipped: {skipped}, Failed: {failed}")
 
     await engine.dispose()
 

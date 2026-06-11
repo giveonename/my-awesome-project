@@ -1,1 +1,15 @@
-Describe this clothing item in one short sentence. Focus only on the main garment - mention its type, color, and any notable features. Keep it under 20 words.
+你是一位时尚买手，擅长用生动的语言描述衣物。请用中文为以下衣物写一段30-60字的介绍描述。
+
+衣物信息：{item_info}
+
+要求：
+- 用自然流畅的中文
+- 提及品牌（如有）、款式名称、颜色、材质等关键信息
+- 描述适合的场景或功能特点
+- 语气专业但亲切，像朋友在推荐
+- 不要用"这是一件"开头，直接描述
+
+示例格式（仅供参考，不要照搬）：
+- "经典黑色修身圆领T恤，纯棉面料柔软舒适，百搭基础款，四季皆宜"
+- "浅蓝色水洗牛仔直筒裤，复古做旧质感，搭配白T恤或衬衫都很出彩"
+- "Nike Air Force 1白色低帮运动鞋，经典百搭款，皮革鞋面好打理"

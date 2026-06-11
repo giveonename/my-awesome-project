@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from urllib.parse import urlencode
 
+import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -17,6 +18,8 @@ from app.schemas.user import (
     UserResponse,
     UserSyncRequest,
     UserSyncResponse,
+    WeChatLoginRequest,
+    WeChatLoginResponse,
 )
 from app.services.user_service import UserEmailConflictError, UserService
 from app.utils.auth import get_current_user
@@ -28,7 +31,7 @@ settings = get_settings()
 
 
 def create_access_token(external_id: str, expires_delta: timedelta | None = None) -> str:
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     if expires_delta:
         expire = now + expires_delta
     else:
@@ -64,6 +67,7 @@ async def mobile_oidc_callback(request: Request) -> RedirectResponse:
 @router.get("/config", response_model=AuthConfigResponse)
 async def get_auth_config() -> AuthConfigResponse:
     oidc_enabled = _oidc_configured()
+    wechat_enabled = bool(settings.wechat_appid and settings.wechat_secret)
     return AuthConfigResponse(
         oidc=AuthConfigOIDC(
             enabled=oidc_enabled,
@@ -73,6 +77,7 @@ async def get_auth_config() -> AuthConfigResponse:
             else None,
         ),
         dev_mode=_is_dev_mode(),
+        wechat_enabled=wechat_enabled,
     )
 
 
@@ -168,6 +173,83 @@ async def sync_user(
     access_token = create_access_token(user.external_id)
 
     return UserSyncResponse(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        is_new_user=is_new,
+        onboarding_completed=user.onboarding_completed,
+        access_token=access_token,
+    )
+
+
+@router.post("/wechat/login", response_model=WeChatLoginResponse)
+async def wechat_login(
+    request: Request,
+    login_data: WeChatLoginRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> WeChatLoginResponse:
+    """
+    WeChat Mini Program login.
+    1. Receives wx.login() code from frontend
+    2. Calls WeChat API to exchange code for openid/session_key
+    3. Creates or syncs user in database
+    4. Returns JWT access token
+    """
+    await rate_limit_by_ip(request, "wechat_login", 10, 60)
+
+    if not settings.wechat_appid or not settings.wechat_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="WeChat login is not configured. Set WECHAT_APPID and WECHAT_SECRET.",
+        )
+
+    # Exchange code for openid via WeChat API
+    wechat_url = "https://api.weixin.qq.com/sns/jscode2session"
+    wechat_params = {
+        "appid": settings.wechat_appid,
+        "secret": settings.wechat_secret,
+        "js_code": login_data.code,
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(wechat_url, params=wechat_params)
+            resp.raise_for_status()
+            wechat_data = resp.json()
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to contact WeChat API: {e}",
+        ) from None
+
+    # Check for WeChat API errors
+    errcode = wechat_data.get("errcode")
+    if errcode:
+        errmsg = wechat_data.get("errmsg", "Unknown error")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"WeChat login failed: {errmsg} (code: {errcode})",
+        )
+
+    openid = wechat_data.get("openid")
+    if not openid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="WeChat login failed: no openid returned",
+        )
+
+    # Sync user
+    user_service = UserService(db)
+    user, is_new = await user_service.sync_from_wechat(
+        openid=openid,
+        nickname=login_data.nickname,
+        avatar_url=login_data.avatar_url,
+    )
+
+    access_token = create_access_token(user.external_id)
+
+    return WeChatLoginResponse(
         id=user.id,
         email=user.email,
         display_name=user.display_name,

@@ -79,6 +79,9 @@ class ItemResponse(ItemBase):
     image_path: str
     thumbnail_path: str | None = None
     medium_path: str | None = None
+    public_url: str | None = None
+    public_url_medium: str | None = None
+    public_url_thumbnail: str | None = None
     tags: dict = Field(default_factory=dict)
     colors: list[str] = Field(default_factory=list)
     primary_color: str | None = None
@@ -91,6 +94,8 @@ class ItemResponse(ItemBase):
     ai_processed: bool = False
     ai_confidence: Decimal | None = None
     ai_description: str | None = None
+    source_scene: str | None = None
+    tryon_ready: bool = False
     wear_count: int = 0
     last_worn_at: date | None = None
     last_suggested_at: date | None = None
@@ -149,6 +154,8 @@ class ItemFilter(BaseModel):
     status: str | None = None
     favorite: bool | None = None
     needs_wash: bool | None = None
+    source_scene: str | None = None
+    tryon_ready: bool | None = None
     is_archived: bool = False
     search: str | None = None
     sort_by: str | None = None
@@ -287,3 +294,5 @@ class WashHistoryResponse(BaseModel):
     method: str | None = None
     notes: str | None = None
     created_at: datetime
+
+
