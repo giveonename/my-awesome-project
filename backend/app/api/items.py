@@ -1271,7 +1271,7 @@ async def parse_items_from_image(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     image: UploadFile = File(...),
-    scene_type: str = Form("commodity"),
+    scene_type: str = Form("", description="commodity/avatar/empty=auto"),
 ) -> ParseResponse:
     """Synchronously analyze an image for clothing items using AI.
 
@@ -1314,6 +1314,22 @@ async def parse_items_from_image(
     # ---------------------------------------------------------------
     # Path A: Scene-based primary processing
     # ---------------------------------------------------------------
+    # Auto-classify using MiMo vision model
+    if not scene_type:
+        from app.services.ai_service import AIService as _AISvc
+        from app.models.preference import UserPreference
+        from sqlalchemy import select as _select
+        _pref_result = await db.execute(
+            _select(UserPreference).where(UserPreference.user_id == current_user.id)
+        )
+        _pref = _pref_result.scalar_one_or_none()
+        _user_eps = _pref.ai_endpoints if _pref and _pref.ai_endpoints else []
+        _ai_svc = _AISvc()
+        scene_type = await _ai_svc.classify_image_type(full_image_path, user_endpoints=_user_eps)
+        if scene_type == "flat_lay":
+            scene_type = "commodity"
+        print(f"AUTO_CLASSIFY_RESULT: {scene_type}")
+
     if scene_type == "commodity":
         # Flat-lay photo: background removal + connected-component splitting
         # Each separated garment → individual item in wardrobe
@@ -1521,8 +1537,8 @@ async def parse_items_from_image(
                                             thumbnail_url=sign_image_url(crop_paths.get("thumbnail_path"))
                                             if crop_paths.get("thumbnail_path") else None,
                                             confidence=0.85,
-                                            source_scene="avatar",
-                                            tryon_ready=True,
+                                            source_scene="commodity",
+                                            tryon_ready=False,
                                         ))
                                         logger.info("Avatar parsing-v1: stored %s crop", item_type)
                                     else:
@@ -1701,13 +1717,9 @@ async def create_items_from_parse(
                     item.public_url_thumbnail = item_image_paths.get("public_url_thumbnail")
                     await db.flush()
 
-                # Set source scene fields based on request
-                if request.scene_type == "avatar":
-                    item.source_scene = "avatar"
-                    item.tryon_ready = True
-                else:
-                    item.source_scene = "commodity"
-                    item.tryon_ready = False
+                # Set source scene fields - use each item's own values
+                item.source_scene = getattr(parsed, 'source_scene', None) or "commodity"
+                item.tryon_ready = bool(getattr(parsed, 'tryon_ready', False))
 
                 item_ids.append(str(item.id))
                 created += 1

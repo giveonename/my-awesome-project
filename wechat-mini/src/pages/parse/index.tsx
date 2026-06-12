@@ -105,9 +105,8 @@ export default function ParsePage() {
 
   const selectedCount = selectedIndices.size
 
-  // --- Upload handler: accepts a specific tab type ---
-  const handleUploadWithType = useCallback(async (type: 'outfit' | 'flat') => {
-    setActiveTab(type)
+  // --- Upload handler: auto-classify by backend ---
+  const handleUploadWithType = useCallback(async (type?: 'outfit' | 'flat') => {
     try {
       const res = await Taro.chooseMedia({
         count: 1,
@@ -125,12 +124,12 @@ export default function ParsePage() {
       setSelectedIndices(new Set())
 
       try {
-        const sceneType = type === 'outfit' ? 'avatar' : 'commodity'
+        // Send without scene_type - backend will auto-classify
         const uploadResult = await uploadFile<ParseResult>(
           '/items/parse',
           filePath,
           'image',
-          { scene_type: sceneType },
+          { scene_type: '' },
           300000
         )
         setResult({
@@ -151,8 +150,7 @@ export default function ParsePage() {
   }, [])
 
   // --- Camera-only handler ---
-  const handleCamera = useCallback(async (type: 'outfit' | 'flat') => {
-    setActiveTab(type)
+  const handleCamera = useCallback(async () => {
     try {
       const res = await Taro.chooseMedia({
         count: 1,
@@ -170,12 +168,11 @@ export default function ParsePage() {
       setSelectedIndices(new Set())
 
       try {
-        const sceneType = type === 'outfit' ? 'avatar' : 'commodity'
         const uploadResult = await uploadFile<ParseResult>(
           '/items/parse',
           filePath,
           'image',
-          { scene_type: sceneType },
+          { scene_type: '' },
           300000
         )
         setResult({
@@ -308,11 +305,11 @@ export default function ParsePage() {
     if (!result?.items?.length || selectedCount === 0) return
 
     setParseState('saving')
-    setLoadingText(activeTab === 'outfit' ? '正在加入试衣间...' : '正在加入衣橱...')
 
     try {
-      const sceneType = activeTab === 'outfit' ? 'avatar' : 'commodity'
       const selectedItems = result.items.filter((_, i) => selectedIndices.has(i))
+      const hasAvatar = selectedItems.some((i: any) => i.source_scene === 'avatar')
+      setLoadingText(hasAvatar ? '正在保存...' : '正在加入衣橱...')
       const saveRes = await request<{ created: number; failed: number }>(
         '/items/from-parse',
         {
@@ -320,7 +317,6 @@ export default function ParsePage() {
           data: {
             items: selectedItems,
             image_path: result.image_path || null,
-            scene_type: sceneType,
           },
           timeout: 300000,
         }
@@ -339,7 +335,7 @@ export default function ParsePage() {
     }
   }, [result, activeTab, selectedIndices, selectedCount])
 
-  const tabLabel = activeTab === 'outfit' ? '穿搭照' : '平铺图'
+  const tabLabel = '照片'
 
   // Ellipsis animation text
   const [dots, setDots] = useState('')
@@ -422,30 +418,16 @@ export default function ParsePage() {
               </View>
             </View>
 
-            {/* Dual action buttons */}
-            <View className='parse-dual-actions'>
-              <View className='parse-action-card' onClick={() => handleUploadWithType('flat')}>
-                <View className='parse-action-icon-wrap'>
-                  <Image src={icons['shirt']} className='parse-action-icon' style={{ width: '56rpx', height: '56rpx' }} />
-                </View>
-                <Text className='parse-action-title'>平铺图解析</Text>
-                <Text className='parse-action-desc'>单件衣物平铺拍照</Text>
-                <View className='parse-action-btn'>
-                  <Image src={icons['camera']} className='parse-action-btn-icon' style={{ width: '32rpx', height: '32rpx' }} />
-                  <Text className='parse-action-btn-text'>拍照 / 相册</Text>
-                </View>
+            {/* Single upload action */}
+            <View className='parse-action-card parse-action-card--wide' onClick={() => handleUploadWithType('flat')}>
+              <View className='parse-action-icon-wrap'>
+                <Image src={icons['camera']} className='parse-action-icon' style={{ width: '64rpx', height: '64rpx' }} />
               </View>
-
-              <View className='parse-action-card' onClick={() => handleUploadWithType('outfit')}>
-                <View className='parse-action-icon-wrap parse-action-icon-wrap--accent'>
-                  <Image src={icons['eye']} className='parse-action-icon' style={{ width: '56rpx', height: '56rpx' }} />
-                </View>
-                <Text className='parse-action-title'>穿搭照解析</Text>
-                <Text className='parse-action-desc'>全身穿搭一键拆解</Text>
-                <View className='parse-action-btn'>
-                  <Image src={icons['camera']} className='parse-action-btn-icon' style={{ width: '32rpx', height: '32rpx' }} />
-                  <Text className='parse-action-btn-text'>拍照 / 相册</Text>
-                </View>
+              <Text className='parse-action-title'>上传照片</Text>
+              <Text className='parse-action-desc'>AI 自动识别穿搭照或平铺照</Text>
+              <View className='parse-action-btn'>
+                <Image src={icons['camera']} className='parse-action-btn-icon' style={{ width: '32rpx', height: '32rpx' }} />
+                <Text className='parse-action-btn-text'>拍照 / 相册</Text>
               </View>
             </View>
 
@@ -621,9 +603,9 @@ export default function ParsePage() {
                       {item.style?.slice(0, 2).map((s, i) => (
                         <Text key={i} className='parse-garment-tag'>{s}</Text>
                       ))}
-                      {item.confidence != null && item.confidence > 0 && (
-                        <Text className='parse-garment-confidence'>{Math.round(item.confidence * 100)}%</Text>
-                      )}
+                      <Text className={`parse-garment-tag ${item.source_scene === 'avatar' ? 'parse-garment-tag--tryon' : 'parse-garment-tag--wardrobe'}`}>
+                        {item.source_scene === 'avatar' ? '试衣间' : '衣橱'}
+                      </Text>
                     </View>
                   </View>
                   <View className='parse-garment-check'>

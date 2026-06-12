@@ -322,6 +322,12 @@
     transform: scale(0.97);
     box-shadow: $shadow-sm;
   }
+
+  &--wide {
+    width: 100%;
+    margin-bottom: 24rpx;
+    padding: 48rpx 32rpx;
+  }
 }
 
 .parse-action-icon-wrap {
@@ -712,6 +718,16 @@
   border-radius: $radius-pill;
   background: $color-gray-100;
   color: $text-secondary;
+
+  &--tryon {
+    background: rgba(255, 105, 135, 0.1);
+    color: #E53E3E;
+  }
+
+  &--wardrobe {
+    background: rgba(124, 111, 235, 0.1);
+    color: $color-primary;
+  }
 }
 
 .parse-garment-confidence {
