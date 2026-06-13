@@ -59,36 +59,9 @@ export default function WardrobePage() {
   const pageSize = 30
   const currentPageRef = useRef(1)
 
-  // Batch notification state
-  const [batchNotification, setBatchNotification] = useState<{ batchId: string; count: number } | null>(null)
-
   useDidShow(() => {
     loadItems(true)
-    checkBatchStatus()
   })
-
-  const checkBatchStatus = useCallback(async () => {
-    try {
-      // Check if there's a recent batch job stored
-      const storedBatchId = Taro.getStorageSync('pending_batch_id')
-      if (!storedBatchId) return
-
-      const data = await api.get<any>(`/items/batch-status/${storedBatchId}`)
-      if (data.status === 'completed' || data.status === 'partial') {
-        setBatchNotification({ batchId: storedBatchId, count: data.completed })
-        Taro.removeStorageSync('pending_batch_id')
-      }
-    } catch (err) {
-      // Ignore errors
-    }
-  }, [])
-
-  const handleBatchNotificationTap = useCallback(() => {
-    if (batchNotification) {
-      Taro.navigateTo({ url: `/pages/batch-review/index?batch_id=${batchNotification.batchId}` })
-      setBatchNotification(null)
-    }
-  }, [batchNotification])
 
   useEffect(() => {
     loadItems(true)
@@ -412,20 +385,6 @@ export default function WardrobePage() {
 
   return (
     <View className='wardrobe-page'>
-      {/* Batch completion notification */}
-      {batchNotification && (
-        <View className='wardrobe-batch-notify' onClick={handleBatchNotificationTap}>
-          <View className='wardrobe-batch-notify-left'>
-            <Text className='wardrobe-batch-notify-icon'>{'\uD83C\uDF89'}</Text>
-            <View className='wardrobe-batch-notify-text'>
-              <Text className='wardrobe-batch-notify-title'>{batchNotification.count} 件衣物识别完成</Text>
-              <Text className='wardrobe-batch-notify-desc'>点击查看并选择入库</Text>
-            </View>
-          </View>
-          <Text className='wardrobe-batch-notify-arrow'>{'\u203A'}</Text>
-        </View>
-      )}
-
       {/* Title + Filter */}
       <View className='wardrobe-top-bar'>
         <Text className='wardrobe-title'>我的衣橱</Text>

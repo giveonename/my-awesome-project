@@ -300,7 +300,12 @@
   letter-spacing: 1rpx;
 }
 
-// --- Dual action cards ---
+.parse-header-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
 .parse-dual-actions {
   display: flex;
   gap: 24rpx;
@@ -1009,149 +1014,30 @@
   margin-top: 8rpx;
 }
 
-// ===== Batch Upload =====
-.parse-batch-entry {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-xs;
-  margin: $spacing-lg $spacing-xl 0;
-  padding: $spacing-sm;
-  background: rgba(124, 111, 235, 0.08);
-  border-radius: $radius-pill;
-  border: 1.5rpx dashed rgba(124, 111, 235, 0.3);
-  transition: all 150ms ease;
-
-  &:active {
-    transform: scale(0.97);
-    background: rgba(124, 111, 235, 0.15);
-  }
-}
-
-.parse-batch-icon {
-  opacity: 0.7;
-}
-
-.parse-batch-text {
-  font-size: 26rpx;
-  color: $color-primary;
-  font-weight: 500;
-}
-
-// Batch Selecting
-.parse-batch-selecting {
-  padding: $spacing-lg;
-}
-
-.parse-batch-title {
-  font-size: $font-h3-size;
-  font-weight: 600;
-  color: $text-primary;
-  margin-bottom: $spacing-md;
-}
-
-.parse-batch-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $spacing-sm;
-  margin-bottom: $spacing-lg;
-}
-
-.parse-batch-thumb {
-  width: calc((100% - 24rpx) / 4);
-  aspect-ratio: 1;
-  border-radius: $radius-md;
+// ===== Progress Bar (multi-file) =====
+.parse-progress-bar {
+  width: 80%;
+  height: 8rpx;
+  background: $color-gray-200;
+  border-radius: 4rpx;
+  margin-top: $spacing-sm;
   overflow: hidden;
-  position: relative;
-  background: $color-gray-100;
-
-  &--add {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2rpx dashed $color-gray-300;
-    background: transparent;
-  }
 }
 
-.parse-batch-thumb-img {
-  width: 100%;
+.parse-progress-fill {
   height: 100%;
+  background: $color-accent-gradient;
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
 }
 
-.parse-batch-thumb-remove {
-  position: absolute;
-  top: 4rpx;
-  right: 4rpx;
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+// ===== Scan Placeholder (no image) =====
+.parse-scan-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.parse-batch-thumb-remove-text {
-  font-size: 24rpx;
-  color: #fff;
-  font-weight: 700;
-}
-
-.parse-batch-thumb-add-text {
-  font-size: 48rpx;
-  color: $color-gray-400;
-}
-
-.parse-batch-actions {
-  display: flex;
-  gap: $spacing-md;
-}
-
-.parse-batch-btn {
-  flex: 1;
-  padding: $spacing-sm;
-  border-radius: $radius-pill;
-  text-align: center;
-  background: $color-gray-100;
-  transition: transform 150ms ease;
-
-  &:active { transform: scale(0.96); }
-
-  &--primary {
-    background: $color-accent-gradient;
-    box-shadow: $shadow-md;
-  }
-}
-
-.parse-batch-btn-text {
-  font-size: $font-body-size;
-  font-weight: 600;
-  color: $text-secondary;
-
-  &--primary {
-    color: #fff;
-  }
-}
-
-// Batch Uploading
-.parse-batch-uploading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 120rpx $spacing-xl;
-}
-
-.parse-batch-upload-text {
-  font-size: $font-body-size;
-  color: $text-secondary;
-  margin-top: $spacing-md;
-}
-
-// Batch Processing
-.parse-batch-processing {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: $spacing-xl;
+  width: 100%;
+  height: 300rpx;
+  background: $color-gray-50;
+  border-radius: $radius-lg;
 }

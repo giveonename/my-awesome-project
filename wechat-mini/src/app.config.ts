@@ -21,6 +21,9 @@ export default defineAppConfig({
     'pages/outfit-detail/index',
     'pages/item-select/index',
     'pages/batch-review/index',
+    'pages/evaluation/index',
+    'pages/discover/index',
+    'pages/ootd/index',
   ],
   requiredPrivateInfos: ['getLocation'],
   permission: {

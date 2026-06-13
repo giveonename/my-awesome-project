@@ -29,8 +29,21 @@ function setCacheEntry(key: string, value: string) {
   downloadCache.set(key, value)
 }
 
+function isLocalPath(url: string): boolean {
+  return (
+    url.startsWith('http://tmp') ||
+    url.startsWith('tmp/') ||
+    url.startsWith('wxfile://') ||
+    url.startsWith('/tmp/') ||
+    url.startsWith('https://tmp') ||
+    url.startsWith(Taro.env.USER_DATA_PATH)
+  )
+}
+
 export default function CachedImage({ src, mode = 'aspectFill', className, style, onError }: CachedImageProps) {
-  const [localPath, setLocalPath] = useState<string | null>(downloadCache.get(src) || null)
+  const [localPath, setLocalPath] = useState<string | null>(
+    downloadCache.get(src) || (src && isLocalPath(src) ? src : null)
+  )
   const [failed, setFailed] = useState(false)
   const mountedRef = useRef(true)
 
@@ -41,6 +54,13 @@ export default function CachedImage({ src, mode = 'aspectFill', className, style
 
   useEffect(() => {
     if (!src) return
+
+    // Local file paths can be used directly as Image src
+    if (isLocalPath(src)) {
+      setLocalPath(src)
+      setFailed(false)
+      return
+    }
 
     // Check cache first
     const cached = downloadCache.get(src)

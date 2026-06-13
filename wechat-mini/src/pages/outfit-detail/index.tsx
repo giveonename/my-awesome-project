@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
 import CachedImage from '../../components/CachedImage'
 import { ClothingItem } from '../../types'
-import { TYPE_LABELS, COLOR_MAP, getTypeLabel } from '../../constants'
+import { TYPE_LABELS, COLOR_MAP, getTypeLabel, OCCASION_LABELS } from '../../constants'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
@@ -19,6 +19,9 @@ interface OutfitDetail {
   model_image_url?: string
   like_count: number
   is_liked_by_me: boolean
+  source?: string
+  status?: string
+  name?: string
 }
 
 export default function OutfitDetailPage() {
@@ -70,6 +73,36 @@ export default function OutfitDetailPage() {
     }
   }
 
+  const handlePreviewPhoto = () => {
+    if (!outfit?.model_image_url) return
+    Taro.previewImage({ urls: [resolveImageUrl(outfit.model_image_url) || ''] })
+  }
+
+  const handleDelete = async () => {
+    if (!outfit) return
+    const { confirm } = await Taro.showModal({
+      title: '删除搭配',
+      content: '确定要删除这个搭配吗？删除后无法恢复。',
+      confirmColor: '#ff4d4f',
+    })
+    if (!confirm) return
+
+    try {
+      await api.delete(`/outfits/${outfit.id}`)
+      Taro.showToast({ title: '已删除', icon: 'success' })
+      setTimeout(() => Taro.navigateBack(), 1200)
+    } catch (err) {
+      console.error('Delete outfit failed:', err)
+      Taro.showToast({ title: '删除失败', icon: 'none' })
+    }
+  }
+
+  const handleEdit = () => {
+    if (!outfit) return
+    // 跳转到DIY页面，传入outfit_id进行编辑
+    Taro.navigateTo({ url: `/pages/diy/index?outfit_id=${outfit.id}` })
+  }
+
   if (loading) {
     return (
       <View className='od-page'>
@@ -82,6 +115,29 @@ export default function OutfitDetailPage() {
 
   return (
     <View className='od-page'>
+
+      {/* Hero: Outfit Photo */}
+      {outfit.model_image_url && (
+        <View className='od-hero' onClick={handlePreviewPhoto}>
+          <CachedImage
+            className='od-hero-img'
+            src={resolveImageUrl(outfit.model_image_url) || ''}
+            mode='aspectFill'
+          />
+        </View>
+      )}
+
+      {/* Outfit Name & Occasion */}
+      <View className='od-header-info'>
+        {outfit.name && (
+          <Text className='od-outfit-name'>{outfit.name}</Text>
+        )}
+        {outfit.occasion && (
+          <View className='od-occasion-tag'>
+            <Text className='od-occasion-tag-text'>{OCCASION_LABELS[outfit.occasion] || outfit.occasion}</Text>
+          </View>
+        )}
+      </View>
 
       {/* Items Grid */}
       <View className='od-section'>
@@ -159,8 +215,19 @@ export default function OutfitDetailPage() {
 
       {/* Action Buttons */}
       <View className='od-actions'>
+        {/* Edit and Delete for manual outfits */}
+        {outfit.source === 'manual' && (
+          <View className='od-action-row'>
+            <View className='od-action-btn od-action-btn--secondary' onClick={handleEdit}>
+              <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['edit']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>编辑</Text></View>
+            </View>
+            <View className='od-action-btn od-action-btn--danger' onClick={handleDelete}>
+              <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['trash']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>删除</Text></View>
+            </View>
+          </View>
+        )}
         <View className='od-action-btn od-action-btn--primary' onClick={handleWear}>
-          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['thumbs-up']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>就穿这套</Text></View>
+          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['thumbs-up']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>今天穿这套</Text></View>
         </View>
       </View>
     </View>

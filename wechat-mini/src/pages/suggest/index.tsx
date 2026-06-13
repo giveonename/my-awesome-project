@@ -1,7 +1,7 @@
 import { View, Text, Image, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow, useReachBottom, usePullDownRefresh } from '@tarojs/taro'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { api, resolveImageUrl, completeOutfit, CompleteOutfitGroup } from '../../utils/api'
+import { api, resolveImageUrl, completeOutfit, CompleteOutfitGroup, uploadFile } from '../../utils/api'
 import OutfitCard from '../../components/OutfitCard'
 import OutfitCardEnhanced from '../../components/OutfitCardEnhanced'
 import ProductCard from '../../components/ProductCard'
@@ -9,6 +9,7 @@ import VirtualTryOnModal from '../../components/VirtualTryOnModal'
 import CachedImage from '../../components/CachedImage'
 import { getLocationAndSave } from '../../utils/location'
 import { ClothingItem } from '../../types'
+import { OCCASION_FILTERS, OCCASION_OPTIONS, OCCASION_LABELS } from '../../constants'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
@@ -17,6 +18,7 @@ interface OutfitRecommendation {
   items: ClothingItem[]
   occasion?: string
   reasoning?: string
+  highlights?: string[]
   like_count?: number
   is_liked_by_me?: boolean
   model_image_url?: string
@@ -45,39 +47,114 @@ const MAX_RECOMMENDATIONS = 6
 function MineOutfitsTab() {
   const [outfits, setOutfits] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [activeOccasion, setActiveOccasion] = useState('all')
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null)
+  const [pendingOccasion, setPendingOccasion] = useState<string | null>(null)
+  const [uploadingOutfitId, setUploadingOutfitId] = useState<string | null>(null)
 
-  useDidShow(() => {
+  // 使用 useEffect 在组件挂载时加载数据
+  useEffect(() => {
     loadMine()
-  })
+  }, [])
 
   const loadMine = async () => {
     setLoading(true)
+    setError(false)
     try {
-      const data = await api.get<{ items: any[] }>('/outfits', {
+      const data = await api.get<{ outfits: any[]; total: number; has_more: boolean }>('/outfits', {
         page: '1',
         page_size: '50',
         source: 'manual',
       })
-      setOutfits(data.items || [])
+      setOutfits(data.outfits || [])
     } catch (err) {
       console.error('Load mine outfits failed:', err)
+      setError(true)
     } finally {
       setLoading(false)
     }
   }
 
+  const handleSetScene = async (outfitId: string, occasion: string) => {
+    const prevOccasion = outfits.find(o => o.id === outfitId)?.occasion
+    setOutfits(prev => prev.map(o => o.id === outfitId ? { ...o, occasion } : o))
+    setEditingSceneId(null)
+    setPendingOccasion(null)
+    try {
+      await api.patch(`/outfits/${outfitId}`, { occasion })
+      Taro.showToast({ title: '场景已更新', icon: 'success' })
+    } catch (err) {
+      console.error('Set scene failed:', err)
+      setOutfits(prev => prev.map(o => o.id === outfitId ? { ...o, occasion: prevOccasion } : o))
+      Taro.showToast({ title: '设置失败', icon: 'none' })
+    }
+  }
+
+  const handleUploadPhoto = async (outfitId: string) => {
+    try {
+      const res = await Taro.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+      })
+
+      if (res.tempFilePaths.length === 0) return
+
+      setUploadingOutfitId(outfitId)
+      Taro.showLoading({ title: '上传中...' })
+
+      const filePath = res.tempFilePaths[0]
+      const uploadResult = await uploadFile<{ url: string }>(
+        '/items/upload-image',
+        filePath,
+        'image',
+        undefined,
+        60000
+      )
+
+      await api.patch(`/outfits/${outfitId}`, { outfit_photo_url: uploadResult.url })
+
+      setOutfits(prev => prev.map(o =>
+        o.id === outfitId ? { ...o, model_image_url: uploadResult.url } : o
+      ))
+
+      Taro.hideLoading()
+      Taro.showToast({ title: '穿搭照已上传', icon: 'success' })
+    } catch (err) {
+      Taro.hideLoading()
+      console.error('Upload photo failed:', err)
+      if (err && (err as any).errMsg && (err as any).errMsg.includes('cancel')) {
+        return
+      }
+      Taro.showToast({ title: '上传失败', icon: 'none' })
+    } finally {
+      setUploadingOutfitId(null)
+    }
+  }
+
+  const filteredOutfits = activeOccasion === 'all'
+    ? outfits
+    : outfits.filter(o => o.occasion === activeOccasion)
+
   if (loading) {
     return (
       <View className='suggest-body'>
-        <View className='suggest-waterfall'>
-          <View className='suggest-col'>
-            <View className='skel-card skel-card--tall' />
-            <View className='skel-card skel-card--short' />
-          </View>
-          <View className='suggest-col'>
-            <View className='skel-card skel-card--medium' />
-            <View className='skel-card skel-card--tall' />
-          </View>
+        <View className='mine-list'>
+          <View className='mine-card-skeleton' />
+          <View className='mine-card-skeleton' />
+        </View>
+      </View>
+    )
+  }
+
+  if (error) {
+    return (
+      <View className='suggest-empty'>
+        <Text className='suggest-empty-title'>加载失败了</Text>
+        <Text className='suggest-empty-desc'>检查一下网络，再试试？</Text>
+        <View className='suggest-empty-btn press-scale' onClick={loadMine}>
+          <Text className='suggest-empty-btn-text'>重新加载</Text>
         </View>
       </View>
     )
@@ -99,33 +176,147 @@ function MineOutfitsTab() {
     )
   }
 
+  const handlePhotoClick = (outfit: any) => {
+    if (outfit.model_image_url) {
+      Taro.previewImage({ urls: [resolveImageUrl(outfit.model_image_url) || ''] })
+    } else {
+      handleUploadPhoto(outfit.id)
+    }
+  }
+
   return (
-    <View className='suggest-body'>
-      <View className='suggest-waterfall'>
-        <View className='suggest-col'>
-          {outfits.filter((_, i) => i % 2 === 0).map((outfit, idx) => (
-            <OutfitCard
-              key={outfit.id}
-              id={outfit.id}
-              items={outfit.items || []}
-              occasion={outfit.occasion}
-              likeCount={outfit.like_count}
-              index={idx}
-            />
-          ))}
+    <View className='mine-container'>
+      {/* 场景筛选栏 */}
+      <ScrollView className='mine-occasion-bar' scrollX enableFlex>
+        {OCCASION_FILTERS.map(o => (
+          <View
+            key={o.key}
+            className={`mine-occasion-tag ${activeOccasion === o.key ? 'mine-occasion-tag--active' : ''}`}
+            onClick={() => setActiveOccasion(o.key)}
+          >
+            <Text className='mine-occasion-tag-text'>{o.label}</Text>
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* 搭配列表 */}
+      {filteredOutfits.length === 0 ? (
+        <View className='mine-filtered-empty'>
+          <Text className='mine-filtered-empty-text'>该场景暂无搭配</Text>
+          <Text className='mine-filtered-empty-hint'>换个场景试试，或创建新搭配</Text>
         </View>
-        <View className='suggest-col'>
-          {outfits.filter((_, i) => i % 2 === 1).map((outfit, idx) => (
-            <OutfitCard
-              key={outfit.id}
-              id={outfit.id}
-              items={outfit.items || []}
-              occasion={outfit.occasion}
-              likeCount={outfit.like_count}
-              index={idx}
-            />
-          ))}
-        </View>
+      ) : (
+      <View className='mine-list'>
+        {filteredOutfits.map((outfit) => (
+          <View key={outfit.id} className='mine-card'>
+            {/* 左侧衣物缩略图 - 点击进入详情 */}
+            <View
+              className='mine-card-left'
+              onClick={() => Taro.navigateTo({ url: `/pages/outfit-detail/index?id=${outfit.id}` })}
+            >
+              <View className='mine-card-items'>
+                {(outfit.items || []).slice(0, 2).map((item: any, i: number) => (
+                  <View key={item.id || i} className='mine-card-item'>
+                    {item.thumbnail_url ? (
+                      <CachedImage
+                        className='mine-card-item-img'
+                        src={resolveImageUrl(item.thumbnail_url) || ''}
+                        mode='aspectFill'
+                      />
+                    ) : (
+                      <View className='mine-card-item-placeholder'>
+                        <Text className='mine-card-item-emoji'>👕</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+                {(outfit.items || []).length > 2 && (
+                  <View className='mine-card-item-more'>
+                    <Text className='mine-card-item-more-text'>+{outfit.items.length - 2}</Text>
+                  </View>
+                )}
+              </View>
+              {/* 设定场景标签 */}
+              <View
+                className={`mine-card-scene ${editingSceneId === outfit.id ? 'mine-card-scene--editing' : ''} ${outfit.occasion ? 'mine-card-scene--set' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditingSceneId(editingSceneId === outfit.id ? null : outfit.id)
+                  setPendingOccasion(null)
+                }}
+              >
+                <Text className='mine-card-scene-text'>
+                  {outfit.occasion ? OCCASION_LABELS[outfit.occasion] || outfit.occasion : '设定场景'}
+                </Text>
+              </View>
+            </View>
+
+            {/* 右侧穿搭照区域 - 有照片点击预览，无照片点击上传 */}
+            <View
+              className='mine-card-right'
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePhotoClick(outfit)
+              }}
+            >
+              {outfit.model_image_url ? (
+                <>
+                  <CachedImage
+                    className='mine-card-photo-img'
+                    src={resolveImageUrl(outfit.model_image_url) || ''}
+                    mode='aspectFill'
+                  />
+                  <View className='mine-card-photo-replace' onClick={(e) => {
+                    e.stopPropagation()
+                    handleUploadPhoto(outfit.id)
+                  }}>
+                    <Text className='mine-card-photo-replace-text'>更换</Text>
+                  </View>
+                </>
+              ) : (
+                <View className='mine-card-photo'>
+                  <Text className='mine-card-photo-icon'>📷</Text>
+                  <Text className='mine-card-photo-text'>点击上传穿搭照</Text>
+                  <Text className='mine-card-photo-hint'>记录你的穿搭</Text>
+                </View>
+              )}
+            </View>
+
+            {/* 场景选择面板 */}
+            {editingSceneId === outfit.id && (
+              <View className='mine-scene-panel' onClick={(e) => e.stopPropagation()}>
+                <View className='mine-scene-grid'>
+                  {OCCASION_OPTIONS.map(o => (
+                    <View
+                      key={o.key}
+                      className={`mine-scene-item ${(pendingOccasion || outfit.occasion) === o.key ? 'mine-scene-item--active' : ''}`}
+                      onClick={() => setPendingOccasion(o.key)}
+                    >
+                      <Text className='mine-scene-item-text'>{o.label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View className='mine-scene-actions'>
+                  <View className='mine-scene-btn mine-scene-btn--cancel' onClick={() => { setEditingSceneId(null); setPendingOccasion(null) }}>
+                    <Text className='mine-scene-btn-text'>取消</Text>
+                  </View>
+                  <View className='mine-scene-btn mine-scene-btn--confirm' onClick={() => {
+                    if (pendingOccasion) handleSetScene(outfit.id, pendingOccasion)
+                    else setEditingSceneId(null)
+                  }}>
+                    <Text className='mine-scene-btn-text'>确定</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        ))}
+      </View>
+      )}
+
+      {/* FAB按钮 */}
+      <View className='mine-fab' onClick={() => Taro.navigateTo({ url: '/pages/diy/index' })}>
+        <Text className='mine-fab-text'>+</Text>
       </View>
     </View>
   )
@@ -600,6 +791,8 @@ export default function SuggestPage() {
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const requestIdRef = useRef(0)
   const [incomingItemId, setIncomingItemId] = useState('')
+  const [occasion, setOccasion] = useState('casual')
+  const tryOnPollRef = useRef<NodeJS.Timeout | null>(null)
 
   // --- Virtual Try-On ---
   const [tryOnVisible, setTryOnVisible] = useState(false)
@@ -612,26 +805,47 @@ export default function SuggestPage() {
     setTryOnVisible(true)
   }, [])
 
-  // POST /outfits/suggest — 每次获取一条推荐
-  const fetchOneRecommendation = useCallback(async (occasion: string = 'casual'): Promise<OutfitRecommendation | null> => {
-    try {
-      const loc = await Promise.race([getLocationAndSave(), new Promise<null>(r => setTimeout(() => r(null), 5000))])
-      const body: Record<string, unknown> = { occasion }
-      if (loc) {
-        body.latitude = loc.latitude
-        body.longitude = loc.longitude
+  // Poll for try-on image updates
+  const startTryOnPolling = useCallback((outfitIds: string[]) => {
+    if (tryOnPollRef.current) clearInterval(tryOnPollRef.current)
+
+    let pollCount = 0
+    const maxPolls = 30 // Max 5 minutes (30 * 10s)
+
+    tryOnPollRef.current = setInterval(async () => {
+      pollCount++
+      if (pollCount > maxPolls || outfitIds.length === 0) {
+        if (tryOnPollRef.current) clearInterval(tryOnPollRef.current)
+        return
       }
-      const data = await api.post<OutfitRecommendation>('/outfits/suggest', body, { timeout: 180000 })
-      return data
-    } catch (err: any) {
-      // 衣橱衣物不足是正常业务场景，不需要报错
-      if (err?.status === 400) return null
-      console.error('Failed to get recommendation:', err)
-      return null
-    }
+
+      try {
+        const updated = await api.post<any[]>('/outfits/batch-check', { ids: outfitIds })
+        if (updated && Array.isArray(updated)) {
+          setOutfits(prev => {
+            const next = [...prev]
+            let changed = false
+            for (const u of updated) {
+              const idx = next.findIndex(o => o.id === u.id)
+              if (idx >= 0 && u.model_image_url && !next[idx].model_image_url) {
+                next[idx] = { ...next[idx], model_image_url: u.model_image_url }
+                changed = true
+              }
+            }
+            // If all have images, stop polling
+            if (next.every(o => o.model_image_url)) {
+              if (tryOnPollRef.current) clearInterval(tryOnPollRef.current)
+            }
+            return changed ? next : prev
+          })
+        }
+      } catch (err) {
+        console.error('Try-on polling failed:', err)
+      }
+    }, 10000) // Poll every 10 seconds
   }, [])
 
-  // 首屏加载：批量获取推荐
+  // POST /outfits/suggest-batch — 一次获取多套推荐
   const fetchOutfits = useCallback(async (reset: boolean = false) => {
     const requestId = ++requestIdRef.current
 
@@ -644,38 +858,46 @@ export default function SuggestPage() {
     }
 
     try {
-      // 获取第一条
-      const first = await fetchOneRecommendation()
+      const loc = await Promise.race([
+        getLocationAndSave(),
+        new Promise<null>(r => setTimeout(() => r(null), 5000))
+      ])
+
+      const body: Record<string, unknown> = {
+        occasion,
+        count: MAX_RECOMMENDATIONS,
+      }
+      if (loc) {
+        body.latitude = loc.latitude
+        body.longitude = loc.longitude
+      }
+
+      const data = await api.post<OutfitRecommendation[]>('/outfits/suggest-batch', body, {
+        timeout: 180000
+      })
+
       if (requestId !== requestIdRef.current) return
 
-      if (first) {
-        if (reset) {
-          setOutfits([first])
-        } else {
-          setOutfits(prev => [...prev, first])
-        }
+      if (data && Array.isArray(data) && data.length > 0) {
+        setOutfits(data)
         setLoading(false)
 
-        // 并行获取更多推荐
-        const remaining = MAX_RECOMMENDATIONS - (reset ? 1 : outfits.length + 1)
-        for (let i = 0; i < remaining; i++) {
-          if (requestId !== requestIdRef.current) return
-          const next = await fetchOneRecommendation()
-          if (requestId !== requestIdRef.current) return
-          if (next) {
-            setOutfits(prev => {
-              if (prev.some(o => o.id === next.id)) return prev
-              return [...prev, next]
-            })
-          }
+        // Start polling for try-on images
+        const idsNeedingTryOn = data
+          .filter(o => !o.model_image_url)
+          .map(o => o.id)
+        if (idsNeedingTryOn.length > 0) {
+          startTryOnPolling(idsNeedingTryOn)
         }
       } else {
         if (reset) setOutfits([])
       }
-    } catch (err) {
+    } catch (err: any) {
       if (requestId === requestIdRef.current) {
         console.error('Failed to load outfits:', err)
-        if (reset) {
+        if (err?.status === 400) {
+          // Insufficient wardrobe
+        } else if (reset) {
           Taro.showToast({ title: '推荐没拿到，稍后再试试', icon: 'none' })
         }
       }
@@ -685,7 +907,7 @@ export default function SuggestPage() {
         setLoadingMore(false)
       }
     }
-  }, [fetchOneRecommendation, loadingMore, outfits.length])
+  }, [occasion, loadingMore, startTryOnPolling])
 
   // 首屏加载 + 检查从衣物详情跳转过来的 item_id
   useDidShow(() => {
@@ -777,22 +999,44 @@ export default function SuggestPage() {
       {/* ===== AI Tab Content ===== */}
       {activeTab === 'ai' && (
         <View className='suggest-body'>
+          {/* 场景选择器 */}
+          <ScrollView className='occasion-selector' scrollX enableFlex>
+            {OCCASIONS.map(o => (
+              <View
+                key={o.key}
+                className={`occasion-tag ${occasion === o.key ? 'occasion-tag--active' : ''}`}
+                onClick={() => {
+                  setOccasion(o.key)
+                  fetchOutfits(true)
+                }}
+              >
+                <Text className='occasion-tag-icon'>{o.icon}</Text>
+                <Text className='occasion-tag-label'>{o.label}</Text>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* 加载进度提示 */}
+          {loading && (
+            <View className='suggest-loading-state'>
+              <View className='suggest-loading-spinner' />
+              <Text className='suggest-loading-text'>AI 正在为你搭配...</Text>
+              <Text className='suggest-loading-hint'>预计需要 10-20 秒</Text>
+            </View>
+          )}
+
           {/* 骨架屏加载 */}
           {loading && (
             <View className='suggest-waterfall'>
               <View className='suggest-col'>
                 <View className='skel-card skel-card--tall' />
                 <View className='skel-card skel-card--short' />
-                <View className='skel-card skel-card--medium' />
               </View>
               <View className='suggest-col'>
                 <View className='skel-card skel-card--medium' />
                 <View className='skel-card skel-card--tall' />
-                <View className='skel-card skel-card--short' />
               </View>
             </View>
-
-
           )}
 
           {/* 瀑布流列表 */}
@@ -807,7 +1051,6 @@ export default function SuggestPage() {
                       items={outfit.items}
                       modelImageUrl={outfit.model_image_url}
                       occasion={outfit.occasion}
-                      reasoning={outfit.reasoning}
                       likeCount={outfit.like_count}
                       isLiked={likedIds.has(outfit.id) || outfit.is_liked_by_me}
                       index={idx}
@@ -824,7 +1067,6 @@ export default function SuggestPage() {
                       items={outfit.items}
                       modelImageUrl={outfit.model_image_url}
                       occasion={outfit.occasion}
-                      reasoning={outfit.reasoning}
                       likeCount={outfit.like_count}
                       isLiked={likedIds.has(outfit.id) || outfit.is_liked_by_me}
                       index={idx}

@@ -58,6 +58,7 @@ class Outfit(Base):
     reasoning: Mapped[str | None] = mapped_column(Text)
     style_notes: Mapped[str | None] = mapped_column(Text)
     ai_raw_response: Mapped[dict | None] = mapped_column(JSONB)
+    model_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     # Status
     status: Mapped[OutfitStatus] = mapped_column(

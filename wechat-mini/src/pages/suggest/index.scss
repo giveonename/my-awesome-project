@@ -56,6 +56,81 @@
   padding: $spacing-sm;
 }
 
+// ===================== Occasion Selector =====================
+
+.occasion-selector {
+  white-space: nowrap;
+  padding: $spacing-sm 0;
+  margin-bottom: $spacing-sm;
+}
+
+.occasion-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  margin-right: $spacing-sm;
+  border-radius: $radius-pill;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-accent-gradient;
+    box-shadow: $shadow-sm;
+
+    .occasion-tag-label {
+      color: white;
+      font-weight: 600;
+    }
+  }
+}
+
+.occasion-tag-icon {
+  font-size: 28rpx;
+}
+
+.occasion-tag-label {
+  font-size: $font-caption-size;
+  color: $text-secondary;
+}
+
+// ===================== Loading State =====================
+
+.suggest-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx 0;
+}
+
+.suggest-loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid $color-gray-200;
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: $spacing-md;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.suggest-loading-text {
+  font-size: $font-body-size;
+  color: $text-primary;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.suggest-loading-hint {
+  font-size: $font-caption-size;
+  color: $text-tertiary;
+}
+
 // ===================== Waterfall Layout =====================
 
 .suggest-waterfall {
@@ -775,4 +850,354 @@
 .suggest-outfit-group-card {
   width: 280rpx;
   flex-shrink: 0;
+}
+
+// ===== 我的搭配 Tab =====
+
+.mine-container {
+  padding: $spacing-sm;
+}
+
+.mine-occasion-bar {
+  white-space: nowrap;
+  padding: $spacing-sm 0;
+  margin-bottom: $spacing-sm;
+}
+
+.mine-occasion-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  margin-right: $spacing-sm;
+  border-radius: $radius-pill;
+  background: $card-bg;
+  box-shadow: $shadow-xs;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-primary;
+    box-shadow: $shadow-sm;
+
+    .mine-occasion-tag-text {
+      color: white;
+      font-weight: 600;
+    }
+  }
+}
+
+.mine-occasion-tag-text {
+  font-size: $font-caption-size;
+  color: $text-secondary;
+}
+
+.mine-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.mine-card {
+  display: flex;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+  position: relative;
+}
+
+.mine-card-left {
+  width: 240rpx;
+  flex-shrink: 0;
+  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.mine-card-items {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.mine-card-item {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: $color-gray-50;
+}
+
+.mine-card-item-img {
+  width: 100%;
+  height: 100%;
+}
+
+.mine-card-item-placeholder {
+  @include flex-center;
+  width: 100%;
+  height: 100%;
+  background: $color-gray-100;
+}
+
+.mine-card-item-emoji {
+  font-size: 32rpx;
+  opacity: 0.4;
+}
+
+.mine-card-scene {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-sm;
+  background: $color-gray-100;
+  border: 1rpx dashed $color-gray-300;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+
+  &--set {
+    background: $color-primary-50;
+    border: 1rpx solid $color-primary;
+  }
+
+  &--editing {
+    background: $color-primary-50;
+    border: 1rpx solid $color-primary;
+  }
+}
+
+.mine-card-scene-text {
+  font-size: $font-tag-size;
+  color: $color-primary;
+
+  .mine-card-scene--set & {
+    color: $color-primary-dark;
+  }
+
+  .mine-card-scene--editing & {
+    color: $color-primary;
+  }
+}
+
+.mine-card-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fe 0%, #f0f2f9 100%);
+  border-left: 1rpx solid $color-gray-200;
+  min-height: 200rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.mine-card-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.mine-card-photo-icon {
+  font-size: 48rpx;
+  opacity: 0.6;
+}
+
+.mine-card-photo-text {
+  font-size: $font-caption-size;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+.mine-card-photo-hint {
+  font-size: $font-tag-size;
+  color: $text-tertiary;
+}
+
+.mine-card-photo-img {
+  width: 100%;
+  height: 100%;
+}
+
+.mine-card-photo-replace {
+  position: absolute;
+  bottom: 8rpx;
+  right: 8rpx;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.mine-card-photo-replace-text {
+  font-size: $font-tag-size;
+  color: #fff;
+}
+
+.mine-card-item-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-sm;
+  background: $color-gray-100;
+}
+
+.mine-card-item-more-text {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+  font-weight: 600;
+}
+
+.mine-filtered-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx $spacing-xl;
+}
+
+.mine-filtered-empty-text {
+  font-size: $font-h3-size;
+  color: $text-secondary;
+  font-weight: 500;
+}
+
+.mine-filtered-empty-hint {
+  font-size: $font-caption-size;
+  color: $text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+// 场景选择面板
+.mine-scene-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300rpx;
+  background: $card-bg;
+  box-shadow: -4rpx 0 16rpx rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: $spacing-md;
+}
+
+.mine-scene-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-xs;
+  flex: 1;
+}
+
+.mine-scene-item {
+  @include flex-center;
+  padding: $spacing-xs;
+  border-radius: $radius-sm;
+  background: $color-gray-100;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-primary-50;
+    border: 1rpx solid $color-primary;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.mine-scene-item-text {
+  font-size: $font-caption-size;
+  color: $text-secondary;
+
+  .mine-scene-item--active & {
+    color: $color-primary;
+    font-weight: 600;
+  }
+}
+
+.mine-scene-actions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.mine-scene-btn {
+  flex: 1;
+  @include flex-center;
+  height: 64rpx;
+  border-radius: $radius-sm;
+  transition: all 0.2s ease;
+
+  &--cancel {
+    background: $color-gray-100;
+  }
+
+  &--confirm {
+    background: $color-primary;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.mine-scene-btn-text {
+  font-size: $font-body-size;
+  font-weight: 600;
+
+  .mine-scene-btn--cancel & {
+    color: $text-secondary;
+  }
+
+  .mine-scene-btn--confirm & {
+    color: white;
+  }
+}
+
+// 骨架屏
+.mine-card-skeleton {
+  height: 200rpx;
+  background: $card-bg;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-50 50%, $color-gray-100 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+// FAB按钮
+.mine-fab {
+  position: fixed;
+  right: 32rpx;
+  bottom: 120rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: $color-accent-gradient;
+  box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.4);
+  @include flex-center;
+  z-index: 100;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.mine-fab-text {
+  font-size: 48rpx;
+  color: white;
+  font-weight: 300;
+  line-height: 1;
 }

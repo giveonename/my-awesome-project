@@ -237,3 +237,42 @@ export function getTypeLabel(type: string | null | undefined): string {
   if (cleanType && TYPE_LABELS[cleanType]) return TYPE_LABELS[cleanType]
   return cleanType || '其他'
 }
+
+// 场合标签（统一定义，所有页面共用）
+export const OCCASION_LABELS: Record<string, string> = {
+  casual: '日常',
+  work: '通勤',
+  date: '约会',
+  formal: '正式',
+  sport: '运动',
+  travel: '旅行',
+  party: '派对',
+  office: '办公',
+  outdoor: '户外',
+  lounge: '居家',
+  beach: '海滩',
+}
+
+export const OCCASION_ICONS: Record<string, string> = {
+  casual: '☀️',
+  work: '💼',
+  date: '💕',
+  formal: '👔',
+  sport: '🏃',
+  travel: '✈️',
+  party: '🎉',
+  outdoor: '🏕️',
+}
+
+// 用于筛选栏（带"全部"选项）
+export const OCCASION_FILTERS = [
+  { key: 'all', label: '全部' },
+  ...Object.entries(OCCASION_LABELS)
+    .filter(([k]) => ['casual', 'work', 'date', 'formal', 'sport', 'travel', 'party'].includes(k))
+    .map(([key, label]) => ({ key, label })),
+]
+
+// 用于场景选择面板（不含"全部"）
+export const OCCASION_OPTIONS = Object.entries(OCCASION_LABELS)
+  .filter(([k]) => ['casual', 'work', 'date', 'formal', 'sport', 'travel', 'party'].includes(k))
+  .map(([key, label]) => ({ key, label, icon: OCCASION_ICONS[key] || '🏷️' }))

@@ -84,6 +84,7 @@ class RecommendationService:
         occasion: str,
         preferences: UserPreference | None,
         exclude_items: list[UUID],
+        source_scene: str | None = None,
     ) -> list[ClothingItem]:
         query = select(ClothingItem).where(
             and_(
@@ -92,6 +93,10 @@ class RecommendationService:
                 ClothingItem.is_archived.is_(False),
             )
         )
+
+        # Filter by source_scene if specified
+        if source_scene:
+            query = query.where(ClothingItem.source_scene == source_scene)
 
         result = await self.db.execute(query)
         items = list(result.scalars().all())
@@ -526,12 +531,22 @@ class RecommendationService:
 
         for num in selected_numbers:
             try:
+                # Handle nested arrays like [[6], [1], [4]] or flat [6, 1, 4]
+                if isinstance(num, (list, tuple)):
+                    # Extract the first element from nested array
+                    num = num[0] if num else None
+                
+                # Skip non-numeric items (AI sometimes returns text like "乐福鞋")
+                if isinstance(num, str) and not num.strip().isdigit():
+                    logger.warning(f"AI returned text item instead of number: {num}")
+                    continue
+                
                 num_int = int(num)
                 if num_int in number_map:
                     valid_ids.append(number_map[num_int])
                 else:
                     logger.warning(f"AI selected invalid item number: {num}")
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, IndexError):
                 logger.warning(f"AI returned non-numeric item: {num}")
 
         seen = set()
@@ -614,6 +629,7 @@ class RecommendationService:
         time_of_day: str | None = None,
         single_outfit: bool = False,
         scheduled_date: date | None = None,
+        source_scene: str | None = None,
     ) -> Outfit:
         exclude_items = exclude_items or []
         include_items = include_items or []
@@ -660,6 +676,7 @@ class RecommendationService:
             occasion=occasion,
             preferences=preferences,
             exclude_items=exclude_items,
+            source_scene=source_scene,
         )
 
         # Force-include specific items

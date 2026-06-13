@@ -1,11 +1,11 @@
 import { View, Text, MovableArea, MovableView, ScrollView, Image} from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
-import { useState, useMemo, useCallback } from 'react'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
 import CachedImage from '../../components/CachedImage'
 import VirtualTryOnModal from '../../components/VirtualTryOnModal'
 import { ClothingItem } from '../../types'
-import { TYPE_LABELS } from '../../constants'
+import { TYPE_LABELS, OCCASION_LABELS } from '../../constants'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
@@ -44,6 +44,7 @@ const CATEGORY_MAP: Record<string, string[]> = {
 // ===== Main Component =====
 
 export default function DiyPage() {
+  const router = useRouter()
   // --- Data ---
   const [items, setItems] = useState<ClothingItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,6 +60,13 @@ export default function DiyPage() {
   const [showResult, setShowResult] = useState(false)
   const [aiReasoning, setAiReasoning] = useState('')
 
+  // --- Outfit Info ---
+  const [outfitName, setOutfitName] = useState('')
+  const [selectedOccasion, setSelectedOccasion] = useState('casual')
+
+  // --- Edit Mode ---
+  const [editingOutfitId, setEditingOutfitId] = useState<string | null>(null)
+
   // --- Virtual Try-On ---
   const [showTryOn, setShowTryOn] = useState(false)
 
@@ -67,6 +75,38 @@ export default function DiyPage() {
   useDidShow(() => {
     loadItems()
   })
+
+  // Load existing outfit for editing
+  useEffect(() => {
+    const outfitId = router.params.outfit_id
+    if (outfitId) {
+      setEditingOutfitId(outfitId)
+      loadOutfitForEdit(outfitId)
+    }
+  }, [router.params.outfit_id])
+
+  const loadOutfitForEdit = async (outfitId: string) => {
+    try {
+      const data = await api.get<any>(`/outfits/${outfitId}`)
+      if (data.name) setOutfitName(data.name)
+      if (data.occasion) setSelectedOccasion(data.occasion)
+      // Items will be populated after loadItems completes
+      if (data.items?.length) {
+        const editItems: CanvasItem[] = data.items.map((item: any, i: number) => ({
+          id: item.id,
+          item: item,
+          x: (CANVAS_W - ITEM_W) / 2 + (i % 3 - 1) * 80,
+          y: (CANVAS_H - ITEM_H) / 2 + Math.floor(i / 3) * 80,
+          zIndex: i + 1,
+        }))
+        setCanvasItems(editItems)
+        setZCounter(data.items.length + 1)
+      }
+    } catch (err) {
+      console.error('Load outfit for edit failed:', err)
+      Taro.showToast({ title: '加载搭配失败', icon: 'none' })
+    }
+  }
 
   const loadItems = useCallback(async () => {
     setLoading(true)
@@ -162,12 +202,18 @@ export default function DiyPage() {
 
     const payload = {
       items: canvasItems.map(c => c.id),
-      occasion: 'casual',
+      occasion: selectedOccasion,
+      name: outfitName || undefined,
     }
 
     try {
-      await api.post('/outfits/studio', payload)
-      Taro.showToast({ title: '搭配保存好了', icon: 'success' })
+      if (editingOutfitId) {
+        await api.patch(`/outfits/${editingOutfitId}`, payload)
+        Taro.showToast({ title: '搭配已更新', icon: 'success' })
+      } else {
+        await api.post('/outfits/studio', payload)
+        Taro.showToast({ title: '搭配保存好了', icon: 'success' })
+      }
       setTimeout(() => {
         Taro.navigateBack()
       }, 1200)
@@ -175,7 +221,7 @@ export default function DiyPage() {
       console.error('Save outfit failed:', err)
       Taro.showToast({ title: '保存没成功，再试一次？', icon: 'none' })
     }
-  }, [canvasItems])
+  }, [canvasItems, selectedOccasion, outfitName])
 
   // ===== Virtual Try-On =====
 
@@ -197,7 +243,7 @@ export default function DiyPage() {
     try {
       const result = await api.post<{ reasoning: string }>('/outfits/suggest', {
         include_items: canvasItems.map(c => c.id),
-        occasion: 'casual',
+        occasion: selectedOccasion,
       })
       setAiReasoning(result.reasoning || '这套搭配很不错！')
       setShowResult(true)
@@ -367,10 +413,39 @@ export default function DiyPage() {
           </ScrollView>
         )}
 
+        {/* Outfit Info */}
+        <View className='diy-outfit-info'>
+          <View className='diy-info-row'>
+            <Text className='diy-info-label'>搭配名称</Text>
+            <input
+              className='diy-info-input'
+              placeholder='给搭配起个名字（可选）'
+              value={outfitName}
+              onInput={(e) => setOutfitName(e.detail.value)}
+            />
+          </View>
+          <View className='diy-info-row'>
+            <Text className='diy-info-label'>场合</Text>
+            <View className='diy-occasion-tags'>
+              {['casual', 'work', 'date', 'formal', 'sport', 'travel', 'party'].map(occ => (
+                <View
+                  key={occ}
+                  className={`diy-occasion-tag ${selectedOccasion === occ ? 'diy-occasion-tag--active' : ''}`}
+                  onClick={() => setSelectedOccasion(occ)}
+                >
+                  <Text className='diy-occasion-tag-text'>
+                    {OCCASION_LABELS[occ] || occ}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
         {/* Save Button */}
         <View className='diy-drawer-save' onClick={handleSave}>
           <Text className='diy-drawer-save-text'>
-            保存搭配 {canvasItems.length > 0 ? `(${canvasItems.length}件)` : ''}
+            {editingOutfitId ? '更新搭配' : '保存搭配'} {canvasItems.length > 0 ? `(${canvasItems.length}件)` : ''}
           </Text>
         </View>
       </View>

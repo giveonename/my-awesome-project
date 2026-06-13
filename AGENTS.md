@@ -118,7 +118,7 @@ Task store 在内存中，重启丢失（后续可改 Redis）。
 
 - `backend/app/services/virtual_tryon_service.py` — 虚拟试衣核心
 - `backend/app/services/chat_service.py` — AI 对话逻辑
-- `backend/app/services/recommendation_service.py` — AI 推荐引擎
+- `backend/app/services/recommendation_service.py` — AI 推荐引擎（含智能关键词、上下文感知）
 - `backend/app/services/taobao_service.py` — 淘宝联盟集成
 - `backend/app/services/learning_service.py` — 持续学习系统
 - `backend/app/services/aliyun_vision_service.py` — 图像预处理
@@ -126,10 +126,52 @@ Task store 在内存中，重启丢失（后续可改 Redis）。
 - `backend/app/workers/worker.py` — arq 配置（7 job + 5 cron）
 - `wechat-mini/src/constants/index.ts` — 中英文映射
 - `wechat-mini/src/components/VirtualTryOnModal/` — 试衣 UI
-- `wechat-mini/src/pages/suggest/index.tsx` — 搭配灵感（含淘宝）
+- `wechat-mini/src/pages/suggest/index.tsx` — 搭配灵感（AI搭配 + 我的搭配 + 搭配灵感）
+- `wechat-mini/src/pages/diy/index.tsx` — DIY 搭配画板
+- `wechat-mini/src/pages/outfit-detail/index.tsx` — 搭配详情页
+
+## AI搭配功能（本次新增）
+
+### 架构概述
+
+```
+搭配灵感页面（suggest/index.tsx）
+├── Tab 1: 我的搭配 — 用户DIY创建的搭配（source=manual）
+├── Tab 2: AI搭配 — AI实时生成推荐（6套，异步试穿图）
+└── Tab 3: 搭配灵感 — 淘宝商品推荐
+```
+
+### AI搭配核心流程
+
+1. 前端调用 `POST /outfits/suggest-batch`（一次返回6套）
+2. 后端并行生成搭配方案
+3. 异步触发试穿图生成（使用基础 aitryon，非 aitryon-plus）
+4. 前端轮询 `POST /outfits/batch-check` 获取试穿图
+5. 试穿图使用 `aitryon` 基础模型（10-30秒），质量优先场景用 `aitryon-plus`
+
+### 我的搭配核心流程
+
+1. 用户在 DIY 页面创建搭配 → `POST /outfits/studio`
+2. 搭配存储为 `source=manual` 的 Outfit 记录
+3. 前端通过 `GET /outfits?source=manual` 加载
+4. 支持场景筛选、设定场景、上传穿搭照
+
+### 关键数据区分
+
+| 数据类型 | source_scene | tryon_ready | 说明 |
+|----------|--------------|-------------|------|
+| 电子衣橱 | `commodity` | `false` | 用户上传的平铺衣物照片 |
+| 试衣间 | `avatar` | `true` | 用户上传的穿搭照/全身照 |
+
+### 虚拟试衣参数
+
+- 基础版（aitryon）：速度优先（10-30秒），用于AI搭配快速预览
+- Plus版（aitryon-plus）：质量优先（30-60秒），用于虚拟试衣详情页
+- 全身照来源：`BodyProfile.full_body_photo_url`，无则使用 `DEFAULT_PERSON_URL`
 
 ## 已知问题
 
 - Docker 容器不挂载源码，改后端需 `.\sync-backend.cmd` 同步
 - Alembic 有多个迁移头，需逐个 upgrade
 - 会员支付未实现（UI 已就绪，显示"即将开放"）
+- AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）

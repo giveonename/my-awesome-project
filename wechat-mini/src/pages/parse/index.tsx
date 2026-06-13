@@ -6,7 +6,6 @@ import './index.scss'
 import { icons } from '../../constants/icons'
 
 type ParseState = 'idle' | 'scanning' | 'result' | 'saving' | 'error' | 'success'
-type BatchState = 'idle' | 'selecting' | 'uploading' | 'processing' | 'done'
 
 interface ParsedItem {
   name: string
@@ -18,6 +17,8 @@ interface ParsedItem {
   category?: string
   segmented_image_path?: string
   thumbnail_url?: string
+  source_scene?: string
+  tryon_ready?: boolean
 }
 
 interface ParseResult {
@@ -43,14 +44,13 @@ export default function ParsePage() {
         setAutoMode(true)
         const imgPath = decodeURIComponent(opts.img)
         setParseState('scanning')
-        const sceneType = opts.tab === 'outfit' ? 'avatar' : 'commodity'
         ;(async () => {
           try {
             const uploadResult = await uploadFile<ParseResult>(
               '/items/parse',
               imgPath,
               'image',
-              { scene_type: sceneType },
+              { scene_type: '' },
               300000
             )
             setResult({
@@ -77,14 +77,11 @@ export default function ParsePage() {
   const [loadingText, setLoadingText] = useState('')
   const [saveResult, setSaveResult] = useState<{ created: number; failed: number; errors?: string[] } | null>(null)
 
-  // --- Multi-select state for garment cards ---
+  // Multi-select state
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
 
-  // --- Batch upload state ---
-  const [batchState, setBatchState] = useState<BatchState>('idle')
-  const [batchFiles, setBatchFiles] = useState<string[]>([])
-  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
-  const [batchId, setBatchId] = useState('')
+  // Multi-file progress
+  const [fileProgress, setFileProgress] = useState({ current: 0, total: 0 })
 
   const toggleSelect = useCallback((idx: number) => {
     setSelectedIndices(prev => {
@@ -105,97 +102,106 @@ export default function ParsePage() {
 
   const selectedCount = selectedIndices.size
 
-  // --- Upload handler: auto-classify by backend ---
+  // --- Upload handler: single or multi-file ---
   const handleUploadWithType = useCallback(async (type?: 'outfit' | 'flat') => {
     try {
       const res = await Taro.chooseMedia({
-        count: 1,
+        count: 9,
         mediaType: ['image'],
         sourceType: ['camera', 'album'],
         sizeType: ['compressed'],
       })
       if (!res.tempFiles?.length) return
 
-      const filePath = res.tempFiles[0].tempFilePath
-      setImageUrl(filePath)
-      setParseState('scanning')
-      setErrorMsg('')
-      setResult(null)
-      setSelectedIndices(new Set())
+      const files = res.tempFiles.map(f => f.tempFilePath)
 
-      try {
-        // Send without scene_type - backend will auto-classify
-        const uploadResult = await uploadFile<ParseResult>(
-          '/items/parse',
-          filePath,
-          'image',
-          { scene_type: '' },
-          300000
-        )
-        setResult({
-          items: uploadResult.items || [],
-          count: uploadResult.count || 0,
-          image_path: uploadResult.image_path,
-        })
-        setParseState('result')
-      } catch (err) {
-        console.error('Parse failed:', err)
-        const msg = err instanceof Error ? err.message : '解析遇到了点状况'
-        setErrorMsg(msg)
-        setParseState('error')
+      if (files.length === 1) {
+        // Single file: parse directly
+        await handleParseSingle(files[0])
+      } else {
+        // Multi file: parse each sequentially, merge results
+        await handleParseMultiple(files)
       }
     } catch (err) {
       console.log('User cancelled media selection')
     }
   }, [])
 
-  // --- Camera-only handler ---
-  const handleCamera = useCallback(async () => {
-    try {
-      const res = await Taro.chooseMedia({
-        count: 1,
-        mediaType: ['image'],
-        sourceType: ['camera'],
-        sizeType: ['compressed'],
-      })
-      if (!res.tempFiles?.length) return
+  const handleParseSingle = async (filePath: string) => {
+    setImageUrl(filePath)
+    setParseState('scanning')
+    setErrorMsg('')
+    setResult(null)
+    setSelectedIndices(new Set())
 
-      const filePath = res.tempFiles[0].tempFilePath
-      setImageUrl(filePath)
-      setParseState('scanning')
-      setErrorMsg('')
-      setResult(null)
-      setSelectedIndices(new Set())
+    try {
+      const uploadResult = await uploadFile<ParseResult>(
+        '/items/parse',
+        filePath,
+        'image',
+        { scene_type: '' },
+        300000
+      )
+      setResult({
+        items: uploadResult.items || [],
+        count: uploadResult.count || 0,
+        image_path: uploadResult.image_path,
+      })
+      setParseState('result')
+    } catch (err) {
+      console.error('Parse failed:', err)
+      const msg = err instanceof Error ? err.message : '解析遇到了点状况'
+      setErrorMsg(msg)
+      setParseState('error')
+    }
+  }
+
+  const handleParseMultiple = async (files: string[]) => {
+    setParseState('scanning')
+    setErrorMsg('')
+    setResult(null)
+    setSelectedIndices(new Set())
+    setFileProgress({ current: 0, total: files.length })
+    setLoadingText('正在识别第 1 张...')
+
+    const allItems: ParsedItem[] = []
+    let firstImagePath: string | null = null
+
+    for (let i = 0; i < files.length; i++) {
+      setFileProgress({ current: i + 1, total: files.length })
+      setLoadingText(`正在识别第 ${i + 1}/${files.length} 张...`)
 
       try {
         const uploadResult = await uploadFile<ParseResult>(
           '/items/parse',
-          filePath,
+          files[i],
           'image',
           { scene_type: '' },
           300000
         )
-        setResult({
-          items: uploadResult.items || [],
-          count: uploadResult.count || 0,
-          image_path: uploadResult.image_path,
-        })
-        setParseState('result')
+        if (uploadResult.items?.length) {
+          allItems.push(...uploadResult.items)
+        }
+        if (!firstImagePath && uploadResult.image_path) {
+          firstImagePath = uploadResult.image_path
+        }
       } catch (err) {
-        console.error('Parse failed:', err)
-        const msg = err instanceof Error ? err.message : '解析遇到了点状况'
-        setErrorMsg(msg)
-        setParseState('error')
+        console.error(`File ${i + 1} parse failed:`, err)
       }
-    } catch (err) {
-      console.log('User cancelled camera')
     }
-  }, [])
 
-  // --- handleUpload: delegates to handleUploadWithType for autoMode retry ---
-  const handleUpload = useCallback(async () => {
-    await handleUploadWithType(activeTab)
-  }, [activeTab, handleUploadWithType])
+    if (allItems.length > 0) {
+      setResult({
+        items: allItems,
+        count: allItems.length,
+        image_path: firstImagePath,
+      })
+      setParseState('result')
+    } else {
+      setErrorMsg('所有照片都识别失败了，换几张试试？')
+      setParseState('error')
+    }
+  }
 
   const handleRetry = useCallback(() => {
     setParseState('idle')
@@ -204,101 +210,7 @@ export default function ParsePage() {
     setErrorMsg('')
     setLoadingText('')
     setSelectedIndices(new Set())
-    setBatchState('idle')
-    setBatchFiles([])
-    setBatchId('')
-  }, [])
-
-  // --- Batch upload handlers ---
-  const handleBatchSelect = useCallback(async () => {
-    try {
-      const res = await Taro.chooseMedia({
-        count: 9,
-        mediaType: ['image'],
-        sourceType: ['album', 'camera'],
-        sizeType: ['compressed'],
-      })
-      if (!res.tempFiles?.length) return
-      const paths = res.tempFiles.map(f => f.tempFilePath)
-      setBatchFiles(paths)
-      setBatchState('selecting')
-    } catch (err) {
-      console.log('User cancelled batch selection')
-    }
-  }, [])
-
-  const handleBatchRemove = useCallback((idx: number) => {
-    setBatchFiles(prev => prev.filter((_, i) => i !== idx))
-  }, [])
-
-  const handleBatchStart = useCallback(async () => {
-    if (batchFiles.length === 0) return
-    setBatchState('uploading')
-    setBatchProgress({ current: 0, total: batchFiles.length })
-
-    try {
-      const API_BASE = require('../../env').API_BASE
-      const token = Taro.getStorageSync('access_token') || ''
-      const sceneType = activeTab === 'outfit' ? 'avatar' : 'commodity'
-
-      // Upload first file to create the batch
-      const firstResult = await new Promise<any>((resolve, reject) => {
-        Taro.uploadFile({
-          url: `${API_BASE}/items/batch-parse`,
-          filePath: batchFiles[0],
-          name: 'files',
-          formData: { scene_types: sceneType },
-          header: { Authorization: `Bearer ${token}` },
-          success: (resp) => {
-            if (resp.statusCode === 200) {
-              resolve(JSON.parse(resp.data))
-            } else {
-              reject(new Error(`Upload failed: ${resp.statusCode}`))
-            }
-          },
-          fail: reject,
-        })
-      })
-
-      const batchIdResult = firstResult.batch_id
-      setBatchId(batchIdResult)
-      setBatchProgress({ current: 1, total: batchFiles.length })
-
-      // Upload remaining files
-      for (let i = 1; i < batchFiles.length; i++) {
-        setBatchProgress({ current: i + 1, total: batchFiles.length })
-        await new Promise<void>((resolve, reject) => {
-          Taro.uploadFile({
-            url: `${API_BASE}/items/batch-parse`,
-            filePath: batchFiles[i],
-            name: 'files',
-            formData: {
-              scene_types: sceneType,
-              batch_id: batchIdResult,
-            },
-            header: { Authorization: `Bearer ${token}` },
-            success: (resp) => {
-              if (resp.statusCode === 200) resolve()
-              else reject(new Error(`Upload failed: ${resp.statusCode}`))
-            },
-            fail: reject,
-          })
-        })
-      }
-
-      setBatchState('processing')
-      Taro.setStorageSync('pending_batch_id', batchIdResult)
-      Taro.showToast({ title: '已提交识别，完成后会通知你', icon: 'none', duration: 3000 })
-
-    } catch (err) {
-      console.error('Batch upload failed:', err)
-      Taro.showToast({ title: '上传失败，请重试', icon: 'none' })
-      setBatchState('idle')
-    }
-  }, [batchFiles, activeTab])
-
-  const handleBatchGoExplore = useCallback(() => {
-    Taro.switchTab({ url: '/pages/wardrobe/index' })
+    setFileProgress({ current: 0, total: 0 })
   }, [])
 
   const handleSaveItems = useCallback(async () => {
@@ -333,7 +245,7 @@ export default function ParsePage() {
       console.error('Save items failed:', err)
       Taro.showToast({ title: '保存没成功，再试一次？', icon: 'none' })
     }
-  }, [result, activeTab, selectedIndices, selectedCount])
+  }, [result, selectedIndices, selectedCount])
 
   const tabLabel = '照片'
 
@@ -382,7 +294,7 @@ export default function ParsePage() {
       <View className='parse-header'>
         {!autoMode && parseState === 'idle' && (
           <View className='parse-header-title'>
-            <Text className='parse-header-title-text'>AI 批量解析</Text>
+            <Text className='parse-header-title-text'>AI 智能识别</Text>
           </View>
         )}
         {autoMode && (
@@ -399,39 +311,34 @@ export default function ParsePage() {
 
       {/* ============ Content ============ */}
       <View className='parse-content'>
-        {/* ======== IDLE: Immersive Upload (non-autoMode) ======== */}
+        {/* ======== IDLE: Immersive Upload ======== */}
         {parseState === 'idle' && !autoMode && (
           <View className='parse-immersive animate-fade-in-up'>
-            {/* Gradient hero area */}
             <View className='parse-hero'>
               <View className='parse-hero-ring' />
               <View className='parse-hero-inner'>
                 <Image src={icons['sparkles']} className='parse-hero-icon' style={{ width: '80rpx', height: '80rpx' }} />
                 <Text className='parse-hero-title'>AI 智能识别</Text>
-                <Text className='parse-hero-desc'>拍一张照片，自动识别并入库</Text>
+                <Text className='parse-hero-desc'>支持单张或批量，AI 自动识别穿搭照和平铺照</Text>
               </View>
-
-              {/* AI badge - subtle */}
               <View className='parse-ai-pill'>
                 <Image src={icons['bot']} className='parse-ai-pill-icon' style={{ width: '28rpx', height: '28rpx' }} />
                 <Text className='parse-ai-pill-text'>AI 驱动</Text>
               </View>
             </View>
 
-            {/* Single upload action */}
-            <View className='parse-action-card parse-action-card--wide' onClick={() => handleUploadWithType('flat')}>
+            <View className='parse-action-card parse-action-card--wide' onClick={() => handleUploadWithType()}>
               <View className='parse-action-icon-wrap'>
                 <Image src={icons['camera']} className='parse-action-icon' style={{ width: '64rpx', height: '64rpx' }} />
               </View>
               <Text className='parse-action-title'>上传照片</Text>
-              <Text className='parse-action-desc'>AI 自动识别穿搭照或平铺照</Text>
+              <Text className='parse-action-desc'>支持单张或批量上传，AI 自动识别</Text>
               <View className='parse-action-btn'>
                 <Image src={icons['camera']} className='parse-action-btn-icon' style={{ width: '32rpx', height: '32rpx' }} />
                 <Text className='parse-action-btn-text'>拍照 / 相册</Text>
               </View>
             </View>
 
-            {/* Feature pills */}
             <View className='parse-features'>
               <View className='parse-feature-pill'>
                 <Image src={icons['scan']} className='parse-feature-icon' style={{ width: '28rpx', height: '28rpx' }} />
@@ -446,76 +353,10 @@ export default function ParsePage() {
                 <Text className='parse-feature-text'>批量入库</Text>
               </View>
             </View>
-
-            {/* Batch upload entry */}
-            <View className='parse-batch-entry' onClick={handleBatchSelect}>
-              <Image src={icons['layers'] || icons['shirt']} className='parse-batch-icon' style={{ width: '36rpx', height: '36rpx' }} />
-              <Text className='parse-batch-text'>批量上传（最多 9 张）</Text>
-            </View>
           </View>
         )}
 
-        {/* ======== Batch: Selecting ======== */}
-        {batchState === 'selecting' && (
-          <View className='parse-batch-selecting animate-fade-in-up'>
-            <Text className='parse-batch-title'>已选 {batchFiles.length} 张照片</Text>
-            <View className='parse-batch-grid'>
-              {batchFiles.map((file, idx) => (
-                <View key={idx} className='parse-batch-thumb'>
-                  <Image src={file} className='parse-batch-thumb-img' mode='aspectFill' />
-                  <View className='parse-batch-thumb-remove' onClick={() => handleBatchRemove(idx)}>
-                    <Text className='parse-batch-thumb-remove-text'>{'\u00D7'}</Text>
-                  </View>
-                </View>
-              ))}
-              {batchFiles.length < 9 && (
-                <View className='parse-batch-thumb parse-batch-thumb--add' onClick={handleBatchSelect}>
-                  <Text className='parse-batch-thumb-add-text'>+</Text>
-                </View>
-              )}
-            </View>
-            <View className='parse-batch-actions'>
-              <View className='parse-batch-btn' onClick={() => { setBatchState('idle'); setBatchFiles([]) }}>
-                <Text className='parse-batch-btn-text'>取消</Text>
-              </View>
-              <View className='parse-batch-btn parse-batch-btn--primary' onClick={handleBatchStart}>
-                <Text className='parse-batch-btn-text parse-batch-btn-text--primary'>开始识别</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ======== Batch: Uploading ======== */}
-        {batchState === 'uploading' && (
-          <View className='parse-batch-uploading animate-fade-in-up'>
-            <View className='parse-loading-ring'>
-              <View className='parse-loading-ring-inner' />
-            </View>
-            <Text className='parse-batch-upload-text'>上传中 {batchProgress.current}/{batchProgress.total}...</Text>
-          </View>
-        )}
-
-        {/* ======== Batch: Processing ======== */}
-        {batchState === 'processing' && (
-          <View className='parse-batch-processing animate-fade-in-up'>
-            <View className='parse-hero-ring' />
-            <View className='parse-hero-inner'>
-              <Image src={icons['sparkles']} className='parse-hero-icon' style={{ width: '64rpx', height: '64rpx' }} />
-              <Text className='parse-hero-title'>正在识别中</Text>
-              <Text className='parse-hero-desc'>预计需要 1-3 分钟，你可以先去逛逛</Text>
-            </View>
-            <View className='parse-batch-actions'>
-              <View className='parse-batch-btn' onClick={handleBatchGoExplore}>
-                <Text className='parse-batch-btn-text'>先去逛逛</Text>
-              </View>
-              <View className='parse-batch-btn parse-batch-btn--primary' onClick={handleBatchGoExplore}>
-                <Text className='parse-batch-btn-text parse-batch-btn-text--primary'>去衣橱等</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ======== IDLE: AutoMode placeholder (from FAB) ======== */}
+        {/* ======== IDLE: AutoMode placeholder ======== */}
         {parseState === 'idle' && autoMode && (
           <View className='parse-upload-card animate-fade-in-up'>
             <View className='parse-upload-preview'>
@@ -532,7 +373,13 @@ export default function ParsePage() {
           <View className='parse-scan-card animate-fade-in-up'>
             <View className='parse-scan-preview'>
               <View className='parse-image-wrap'>
-                <Image className='parse-image' src={imageUrl} mode='widthFix' />
+                {imageUrl ? (
+                  <Image className='parse-image' src={imageUrl} mode='widthFix' />
+                ) : (
+                  <View className='parse-scan-placeholder'>
+                    <Image src={icons['sparkles']} style={{ width: '64rpx', height: '64rpx' }} />
+                  </View>
+                )}
                 <View className='parse-scan-overlay'>
                   <View className='parse-scan-line'>
                     <View className='parse-scan-line-trail' />
@@ -545,7 +392,14 @@ export default function ParsePage() {
               <View className='parse-scan-ring-wrap'>
                 <View className='parse-scan-ring' />
               </View>
-              <Text className='parse-scan-text'>AI 正在识别{tabLabel}{dots}</Text>
+              <Text className='parse-scan-text'>
+                {loadingText || `AI 正在识别${tabLabel}${dots}`}
+              </Text>
+              {fileProgress.total > 1 && (
+                <View className='parse-progress-bar'>
+                  <View className='parse-progress-fill' style={{ width: `${(fileProgress.current / fileProgress.total) * 100}%` }} />
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -563,7 +417,6 @@ export default function ParsePage() {
               </View>
             </View>
 
-            {/* Garment selection grid (scrollable, padded for sticky bar) */}
             <ScrollView className='parse-garment-scroll' scrollY enhanced showScrollbar={false}>
               {result.items.map((item, idx) => (
                 <View
@@ -619,7 +472,6 @@ export default function ParsePage() {
               ))}
             </ScrollView>
 
-            {/* Retry link */}
             <View className='parse-retry-link' onClick={handleRetry}>
               <Text className='parse-retry-link-text'>重新上传</Text>
             </View>
@@ -665,8 +517,8 @@ export default function ParsePage() {
               </Text>
             )}
             <View className='parse-success-actions'>
-              <View className='parse-success-btn press-scale' onClick={() => Taro.navigateBack()}>
-                <Text className='parse-success-btn-text'>返回衣橱</Text>
+              <View className='parse-success-btn press-scale' onClick={() => Taro.switchTab({ url: '/pages/wardrobe/index' })}>
+                <Text className='parse-success-btn-text'>去衣橱</Text>
               </View>
               <View className='parse-success-btn parse-success-btn--secondary press-scale' onClick={handleRetry}>
                 <Text className='parse-success-btn-text parse-success-btn-text--secondary'>继续扫描</Text>
@@ -676,7 +528,7 @@ export default function ParsePage() {
         )}
       </View>
 
-      {/* ============ Sticky Bottom Action Bar (result state) ============ */}
+      {/* ============ Sticky Bottom Action Bar ============ */}
       {parseState === 'result' && result && (
         <View className='parse-sticky-bar'>
           <View className='parse-sticky-left' onClick={toggleSelectAll}>
@@ -689,7 +541,7 @@ export default function ParsePage() {
             onClick={selectedCount > 0 ? handleSaveItems : undefined}
           >
             <Text className='parse-sticky-save-text'>
-              {activeTab === 'outfit' ? '加入试衣间' : '加入衣橱'}
+              {result.items.some((i: any) => i.source_scene === 'avatar') ? '保存' : '加入衣橱'}
               {selectedCount > 0 ? `（${selectedCount}）` : ''}
             </Text>
           </View>

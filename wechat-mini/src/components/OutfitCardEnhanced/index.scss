@@ -17,7 +17,7 @@
 
 .oce-body {
   display: flex;
-  min-height: 280rpx;
+  min-height: 320rpx;
 }
 
 // -- Left: Item list --
@@ -89,7 +89,7 @@
   color: $text-tertiary;
 }
 
-// -- Right: Effect image or placeholder --
+// -- Right: Try-on image --
 .oce-right {
   flex: 1;
   position: relative;
@@ -100,41 +100,43 @@
 .oce-right-img {
   width: 100%;
   height: 100%;
-  min-height: 280rpx;
+  object-fit: contain;
 }
 
-.oce-right-placeholder {
+.oce-right-generating {
   @include flex-column;
   @include flex-center;
   width: 100%;
   height: 100%;
   min-height: 280rpx;
   padding: $spacing-md;
-  text-align: center;
-  position: relative;
+  background: linear-gradient(135deg, #f8f9fe 0%, #f0f2f9 100%);
 }
 
-.oce-right-placeholder-bg {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, $color-primary-50 0%, #FFF5F0 50%, #F0F5FF 100%);
-  z-index: 0;
+.oce-generating-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid $color-gray-200;
+  border-top-color: $color-primary;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: $spacing-sm;
 }
 
-.oce-right-placeholder-icon {
-  font-size: 48rpx;
-  margin-bottom: $spacing-xs;
-  position: relative;
-  z-index: 1;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.oce-right-placeholder-text {
-  font-size: 22rpx;
-  color: $text-secondary;
-  line-height: 1.5;
-  position: relative;
-  z-index: 1;
-  @include ellipsis(3);
+.oce-generating-text {
+  font-size: $font-body-size;
+  color: $text-primary;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+
+.oce-generating-hint {
+  font-size: $font-caption-size;
+  color: $text-tertiary;
 }
 
 // ===== Footer =====

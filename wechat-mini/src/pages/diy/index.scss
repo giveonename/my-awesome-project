@@ -387,6 +387,62 @@
   font-weight: 600;
 }
 
+// ===== Outfit Info =====
+
+.diy-outfit-info {
+  padding: $spacing-sm $spacing-md;
+  border-top: 1rpx solid $color-gray-200;
+}
+
+.diy-info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.diy-info-label {
+  font-size: $font-caption-size;
+  color: $text-secondary;
+  width: 120rpx;
+  flex-shrink: 0;
+}
+
+.diy-info-input {
+  flex: 1;
+  height: 56rpx;
+  padding: 0 $spacing-sm;
+  border: 1rpx solid $color-gray-300;
+  border-radius: $radius-sm;
+  font-size: $font-caption-size;
+  background: #fff;
+}
+
+.diy-occasion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.diy-occasion-tag {
+  padding: 8rpx 20rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-primary;
+  }
+}
+
+.diy-occasion-tag-text {
+  font-size: $font-tag-size;
+  color: $text-secondary;
+
+  .diy-occasion-tag--active & {
+    color: #fff;
+  }
+}
+
 // ===== AI Result Modal =====
 
 .diy-modal-overlay {

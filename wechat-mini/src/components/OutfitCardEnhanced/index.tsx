@@ -10,6 +10,7 @@ interface OutfitItem {
   id: string
   name?: string
   type: string
+  primary_color?: string
   thumbnail_url?: string
 }
 
@@ -18,7 +19,6 @@ interface OutfitCardEnhancedProps {
   items: OutfitItem[]
   modelImageUrl?: string
   occasion?: string
-  reasoning?: string
   likeCount?: number
   isLiked?: boolean
   index?: number
@@ -31,7 +31,6 @@ export default function OutfitCardEnhanced({
   items,
   modelImageUrl,
   occasion,
-  reasoning,
   likeCount = 0,
   isLiked = false,
   index = 0,
@@ -62,6 +61,16 @@ export default function OutfitCardEnhanced({
     const names = items.map(i => i.name || TYPE_LABELS[i.type] || i.type)
     onTryOn?.(ids, names)
   }, [items, onTryOn])
+
+  const handlePreviewImage = useCallback((e: any) => {
+    e.stopPropagation()
+    if (!modelImageUrl) return
+    const url = resolveImageUrl(modelImageUrl) || modelImageUrl
+    Taro.previewImage({
+      current: url,
+      urls: [url],
+    })
+  }, [modelImageUrl])
 
   return (
     <View
@@ -99,23 +108,21 @@ export default function OutfitCardEnhanced({
           ))}
         </View>
 
-        {/* Right: Effect image or reasoning */}
-        <View className='oce-right'>
+        {/* Right: Try-on image */}
+        <View className='oce-right' onClick={handlePreviewImage}>
           {modelImageUrl ? (
             <CachedImage
               className='oce-right-img'
               src={resolveImageUrl(modelImageUrl) || ''}
-              mode='aspectFill'
+              mode='aspectFit'
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgLoaded(true)}
             />
           ) : (
-            <View className='oce-right-placeholder'>
-              <View className='oce-right-placeholder-bg' />
-              <Text className='oce-right-placeholder-icon'>✨</Text>
-              <Text className='oce-right-placeholder-text'>
-                {reasoning ? reasoning.slice(0, 60) + (reasoning.length > 60 ? '...' : '') : 'AI 搭配方案'}
-              </Text>
+            <View className='oce-right-generating'>
+              <View className='oce-generating-spinner' />
+              <Text className='oce-generating-text'>试穿图生成中</Text>
+              <Text className='oce-generating-hint'>预计需要 10-30 秒</Text>
             </View>
           )}
         </View>

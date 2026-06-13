@@ -187,6 +187,7 @@ export function resolveImageUrl(url: string | null | undefined): string | undefi
   // Pass through data URLs and local file paths
   if (url.startsWith('data:')) return url
   if (url.startsWith('wxfile://') || url.startsWith('http://usr') || url.startsWith('usr') || url.includes('/bg_swap_')) return url
+  if (url.startsWith('http://tmp') || url.startsWith('https://tmp') || url.startsWith('tmp/')) return url
 
   // Force HTTPS — WeChat mini program requires it
   if (url.startsWith('http://')) url = url.replace('http://', 'https://')

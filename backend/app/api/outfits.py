@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import UTC, date, datetime
 from typing import Annotated, Literal
@@ -6,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -116,6 +117,34 @@ class SuggestRequest(BaseModel):
     include_items: list[UUID] = Field(default_factory=list, description="Items to include")
 
 
+class SuggestBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    occasion: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    count: int = Field(default=3, ge=1, le=6, description="Number of outfits to return")
+
+    @field_validator("occasion")
+    @classmethod
+    def validate_occasion(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if len(v) > 50:
+            raise ValueError("Occasion must be 50 characters or less")
+        if v not in VALID_OCCASIONS:
+            raise ValueError(
+                f"Invalid occasion '{v}'. Must be one of: {', '.join(sorted(VALID_OCCASIONS))}"
+            )
+        return v
+
+    time_of_day: Literal["morning", "afternoon", "evening", "night", "full day"] | None = None
+    weather_override: WeatherOverrideRequest | None = None
+    exclude_items: list[UUID] = Field(default_factory=list, description="Items to exclude")
+    include_items: list[UUID] = Field(default_factory=list, description="Items to include")
+
+
 class OutfitItemResponse(BaseModel):
     id: UUID
     type: str
@@ -200,6 +229,7 @@ class OutfitResponse(BaseModel):
     family_rating_average: float | None = None
     family_rating_count: int | None = None
     is_starter_suggestion: bool = False
+    model_image_url: str | None = None
     created_at: datetime
 
 
@@ -383,6 +413,7 @@ def outfit_to_response(
         family_rating_average=family_rating_average,
         family_rating_count=family_rating_count,
         is_starter_suggestion=is_starter_suggestion,
+        model_image_url=outfit.model_image_url,
         created_at=outfit.created_at,
     )
 
@@ -393,7 +424,7 @@ async def suggest_outfit(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> OutfitResponse:
-    await rate_limit_by_user(str(current_user.id), "suggest", max_requests=10, window_seconds=60)
+    await rate_limit_by_user(str(current_user.id), "suggest", max_requests=30, window_seconds=60)
     weather_override = None
     if request.weather_override:
         w = request.weather_override
@@ -419,6 +450,19 @@ async def suggest_outfit(
             occasion = current_user.preferences.default_occasion
         else:
             occasion = "casual"
+
+    # Use request latitude/longitude if provided, otherwise fall back to user profile
+    user_for_weather = current_user
+    if request.latitude is not None and request.longitude is not None:
+        # Create a copy-like approach by setting temporarily
+        # The service will use these if weather_override is not set
+        if not weather_override:
+            try:
+                from app.services.weather_service import WeatherService
+                ws = WeatherService()
+                weather_override = await ws.get_current_weather(request.latitude, request.longitude)
+            except Exception as e:
+                logger.warning(f"Failed to get weather from request coordinates: {e}")
 
     try:
         outfit = await service.generate_recommendation(
@@ -453,6 +497,304 @@ async def suggest_outfit(
 
     wore_instead_map = await fetch_wore_instead_items_map(db, [outfit], user_id=current_user.id)
     return outfit_to_response(outfit, wore_instead_map, is_starter_suggestion=is_starter)
+
+
+@router.post("/suggest-batch", response_model=list[OutfitResponse])
+async def suggest_batch(
+    request: SuggestBatchRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[OutfitResponse]:
+    """Return multiple outfit recommendations in a single request."""
+    await rate_limit_by_user(str(current_user.id), "suggest", max_requests=30, window_seconds=60)
+
+    weather_override = None
+    if request.weather_override:
+        w = request.weather_override
+        weather_override = WeatherData(
+            temperature=w.temperature,
+            feels_like=w.feels_like or w.temperature,
+            humidity=w.humidity,
+            precipitation_chance=w.precipitation_chance,
+            precipitation_mm=0,
+            wind_speed=0,
+            condition=w.condition,
+            condition_code=0,
+            is_day=True,
+            uv_index=0,
+            timestamp=datetime.now(UTC),
+        )
+
+    # Use request latitude/longitude if provided
+    if request.latitude is not None and request.longitude is not None and not weather_override:
+        try:
+            from app.services.weather_service import WeatherService
+            ws = WeatherService()
+            weather_override = await ws.get_current_weather(request.latitude, request.longitude)
+        except Exception as e:
+            logger.warning(f"Failed to get weather from request coordinates: {e}")
+
+    service = RecommendationService(db)
+
+    occasion = request.occasion
+    if occasion is None:
+        if current_user.preferences and current_user.preferences.default_occasion:
+            occasion = current_user.preferences.default_occasion
+        else:
+            occasion = "casual"
+
+    outfits = []
+    count = request.count
+
+    # Mode A: Get existing outfits with try-on images from try-on room (50% chance)
+    import random
+    use_existing = random.random() < 0.5
+
+    if use_existing:
+        # Find outfits that already have try-on images AND contain try-on room items
+        # Try-on room items have source_scene = "avatar" or tryon_ready = true
+        result = await db.execute(
+            select(Outfit).join(OutfitItem).join(ClothingItem).where(
+                and_(
+                    Outfit.user_id == current_user.id,
+                    Outfit.model_image_url.isnot(None),
+                    Outfit.status != OutfitStatus.rejected,
+                    # At least one item must be from try-on room
+                    or_(
+                        ClothingItem.source_scene == "avatar",
+                        ClothingItem.tryon_ready.is_(True),
+                    ),
+                )
+            ).distinct().order_by(Outfit.created_at.desc()).limit(count)
+        )
+        existing_outfits = list(result.scalars().all())
+
+        if existing_outfits:
+            # Return existing outfits with try-on images
+            item_service = ItemService(db)
+            total_items = await item_service.get_ready_item_count(current_user.id)
+            is_starter = total_items <= 5
+            wore_instead_map = await fetch_wore_instead_items_map(db, existing_outfits, user_id=current_user.id)
+            return [outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in existing_outfits]
+
+    # Mode B: AI recommendation from digital wardrobe (source_scene = "commodity")
+    # Generate outfits with retry logic - if some fail due to AI returning text instead of numbers, skip and retry
+    max_attempts = count * 2  # Allow up to 2x attempts to get valid outfits
+    attempts = 0
+    
+    while len(outfits) < count and attempts < max_attempts:
+        attempts += 1
+        try:
+            outfit = await service.generate_recommendation(
+                user=current_user,
+                occasion=occasion,
+                weather_override=weather_override,
+                exclude_items=request.exclude_items,
+                include_items=request.include_items,
+                time_of_day=request.time_of_day,
+                source_scene="commodity",  # Only from digital wardrobe
+            )
+            outfits.append(outfit)
+        except AIRecommendationError as e:
+            # AI returned invalid items (e.g., text instead of numbers), skip and retry
+            logger.warning(f"AI recommendation attempt {attempts} failed (likely text items): {e}")
+            continue
+        except Exception as e:
+            logger.error(f"Unexpected error in recommendation attempt {attempts}: {e}")
+            continue
+    
+    if not outfits:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI failed to generate valid recommendations after multiple attempts",
+        )
+    
+    # Commit all outfits BEFORE creating background tasks
+    await db.commit()
+
+    # Now trigger async try-on generation for each outfit
+    for outfit in outfits:
+        try:
+            asyncio.create_task(_generate_tryon_for_outfit(outfit.id, current_user.id))
+        except Exception as e:
+            logger.error(f"Failed to trigger try-on generation: {e}")
+
+    item_service = ItemService(db)
+    total_items = await item_service.get_ready_item_count(current_user.id)
+    is_starter = total_items <= 5
+
+    wore_instead_map = await fetch_wore_instead_items_map(db, outfits, user_id=current_user.id)
+    return [outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in outfits]
+
+
+async def _generate_tryon_for_outfit(outfit_id: UUID, user_id: UUID):
+    """Generate try-on image for an outfit asynchronously.
+
+    Creates its own database session to avoid lifecycle issues.
+    """
+    from app.database import async_session_maker
+    from app.models.body_profile import BodyProfile
+    from app.models.item import ClothingItem
+    from app.services.virtual_tryon_service import (
+        DEFAULT_PERSON_URL,
+        submit_tryon_task,
+        check_task_once,
+    )
+    from app.api.virtual_tryon import _ensure_oss_url
+
+    try:
+        # Create a new database session for this background task
+        async with async_session_maker() as db:
+            # Load outfit with items
+            result = await db.execute(
+                select(Outfit).where(Outfit.id == outfit_id).options(
+                    selectinload(Outfit.items).selectinload(OutfitItem.item)
+                )
+            )
+            outfit = result.scalar_one_or_none()
+            if not outfit:
+                logger.error("Outfit %s not found for try-on generation", outfit_id)
+                return
+
+            # Get person image: BodyProfile.full_body_photo_url or default
+            result = await db.execute(
+                select(BodyProfile).where(BodyProfile.user_id == user_id)
+            )
+            body_profile = result.scalar_one_or_none()
+            person_url = (
+                body_profile.full_body_photo_url
+                if body_profile and body_profile.full_body_photo_url
+                else DEFAULT_PERSON_URL
+            )
+
+            # Ensure person_url is a full HTTP URL
+            if person_url and not person_url.startswith("http"):
+                logger.warning("Person URL is not a full HTTP URL: %s, using default", person_url)
+                person_url = DEFAULT_PERSON_URL
+
+            # Classify items into top/bottom
+            top_items = []
+            bottom_items = []
+            for oi in outfit.items:
+                item = oi.item
+                if item.type in {
+                    "shirt", "t-shirt", "sweater", "hoodie", "blazer", "jacket",
+                    "coat", "top", "dress", "vest", "cardigan", "polo", "blouse", "tank-top",
+                }:
+                    top_items.append(item)
+                elif item.type in {"pants", "jeans", "shorts", "skirt"}:
+                    bottom_items.append(item)
+
+            if not top_items and not bottom_items:
+                logger.warning("No valid items found for try-on in outfit %s", outfit_id)
+                return
+
+            garment_input = {}
+            if top_items:
+                # Use public_url (full HTTP URL) or upload to OSS
+                url = top_items[0].public_url
+                if not url:
+                    logger.info("No public_url for top item %s, attempting OSS upload", top_items[0].id)
+                    url = await _ensure_oss_url(top_items[0])
+                    if url:
+                        # Persist the URL for future use
+                        top_items[0].public_url = url
+                        await db.commit()
+                if not url:
+                    logger.warning("Failed to get URL for top item %s, skipping try-on", top_items[0].id)
+                    return
+                garment_input["top_garment_url"] = url
+            if bottom_items:
+                url = bottom_items[0].public_url
+                if not url:
+                    logger.info("No public_url for bottom item %s, attempting OSS upload", bottom_items[0].id)
+                    url = await _ensure_oss_url(bottom_items[0])
+                    if url:
+                        # Persist the URL for future use
+                        bottom_items[0].public_url = url
+                        await db.commit()
+                if not url:
+                    logger.warning("Failed to get URL for bottom item %s, skipping try-on", bottom_items[0].id)
+                    return
+                garment_input["bottom_garment_url"] = url
+
+            if not garment_input:
+                return
+
+            logger.info(
+                "Submitting try-on for outfit %s: person=%s, garments=%s",
+                outfit_id, person_url[:80], list(garment_input.keys()),
+            )
+
+            # Submit try-on task using basic aitryon (faster)
+            task = await submit_tryon_task(
+                person_image_url=person_url,
+                garment_urls=[],
+                model="aitryon",  # Use basic model for speed
+                garment_input=garment_input,
+            )
+
+            if task.status == "FAILED":
+                logger.error("Try-on task failed for outfit %s: %s", outfit_id, task.error)
+                return
+
+            # Poll for result (with timeout)
+            import asyncio as _asyncio
+            for _ in range(60):  # Max 5 minutes
+                await _asyncio.sleep(5)
+                checked = await check_task_once(task.task_id)
+                if checked and checked.status == "SUCCEEDED" and checked.image_url:
+                    # Update outfit with try-on image
+                    outfit.model_image_url = checked.image_url
+                    await db.commit()
+                    logger.info("Try-on image generated for outfit %s", outfit_id)
+                    return
+                elif checked and checked.status in {"FAILED", "CANCELED"}:
+                    logger.error("Try-on task %s ended with status: %s", task.task_id, checked.status)
+                    return
+
+            logger.warning("Try-on task %s timed out for outfit %s", task.task_id, outfit_id)
+
+    except Exception as e:
+        logger.error("Try-on generation failed for outfit %s: %s", outfit_id, e, exc_info=True)
+
+
+class BatchCheckRequest(BaseModel):
+    ids: list[UUID]
+
+
+class BatchCheckResponse(BaseModel):
+    id: UUID
+    model_image_url: str | None = None
+
+
+@router.post("/batch-check", response_model=list[BatchCheckResponse])
+async def batch_check_tryon(
+    request: BatchCheckRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[BatchCheckResponse]:
+    """Check if try-on images are ready for given outfits."""
+    if not request.ids:
+        return []
+
+    result = await db.execute(
+        select(Outfit).where(
+            and_(
+                Outfit.id.in_(request.ids),
+                Outfit.user_id == current_user.id,
+            )
+        )
+    )
+    outfits = result.scalars().all()
+
+    return [
+        BatchCheckResponse(
+            id=o.id,
+            model_image_url=o.model_image_url,
+        )
+        for o in outfits
+    ]
 
 
 @router.get("", response_model=OutfitListResponse)
@@ -1021,6 +1363,22 @@ class PatchOutfitRequest(BaseModel):
 
     name: Annotated[str | None, Field(max_length=100)] = None
     items: Annotated[list[UUID] | None, Field(min_length=1, max_length=20)] = None
+    occasion: Annotated[str | None, Field(max_length=50)] = None
+    outfit_photo_url: Annotated[str | None, Field(max_length=1000)] = None
+
+    @field_validator("occasion")
+    @classmethod
+    def validate_occasion(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if len(v) > 50:
+            raise ValueError("Occasion must be 50 characters or less")
+        if v not in VALID_OCCASIONS:
+            raise ValueError(
+                f"Invalid occasion '{v}'. Must be one of: {', '.join(sorted(VALID_OCCASIONS))}"
+            )
+        return v
 
 
 async def _run_learning_safely(db: AsyncSession, outfit_id: UUID, user_id: UUID) -> None:
@@ -1196,41 +1554,65 @@ async def patch_outfit_endpoint(
         str(current_user.id), "patch_outfit", max_requests=30, window_seconds=60
     )
 
-    if request.name is None and request.items is None:
+    has_item_fields = request.name is not None or request.items is not None
+    has_meta_fields = request.occasion is not None or request.outfit_photo_url is not None
+
+    if not has_item_fields and not has_meta_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error_code": "PATCH_EMPTY", "message": "No fields provided"},
         )
 
     service = StudioService(db)
-    try:
-        updated = await service.patch_outfit(
-            user=current_user,
-            outfit_id=outfit_id,
-            name=request.name,
-            items=request.items,
+    updated = None
+
+    if has_item_fields:
+        try:
+            updated = await service.patch_outfit(
+                user=current_user,
+                outfit_id=outfit_id,
+                name=request.name,
+                items=request.items,
+            )
+        except LookupError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
+            ) from None
+        except ItemOwnershipError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "OUTFIT_ITEM_OWNERSHIP",
+                    "message": "One or more items do not belong to you",
+                },
+            ) from None
+        except OutfitWornImmutableError:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "error_code": "OUTFIT_WORN_IMMUTABLE",
+                    "message": "Cannot modify items on a worn outfit.",
+                },
+            ) from None
+
+    if has_meta_fields:
+        result = await db.execute(
+            select(Outfit).where(
+                and_(Outfit.id == outfit_id, Outfit.user_id == current_user.id)
+            )
         )
-    except LookupError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
-        ) from None
-    except ItemOwnershipError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error_code": "OUTFIT_ITEM_OWNERSHIP",
-                "message": "One or more items do not belong to you",
-            },
-        ) from None
-    except OutfitWornImmutableError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error_code": "OUTFIT_WORN_IMMUTABLE",
-                "message": "Cannot modify items on a worn outfit. Create a new lookbook entry instead.",
-            },
-        ) from None
+        outfit = result.scalar_one_or_none()
+        if not outfit:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
+            )
+        if request.occasion is not None:
+            outfit.occasion = request.occasion
+        if request.outfit_photo_url is not None:
+            outfit.model_image_url = request.outfit_photo_url
+        updated = outfit
 
     await db.commit()
 

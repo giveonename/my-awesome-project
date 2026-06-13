@@ -1857,6 +1857,50 @@ async def create_items_from_parse(
     return FromParseResponse(created=created, failed=failed, item_ids=item_ids, errors=errors)
 
 
+class ImageUploadResponse(BaseModel):
+    url: str
+    path: str
+
+
+@router.post("/upload-image", response_model=ImageUploadResponse)
+async def upload_image(
+    current_user: Annotated[User, Depends(get_current_user)],
+    image: UploadFile = File(..., description="Image file to upload"),
+) -> ImageUploadResponse:
+    from app.utils.signed_urls import sign_image_url
+    from app.services.oss_service import get_oss_service
+
+    image_service = ImageService()
+    content = await image.read()
+    content_type = image.content_type or "application/octet-stream"
+
+    if not image_service.validate_image(content, content_type):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid image format. Supported: JPEG, PNG, WebP",
+        )
+
+    paths = await image_service.process_and_store(
+        user_id=current_user.id,
+        image_data=content,
+        original_filename=image.filename or "upload.jpg",
+    )
+
+    public_url = None
+    settings_local = get_settings()
+    full_path = Path(settings_local.storage_path) / paths["image_path"]
+    oss = get_oss_service()
+    if oss and full_path.exists():
+        ext = full_path.suffix.lower().lstrip(".")
+        ct = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png"}.get(ext, "image/jpeg")
+        public_url = await asyncio.to_thread(
+            oss.upload_file, str(full_path), f"images/{paths['image_path']}", ct
+        )
+
+    if not public_url:
+        public_url = sign_image_url(paths["image_path"])
+
+    return ImageUploadResponse(url=public_url, path=paths["image_path"])
 
 
 
