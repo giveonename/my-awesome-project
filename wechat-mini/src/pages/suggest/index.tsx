@@ -53,10 +53,10 @@ function MineOutfitsTab() {
   const [pendingOccasion, setPendingOccasion] = useState<string | null>(null)
   const [uploadingOutfitId, setUploadingOutfitId] = useState<string | null>(null)
 
-  // 使用 useEffect 在组件挂载时加载数据
-  useEffect(() => {
+  // 每次显示时刷新数据（从 DIY 返回后也能看到新搭配）
+  useDidShow(() => {
     loadMine()
-  }, [])
+  })
 
   const loadMine = async () => {
     setLoading(true)
@@ -284,27 +284,29 @@ function MineOutfitsTab() {
 
             {/* 场景选择面板 */}
             {editingSceneId === outfit.id && (
-              <View className='mine-scene-panel' onClick={(e) => e.stopPropagation()}>
-                <View className='mine-scene-grid'>
-                  {OCCASION_OPTIONS.map(o => (
-                    <View
-                      key={o.key}
-                      className={`mine-scene-item ${(pendingOccasion || outfit.occasion) === o.key ? 'mine-scene-item--active' : ''}`}
-                      onClick={() => setPendingOccasion(o.key)}
-                    >
-                      <Text className='mine-scene-item-text'>{o.label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View className='mine-scene-actions'>
-                  <View className='mine-scene-btn mine-scene-btn--cancel' onClick={() => { setEditingSceneId(null); setPendingOccasion(null) }}>
-                    <Text className='mine-scene-btn-text'>取消</Text>
+              <View className='mine-scene-overlay' onClick={() => { setEditingSceneId(null); setPendingOccasion(null) }}>
+                <View className='mine-scene-panel' onClick={(e) => e.stopPropagation()}>
+                  <View className='mine-scene-grid'>
+                    {OCCASION_OPTIONS.map(o => (
+                      <View
+                        key={o.key}
+                        className={`mine-scene-item ${(pendingOccasion || outfit.occasion) === o.key ? 'mine-scene-item--active' : ''}`}
+                        onClick={() => setPendingOccasion(o.key)}
+                      >
+                        <Text className='mine-scene-item-text'>{o.label}</Text>
+                      </View>
+                    ))}
                   </View>
-                  <View className='mine-scene-btn mine-scene-btn--confirm' onClick={() => {
-                    if (pendingOccasion) handleSetScene(outfit.id, pendingOccasion)
-                    else setEditingSceneId(null)
-                  }}>
-                    <Text className='mine-scene-btn-text'>确定</Text>
+                  <View className='mine-scene-actions'>
+                    <View className='mine-scene-btn mine-scene-btn--cancel' onClick={() => { setEditingSceneId(null); setPendingOccasion(null) }}>
+                      <Text className='mine-scene-btn-text'>取消</Text>
+                    </View>
+                    <View className='mine-scene-btn mine-scene-btn--confirm' onClick={() => {
+                      if (pendingOccasion) handleSetScene(outfit.id, pendingOccasion)
+                      else setEditingSceneId(null)
+                    }}>
+                      <Text className='mine-scene-btn-text'>确定</Text>
+                    </View>
                   </View>
                 </View>
               </View>

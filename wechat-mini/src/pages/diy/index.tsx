@@ -139,6 +139,12 @@ export default function DiyPage() {
       return
     }
 
+    // Max 20 items
+    if (canvasItems.length >= 20) {
+      Taro.showToast({ title: '最多放 20 件衣物哦', icon: 'none' })
+      return
+    }
+
     const newZ = zCounter + 1
     setZCounter(newZ)
 
@@ -299,7 +305,7 @@ export default function DiyPage() {
                 )}
                 <View className='diy-canvas-item-label'>
                   <Text className='diy-canvas-item-label-text'>
-                    {TYPE_LABELS[ci.item.type] || ci.item.type}
+                    {ci.item.name || TYPE_LABELS[ci.item.type] || ci.item.type}
                   </Text>
                 </View>
                 {activeId === ci.id && (
@@ -421,6 +427,7 @@ export default function DiyPage() {
               className='diy-info-input'
               placeholder='给搭配起个名字（可选）'
               value={outfitName}
+              maxlength={100}
               onInput={(e) => setOutfitName(e.detail.value)}
             />
           </View>

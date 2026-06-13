@@ -28,6 +28,7 @@ export default function OutfitDetailPage() {
   const router = useRouter()
   const [outfit, setOutfit] = useState<OutfitDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [wearing, setWearing] = useState(false)
 
   useEffect(() => {
     const id = router.params.id
@@ -63,13 +64,16 @@ export default function OutfitDetailPage() {
   }
 
   const handleWear = async () => {
-    if (!outfit) return
+    if (!outfit || wearing) return
+    setWearing(true)
     try {
       await api.post(`/outfits/${outfit.id}/accept`)
       Taro.showToast({ title: '已记录今日穿搭！', icon: 'success' })
     } catch (err) {
       console.error('Accept outfit failed:', err)
       Taro.showToast({ title: '记录没成功', icon: 'none' })
+    } finally {
+      setWearing(false)
     }
   }
 
@@ -226,8 +230,8 @@ export default function OutfitDetailPage() {
             </View>
           </View>
         )}
-        <View className='od-action-btn od-action-btn--primary' onClick={handleWear}>
-          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['thumbs-up']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>今天穿这套</Text></View>
+        <View className={`od-action-btn od-action-btn--primary ${wearing ? 'od-action-btn--disabled' : ''}`} onClick={handleWear}>
+          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['thumbs-up']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>{wearing ? '记录中...' : '今天穿这套'}</Text></View>
         </View>
       </View>
     </View>

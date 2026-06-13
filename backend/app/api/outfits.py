@@ -231,6 +231,7 @@ class OutfitResponse(BaseModel):
     is_starter_suggestion: bool = False
     model_image_url: str | None = None
     created_at: datetime
+    updated_at: datetime | None = None
 
 
 class OutfitListResponse(BaseModel):
@@ -413,8 +414,14 @@ def outfit_to_response(
         family_rating_average=family_rating_average,
         family_rating_count=family_rating_count,
         is_starter_suggestion=is_starter_suggestion,
-        model_image_url=outfit.model_image_url,
+        model_image_url=(
+            outfit.model_image_url
+            if outfit.model_image_url and outfit.model_image_url.startswith("http")
+            else sign_image_url(outfit.model_image_url) if outfit.model_image_url
+            else None
+        ),
         created_at=outfit.created_at,
+        updated_at=outfit.updated_at,
     )
 
 

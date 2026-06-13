@@ -173,6 +173,11 @@
   &--primary {
     width: 100%;
   }
+
+  &--disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
 }
 
 .od-action-btn-text { font-size: $font-body-size; color: $text-on-primary; font-weight: 600; }
