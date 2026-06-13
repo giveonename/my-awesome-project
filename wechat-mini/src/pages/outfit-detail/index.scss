@@ -3,6 +3,52 @@
 
 .od-page { min-height: 100vh; background: $bg-page-default; padding-bottom: 200rpx; }
 
+// Skeleton loading
+.od-skeleton-hero {
+  height: 400rpx;
+  background: $color-gray-100;
+  animation: shimmer 1.5s infinite;
+  background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-50 50%, $color-gray-100 75%);
+  background-size: 200% 100%;
+}
+
+.od-skeleton-section {
+  margin: $spacing-md $spacing-lg 0;
+}
+
+.od-skeleton-line {
+  height: 32rpx;
+  border-radius: $radius-sm;
+  background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-50 50%, $color-gray-100 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: $spacing-sm;
+
+  &--60 { width: 60%; }
+  &--80 { width: 80%; }
+  &--40 { width: 40%; }
+}
+
+.od-skeleton-items {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.od-skeleton-item {
+  width: calc((100% - 32rpx) / 3);
+  height: 200rpx;
+  border-radius: $radius-sm;
+  background: linear-gradient(90deg, $color-gray-100 25%, $color-gray-50 50%, $color-gray-100 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 // Hero
 .od-hero {
   position: relative;

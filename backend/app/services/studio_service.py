@@ -360,8 +360,10 @@ class StudioService:
         self,
         user: User,
         outfit_id: UUID,
-        name: str | None,
-        items: list[UUID] | None,
+        name: str | None = None,
+        items: list[UUID] | None = None,
+        occasion: str | None = None,
+        outfit_photo_url: str | None = None,
     ) -> Outfit:
         result = await self.db.execute(
             select(Outfit)
@@ -377,6 +379,12 @@ class StudioService:
 
         if name is not None:
             outfit.name = name
+
+        if occasion is not None:
+            outfit.occasion = occasion
+
+        if outfit_photo_url is not None:
+            outfit.model_image_url = outfit_photo_url
 
         if items is not None:
             if outfit.feedback is not None and outfit.feedback.worn_at is not None:

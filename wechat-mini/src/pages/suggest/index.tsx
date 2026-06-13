@@ -24,6 +24,19 @@ interface OutfitRecommendation {
   model_image_url?: string
 }
 
+interface MineOutfit {
+  id: string
+  name?: string
+  occasion?: string
+  source?: string
+  model_image_url?: string
+  items: ClothingItem[]
+  like_count?: number
+  is_liked_by_me?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 type SuggestTabKey = 'mine' | 'ai' | 'product'
 
 const SUGGEST_TABS: { key: SuggestTabKey; label: string }[] = [
@@ -45,7 +58,7 @@ const MAX_RECOMMENDATIONS = 6
 // ===== 我的搭配 Tab 组件 =====
 
 function MineOutfitsTab() {
-  const [outfits, setOutfits] = useState<any[]>([])
+  const [outfits, setOutfits] = useState<MineOutfit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [activeOccasion, setActiveOccasion] = useState('all')
@@ -62,7 +75,7 @@ function MineOutfitsTab() {
     setLoading(true)
     setError(false)
     try {
-      const data = await api.get<{ outfits: any[]; total: number; has_more: boolean }>('/outfits', {
+      const data = await api.get<{ outfits: MineOutfit[]; total: number; has_more: boolean }>('/outfits', {
         page: '1',
         page_size: '50',
         source: 'manual',
@@ -236,6 +249,15 @@ function MineOutfitsTab() {
                   </View>
                 )}
               </View>
+              {/* 搭配名称和时间 */}
+              {outfit.name && (
+                <Text className='mine-card-name'>{outfit.name}</Text>
+              )}
+              {outfit.created_at && (
+                <Text className='mine-card-time'>
+                  {new Date(outfit.created_at).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
+                </Text>
+              )}
               {/* 设定场景标签 */}
               <View
                 className={`mine-card-scene ${editingSceneId === outfit.id ? 'mine-card-scene--editing' : ''} ${outfit.occasion ? 'mine-card-scene--set' : ''}`}

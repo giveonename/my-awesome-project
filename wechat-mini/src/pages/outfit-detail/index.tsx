@@ -1,5 +1,5 @@
 import { View, Text, Image} from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
 import CachedImage from '../../components/CachedImage'
@@ -103,15 +103,38 @@ export default function OutfitDetailPage() {
 
   const handleEdit = () => {
     if (!outfit) return
-    // 跳转到DIY页面，传入outfit_id进行编辑
     Taro.navigateTo({ url: `/pages/diy/index?outfit_id=${outfit.id}` })
   }
+
+  const handleShare = () => {
+    if (!outfit) return
+    Taro.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+  }
+
+  useShareAppMessage(() => {
+    const title = outfit?.name || (outfit?.occasion ? `${OCCASION_LABELS[outfit.occasion] || outfit.occasion}搭配` : '我的搭配')
+    return {
+      title,
+      path: `/pages/outfit-detail/index?id=${outfit?.id}`,
+    }
+  })
 
   if (loading) {
     return (
       <View className='od-page'>
-        <View className='od-loading'>
-          <Text>加载中...</Text>
+        <View className='od-skeleton-hero' />
+        <View className='od-skeleton-section'>
+          <View className='od-skeleton-line od-skeleton-line--60' />
+          <View className='od-skeleton-items'>
+            <View className='od-skeleton-item' />
+            <View className='od-skeleton-item' />
+            <View className='od-skeleton-item' />
+          </View>
+        </View>
+        <View className='od-skeleton-section'>
+          <View className='od-skeleton-line od-skeleton-line--40' />
+          <View className='od-skeleton-line od-skeleton-line--80' />
+          <View className='od-skeleton-line od-skeleton-line--60' />
         </View>
       </View>
     )
@@ -224,6 +247,9 @@ export default function OutfitDetailPage() {
           <View className='od-action-row'>
             <View className='od-action-btn od-action-btn--secondary' onClick={handleEdit}>
               <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['edit']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>编辑</Text></View>
+            </View>
+            <View className='od-action-btn od-action-btn--secondary' onClick={handleShare}>
+              <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['share']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>分享</Text></View>
             </View>
             <View className='od-action-btn od-action-btn--danger' onClick={handleDelete}>
               <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['trash']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>删除</Text></View>

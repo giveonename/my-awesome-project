@@ -916,6 +916,20 @@
   gap: $spacing-xs;
 }
 
+.mine-card-name {
+  @include text-caption;
+  font-weight: 500;
+  color: $text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mine-card-time {
+  @include text-tag;
+  color: $text-tertiary;
+}
+
 .mine-card-item {
   flex: 1;
   aspect-ratio: 1;
@@ -961,7 +975,7 @@
 }
 
 .mine-card-scene-text {
-  font-size: $font-tag-size;
+  @include text-tag;
   color: $color-primary;
 
   .mine-card-scene--set & {
@@ -998,13 +1012,12 @@
 }
 
 .mine-card-photo-text {
-  font-size: $font-caption-size;
-  color: $text-secondary;
+  @include text-caption;
   font-weight: 500;
 }
 
 .mine-card-photo-hint {
-  font-size: $font-tag-size;
+  @include text-tag;
   color: $text-tertiary;
 }
 
@@ -1023,7 +1036,7 @@
 }
 
 .mine-card-photo-replace-text {
-  font-size: $font-tag-size;
+  @include text-tag;
   color: #fff;
 }
 
@@ -1038,7 +1051,7 @@
 }
 
 .mine-card-item-more-text {
-  font-size: $font-tag-size;
+  @include text-tag;
   color: $text-secondary;
   font-weight: 600;
 }
@@ -1110,8 +1123,7 @@
 }
 
 .mine-scene-item-text {
-  font-size: $font-caption-size;
-  color: $text-secondary;
+  @include text-caption;
 
   .mine-scene-item--active & {
     color: $color-primary;

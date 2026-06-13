@@ -1561,65 +1561,50 @@ async def patch_outfit_endpoint(
         str(current_user.id), "patch_outfit", max_requests=30, window_seconds=60
     )
 
-    has_item_fields = request.name is not None or request.items is not None
-    has_meta_fields = request.occasion is not None or request.outfit_photo_url is not None
+    has_any_field = (
+        request.name is not None
+        or request.items is not None
+        or request.occasion is not None
+        or request.outfit_photo_url is not None
+    )
 
-    if not has_item_fields and not has_meta_fields:
+    if not has_any_field:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error_code": "PATCH_EMPTY", "message": "No fields provided"},
         )
 
     service = StudioService(db)
-    updated = None
-
-    if has_item_fields:
-        try:
-            updated = await service.patch_outfit(
-                user=current_user,
-                outfit_id=outfit_id,
-                name=request.name,
-                items=request.items,
-            )
-        except LookupError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
-            ) from None
-        except ItemOwnershipError:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "error_code": "OUTFIT_ITEM_OWNERSHIP",
-                    "message": "One or more items do not belong to you",
-                },
-            ) from None
-        except OutfitWornImmutableError:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "error_code": "OUTFIT_WORN_IMMUTABLE",
-                    "message": "Cannot modify items on a worn outfit.",
-                },
-            ) from None
-
-    if has_meta_fields:
-        result = await db.execute(
-            select(Outfit).where(
-                and_(Outfit.id == outfit_id, Outfit.user_id == current_user.id)
-            )
+    try:
+        updated = await service.patch_outfit(
+            user=current_user,
+            outfit_id=outfit_id,
+            name=request.name,
+            items=request.items,
+            occasion=request.occasion,
+            outfit_photo_url=request.outfit_photo_url,
         )
-        outfit = result.scalar_one_or_none()
-        if not outfit:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
-            )
-        if request.occasion is not None:
-            outfit.occasion = request.occasion
-        if request.outfit_photo_url is not None:
-            outfit.model_image_url = request.outfit_photo_url
-        updated = outfit
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "OUTFIT_NOT_FOUND", "message": "Outfit not found"},
+        ) from None
+    except ItemOwnershipError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "OUTFIT_ITEM_OWNERSHIP",
+                "message": "One or more items do not belong to you",
+            },
+        ) from None
+    except OutfitWornImmutableError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": "OUTFIT_WORN_IMMUTABLE",
+                "message": "Cannot modify items on a worn outfit.",
+            },
+        ) from None
 
     await db.commit()
 
