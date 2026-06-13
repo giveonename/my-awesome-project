@@ -257,16 +257,51 @@
   @include flex-center;
   padding: 120rpx $spacing-xl;
   text-align: center;
+  position: relative;
+}
+
+.suggest-empty-glow {
+  position: absolute;
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 111, 235, 0.12), transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  z-index: 0;
+}
+
+.suggest-empty-icon-wrap {
+  position: relative;
+  z-index: 1;
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(124, 111, 235, 0.15), rgba(155, 143, 255, 0.08));
+  @include flex-center;
+  margin-bottom: $spacing-lg;
+  box-shadow: 0 0 40rpx rgba(124, 111, 235, 0.15);
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 40rpx rgba(124, 111, 235, 0.15); }
+  50% { box-shadow: 0 0 60rpx rgba(124, 111, 235, 0.3); }
 }
 
 .suggest-empty-icon {
   font-size: 96rpx;
   margin-bottom: $spacing-md;
+  position: relative;
+  z-index: 1;
 }
 
 .suggest-empty-title {
   @include text-h3;
   margin-bottom: $spacing-xs;
+  position: relative;
+  z-index: 1;
 }
 
 .suggest-empty-desc {
@@ -274,12 +309,22 @@
   color: $text-tertiary;
   margin-bottom: $spacing-lg;
   line-height: 1.6;
+  position: relative;
+  z-index: 1;
 }
 
 .suggest-empty-btn {
   @include btn-primary;
   display: inline-flex;
   padding: 20rpx 56rpx;
+  position: relative;
+  z-index: 1;
+  animation: breathe-btn 2.5s ease-in-out infinite;
+}
+
+@keyframes breathe-btn {
+  0%, 100% { box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.3); }
+  50% { box-shadow: 0 8rpx 32rpx rgba(124, 111, 235, 0.5); }
 }
 
 .suggest-empty-btn-text {
@@ -1088,6 +1133,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .mine-scene-panel {
@@ -1096,6 +1147,12 @@
   border-radius: $radius-lg;
   padding: $spacing-lg;
   box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .mine-scene-grid {
@@ -1226,4 +1283,40 @@
   color: white;
   font-weight: 300;
   line-height: 1;
+}
+
+// 加载更多
+.mine-loading-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12rpx;
+  padding: $spacing-md 0;
+}
+
+.mine-loading-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: $color-primary;
+  opacity: 0.4;
+  animation: dotBounce 1.2s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% { opacity: 0.4; transform: scale(1); }
+  40% { opacity: 1; transform: scale(1.3); }
+}
+
+.mine-no-more {
+  text-align: center;
+  padding: $spacing-md 0;
+}
+
+.mine-no-more-text {
+  @include text-tag;
+  color: $text-tertiary;
 }

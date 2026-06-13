@@ -61,6 +61,9 @@ function MineOutfitsTab() {
   const [outfits, setOutfits] = useState<MineOutfit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [activeOccasion, setActiveOccasion] = useState('all')
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null)
   const [pendingOccasion, setPendingOccasion] = useState<string | null>(null)
@@ -68,25 +71,46 @@ function MineOutfitsTab() {
 
   // 每次显示时刷新数据（从 DIY 返回后也能看到新搭配）
   useDidShow(() => {
-    loadMine()
+    setOutfits([])
+    setPage(1)
+    setHasMore(true)
+    loadMine(1)
   })
 
-  const loadMine = async () => {
-    setLoading(true)
+  useReachBottom(() => {
+    if (hasMore && !loading && !loadingMore) {
+      loadMore()
+    }
+  })
+
+  const loadMine = async (p: number) => {
+    if (p === 1) setLoading(true)
     setError(false)
     try {
       const data = await api.get<{ outfits: MineOutfit[]; total: number; has_more: boolean }>('/outfits', {
-        page: '1',
-        page_size: '50',
+        page: String(p),
+        page_size: '20',
         source: 'manual',
       })
-      setOutfits(data.outfits || [])
+      if (p === 1) {
+        setOutfits(data.outfits || [])
+      } else {
+        setOutfits(prev => [...prev, ...(data.outfits || [])])
+      }
+      setHasMore(data.has_more ?? false)
+      setPage(p)
     } catch (err) {
       console.error('Load mine outfits failed:', err)
-      setError(true)
+      if (p === 1) setError(true)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
+  }
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    await loadMine(page + 1)
   }
 
   const handleSetScene = async (outfitId: string, occasion: string) => {
@@ -113,6 +137,19 @@ function MineOutfitsTab() {
       })
 
       if (res.tempFilePaths.length === 0) return
+
+      const filePath = res.tempFilePaths[0]
+
+      // 文件大小校验（最大 10MB）
+      try {
+        const fileInfo = await Taro.getFileInfo({ filePath })
+        if (fileInfo.size > 10 * 1024 * 1024) {
+          Taro.showToast({ title: '图片太大了，选张小一点的吧', icon: 'none' })
+          return
+        }
+      } catch {
+        // getFileInfo 失败不阻塞上传
+      }
 
       setUploadingOutfitId(outfitId)
       Taro.showLoading({ title: '上传中...' })
@@ -176,11 +213,14 @@ function MineOutfitsTab() {
   if (outfits.length === 0) {
     return (
       <View className='suggest-empty'>
-        <Image src={icons['hand']} className='suggest-empty-icon' style={{width: '48rpx', height: '48rpx'}} />
+        <View className='suggest-empty-glow' />
+        <View className='suggest-empty-icon-wrap'>
+          <Image src={icons['hand']} className='suggest-empty-icon' style={{width: '64rpx', height: '64rpx'}} />
+        </View>
         <Text className='suggest-empty-title'>还没有自定义搭配</Text>
         <Text className='suggest-empty-desc'>去搭配 DIY 页面自由组合你的衣物吧</Text>
         <View
-          className='suggest-empty-btn press-scale'
+          className='suggest-empty-btn'
           onClick={() => Taro.navigateTo({ url: '/pages/diy/index' })}
         >
           <Text className='suggest-empty-btn-text'>去搭配</Text>
@@ -336,6 +376,20 @@ function MineOutfitsTab() {
           </View>
         ))}
       </View>
+      )}
+
+      {/* 加载更多 */}
+      {loadingMore && (
+        <View className='mine-loading-more'>
+          <View className='mine-loading-dot' />
+          <View className='mine-loading-dot' />
+          <View className='mine-loading-dot' />
+        </View>
+      )}
+      {!hasMore && outfits.length > 0 && (
+        <View className='mine-no-more'>
+          <Text className='mine-no-more-text'>没有更多了</Text>
+        </View>
       )}
 
       {/* FAB按钮 */}
