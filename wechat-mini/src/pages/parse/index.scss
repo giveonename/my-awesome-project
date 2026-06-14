@@ -632,6 +632,7 @@
 
 .parse-garment-card {
   width: calc(50% - 8rpx);
+  box-sizing: border-box;
   background: $color-gray-50;
   border-radius: $radius-md;
   overflow: hidden;
