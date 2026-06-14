@@ -28,15 +28,19 @@ interface TypeGroup {
 
 const TYPE_ICONS: Record<string, string> = {
   tshirt: icons['shirt'], shirt: icons['shirt'], blouse: icons['shirt'], top: icons['shirt'],
+  'tank-top': icons['shirt'], polo: icons['shirt'],
   sweater: icons['shirt'], hoodie: icons['shirt'],
   blazer: icons['briefcase'], jacket: icons['shirt'], coat: icons['shirt'], vest: icons['shirt'],
+  cardigan: icons['shirt'],
   pants: icons['shirt'], jeans: icons['shirt'], shorts: icons['shirt'], skirt: icons['shirt'],
-  dress: icons['shirt'],
-  shoes: icons['shirt'], sneakers: icons['shirt'], boots: icons['shirt'], sandals: icons['shirt'], loafers: icons['shirt'],
+  dress: icons['shirt'], jumpsuit: icons['shirt'],
+  shoes: icons['shirt'], sneakers: icons['shirt'], boots: icons['shirt'],
+  sandals: icons['shirt'], loafers: icons['shirt'],
   hat: icons['crown'], cap: icons['crown'],
   bag: icons['briefcase'],
   scarf: icons['shirt'], belt: icons['shirt'], watch: '⌚', sunglasses: icons['sun'],
   jewelry: icons['gem'], accessory: icons['shirt'], underwear: icons['shirt'], socks: icons['shirt'],
+  tie: icons['shirt'],
 }
 
 export default function WardrobePage() {

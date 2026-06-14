@@ -15,22 +15,35 @@ export const TYPE_LABELS: Record<string, string> = {
   'shoes': '鞋子',
   'sneakers': '运动鞋',
   'boots': '靴子',
+  'sandals': '凉鞋',
+  'loafers': '乐福鞋',
   'accessories': '配饰',
   'hat': '帽子',
   'bag': '包',
   'top': '上衣',
+  'blouse': '衬衫',
+  'tank-top': '背心',
+  'polo': 'POLO衫',
+  'cardigan': '开衫',
+  'jumpsuit': '连体裤',
+  'socks': '袜子',
+  'tie': '领带',
+  'scarf': '围巾',
+  'belt': '腰带',
+  'sunglasses': '墨镜',
+  'jewelry': '首饰',
 }
 
 // Category filter mapping: category key → list of clothing types
 export const CATEGORY_TYPES: Record<string, string[]> = {
-  'top': ['shirt', 't-shirt', 'top', 'blouse'],
-  'outerwear': ['sweater', 'hoodie', 'blazer', 'jacket', 'coat', 'vest'],
+  'top': ['shirt', 't-shirt', 'top', 'blouse', 'tank-top', 'polo'],
+  'outerwear': ['sweater', 'hoodie', 'blazer', 'jacket', 'coat', 'vest', 'cardigan'],
   'bottom': ['pants', 'jeans', 'shorts', 'skirt'],
-  'dress': ['dress'],
+  'dress': ['dress', 'jumpsuit'],
   'shoes': ['shoes', 'sneakers', 'boots', 'sandals', 'loafers'],
   'bag': ['bag'],
   'hat': ['hat', 'cap'],
-  'accessories': ['accessories', 'scarf', 'belt', 'watch', 'sunglasses', 'jewelry'],
+  'accessories': ['accessories', 'scarf', 'belt', 'watch', 'sunglasses', 'jewelry', 'socks', 'tie'],
 }
 
 // 材质英文→中文映射
