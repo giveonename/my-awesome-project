@@ -978,8 +978,7 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
         ("帆布包 文艺 百搭 通勤", "文艺帆布包", ""),
     ]
     kw, reason, cat = random.choice(_SAFE_KEYWORDS)
-    parts = [p for p in [user_style, kw] if p]
-    return " ".join(parts), reason, cat
+    return kw, reason, cat
 
 
 # ===== Endpoints =====
