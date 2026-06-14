@@ -114,7 +114,7 @@ function CountUpCard({ label, value, icon, delay }: { label: string; value: numb
   const displayValue = useCountUp(value, 1000)
   return (
     <View className='ac-overview-card animate-fade-in-up' style={{ animationDelay: `${delay}ms` }}>
-      <Image src={{icon}} className='ac-overview-icon' style={{width: '48rpx', height: '48rpx'}} />
+      <Image src={icon} className='ac-overview-icon' style={{width: '48rpx', height: '48rpx'}} />
       <Text className='ac-overview-value'>{displayValue}</Text>
       <Text className='ac-overview-label'>{label}</Text>
     </View>
