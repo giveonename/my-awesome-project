@@ -1,4 +1,4 @@
-﻿@import '../../styles/tokens.scss';
+@import '../../styles/tokens.scss';
 @import '../../styles/animations.scss';
 
 .parse-page {
@@ -617,6 +617,12 @@
 }
 
 // --- Garment grid ---
+.parse-garment-scroll {
+  max-height: 800rpx;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .parse-garment-grid {
   display: flex;
   flex-wrap: wrap;
