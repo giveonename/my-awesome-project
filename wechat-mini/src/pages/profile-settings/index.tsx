@@ -415,7 +415,7 @@ export default function ProfileSettingsPage() {
               <Text className='ps-group-title'>全身照</Text>
               <View className='ps-photo-area' onClick={handlePhotoUpload}>
                 {photoUrl ? (
-                  <Image className='ps-photo-img' src={resolveImageUrl(photoUrl) || ''} mode='aspectFill' />
+                  <Image className='ps-photo-img' src={resolveImageUrl(photoUrl) || ''} mode='aspectFit' />
                 ) : (
                   <View className='ps-photo-placeholder'>
                     <Text className='ps-photo-icon'>📷</Text>
