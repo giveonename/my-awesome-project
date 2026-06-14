@@ -154,7 +154,6 @@ function MineOutfitsTab() {
       setUploadingOutfitId(outfitId)
       Taro.showLoading({ title: '上传中...' })
 
-      const filePath = res.tempFilePaths[0]
       const uploadResult = await uploadFile<{ url: string }>(
         '/items/upload-image',
         filePath,
