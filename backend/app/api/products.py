@@ -161,9 +161,9 @@ SCENE_KEYWORDS: dict[str, str] = {
 # neutral = fallback when gender is unknown or "prefer-not-to-say"
 _GENDER_KEYWORDS: dict[str, dict[str, list[str]]] = {
     "shoes": {
-        "male": ["皮鞋", "运动鞋", "帆布鞋", "板鞋", "休闲鞋"],
-        "female": ["高跟鞋", "玛丽珍鞋", "运动鞋", "单鞋", "平底鞋"],
-        "neutral": ["运动鞋", "板鞋", "休闲鞋", "单鞋"],
+        "male": ["运动鞋", "休闲鞋", "皮鞋", "帆布鞋", "板鞋"],
+        "female": ["平底鞋", "小白鞋", "运动鞋", "乐福鞋", "短靴", "凉鞋"],
+        "neutral": ["运动鞋", "小白鞋", "休闲鞋", "帆布鞋"],
     },
     "accessories": {
         "male": ["公文包", "双肩包", "腰带", "手表"],
@@ -831,12 +831,12 @@ async def _analyze_wardrobe_gaps(
     # Sort: gaps with 0 items first, then by category priority (clothing > accessories)
     # This ensures default recommendations show varied clothing items, not just bags
     _GAP_PRIORITY = {
-        "bottom": 0,   # pants/skirts most needed for outfits
-        "shoes": 1,    # shoes second most important
-        "top": 2,
+        "top": 0,        # 上衣最基础
+        "bottom": 1,     # 下装第二
+        "shoes": 2,      # 鞋子第三
         "outerwear": 3,
         "dress": 4,
-        "accessories": 5,  # bags/scarves least urgent
+        "accessories": 5,
     }
     gaps.sort(key=lambda g: (g.count, _GAP_PRIORITY.get(g.category, 99)))
     return gaps
@@ -981,8 +981,22 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
             parts = [p for p in [style_cn, kw] if p]
             return " ".join(parts), f"升级你的{style_cn}风格", cat
 
-    # Fallback
-    return "百搭 基础款", "补充基础单品", "top"
+    # Fallback: safe versatile keywords pool — varied categories, easy to match
+    _SAFE_KEYWORDS = [
+        ("简约 百搭 基础款", "推荐百搭基础单品", "top"),
+        ("通勤 休闲裤 百搭", "职场百搭下装", "bottom"),
+        ("小白鞋 休闲 百搭", "百搭休闲鞋", "shoes"),
+        ("针织衫 纯色 简约", "温柔百搭上衣", "top"),
+        ("牛仔裤 直筒 经典", "经典百搭牛仔裤", "bottom"),
+        ("简约 连衣裙 日常", "日常百搭连衣裙", "dress"),
+        ("轻薄 外套 百搭", "换季必备外套", "outerwear"),
+        ("帆布包 休闲 百搭", "实用百搭包包", "accessories"),
+        ("运动鞋 舒适 百搭", "舒适百搭运动鞋", "shoes"),
+        ("衬衫 纯色 简约", "百搭衬衫", "top"),
+    ]
+    kw, reason, cat = random.choice(_SAFE_KEYWORDS)
+    parts = [p for p in [user_style, kw] if p]
+    return " ".join(parts), reason, cat
 
 
 # ===== Endpoints =====
