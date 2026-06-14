@@ -1,10 +1,10 @@
-// ===== 主色调（柔和紫罗兰，低饱和度高级感） =====
-$color-primary: #7C6FEB;           // 主色紫（柔和）
-$color-primary-light: #9B8FFF;     // 亮紫（渐变起点）
-$color-primary-dark: #6358D1;      // 深紫（按压态）
-$color-primary-50: #F3F1FE;        // 极浅紫（背景高亮）
-$color-primary-100: #E8E4FD;       // 浅紫（tag 背景）
-$color-accent-gradient: linear-gradient(135deg, #9B8FFF, #7C6FEB);
+// ===== 主色调（低饱和灰调紫，现代简约高级感） =====
+$color-primary: #6366F1;           // 主色紫（低饱和）
+$color-primary-light: #818CF8;     // 亮紫
+$color-primary-dark: #4F46E5;      // 深紫（按压态）
+$color-primary-50: #EEF2FF;        // 极浅紫（背景高亮）
+$color-primary-100: #E0E7FF;       // 浅紫（tag 背景）
+$color-accent-gradient: #6366F1;   // 实色，去掉渐变
 
 // ===== 中性色阶 =====
 $color-gray-50: #FAFAFA;
@@ -19,9 +19,9 @@ $color-gray-800: #424242;
 $color-gray-900: #333333;
 
 // ===== 背景 =====
-$bg-home-gradient: linear-gradient(180deg, #FFF0E6 0%, #FFE8F0 40%, #F5F0FF 100%);
-$bg-profile-gradient: linear-gradient(180deg, #EDE0F5 0%, #D8E8F0 100%);
-$bg-page-default: #F7F8FA;          // 极浅灰白
+$bg-home-gradient: #FFFFFF;
+$bg-profile-gradient: #FFFFFF;
+$bg-page-default: #F8F9FA;          // 极浅冷灰
 
 // ===== 卡片 =====
 $card-bg: #FFFFFF;
@@ -35,7 +35,7 @@ $shadow-xs: 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
 $shadow-sm: 0 2rpx 6rpx rgba(0, 0, 0, 0.05), 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
 $shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.06), 0 12rpx 32rpx rgba(0, 0, 0, 0.08);
 $shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.08), 0 24rpx 64rpx rgba(0, 0, 0, 0.12);
-$shadow-focus: 0 0 0 4rpx rgba(124, 111, 235, 0.2);  // 主色聚焦光环
+$shadow-focus: 0 0 0 4rpx rgba(99, 102, 241, 0.15);  // 主色聚焦光环（更淡）
 
 // ===== 文字 =====
 $text-primary: #333333;            // 主文字
@@ -49,11 +49,11 @@ $color-success: #34C759;           // iOS 风格绿
 $color-warning: #FF9500;           // iOS 风格橙
 $color-danger: #FF3B30;            // iOS 风格红
 $color-info: #5AC8FA;              // iOS 风格蓝
-$color-ai-glow: rgba(155, 143, 255, 0.35);  // AI 光效
+$color-ai-glow: rgba(99, 102, 241, 0.15);  // AI 光效（克制）
 
 // ===== 标签/徽章 =====
-$tag-ai-bg: linear-gradient(135deg, #9B8FFF, #B8AEFF);
-$tag-vip-bg: linear-gradient(135deg, #1A1A2E, #2D2D44);
+$tag-ai-bg: #EEF2FF;               // 浅紫实色
+$tag-vip-bg: #1F2937;              // 深灰
 $tag-badge-red: #FF4757;
 
 // ===== 圆角体系 =====

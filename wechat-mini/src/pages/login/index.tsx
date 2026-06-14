@@ -81,15 +81,9 @@ export default function LoginPage() {
 
   return (
     <View className={`login-page ${animReady ? 'login-page--ready' : ''}`}>
-      {/* Floating ambient orbs for depth */}
-      <View className='login-orb login-orb--1' />
-      <View className='login-orb login-orb--2' />
-      <View className='login-orb login-orb--3' />
-
       {/* Brand header */}
       <View className='login-brand'>
         <View className='login-logo-wrap'>
-          <View className='login-logo-glow' />
           <Image src={icons['sparkles']} className='login-logo-icon' style={{width: '48rpx', height: '48rpx'}} />
         </View>
         <Text className='login-brand-name'>魔搭幻穿</Text>
