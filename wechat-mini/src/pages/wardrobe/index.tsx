@@ -374,7 +374,7 @@ export default function WardrobePage() {
           <Text className='wardrobe-edit-check-icon'>{selectedItems.has(item.id) ? '✓' : ''}</Text>
         </View>
       )}
-      {closetTab === 'tryon' && !editMode && (
+      {closetTab === 'wardrobe' && !editMode && (
         <>
           <View
             className={`wardrobe-item-select-check ${selectedTryOnItems.has(item.id) ? 'wardrobe-item-select-check--checked' : ''}`}
@@ -605,7 +605,7 @@ export default function WardrobePage() {
       {/* ===== Unified Bottom Action Bars ===== */}
 
       {/* 1. Non-edit try-on: quick try-on selection bar */}
-      {closetTab === 'tryon' && !editMode && selectedTryOnItems.size > 0 && (
+      {closetTab === 'wardrobe' && !editMode && selectedTryOnItems.size > 0 && (
         <View className="wardrobe-action-bar">
           <View className="wardrobe-action-bar-inner">
             <View className="wardrobe-action-bar-info">
@@ -634,7 +634,7 @@ export default function WardrobePage() {
               <Text className="wardrobe-action-bar-count-label">{selectedItems.size} 件</Text>
             </View>
             <View className="wardrobe-action-bar-right">
-              {closetTab === 'tryon' && (
+              {closetTab === 'wardrobe' && (
                 <View
                   className={`wardrobe-action-bar-btn wardrobe-action-bar-btn--primary ${selectedItems.size === 0 ? 'wardrobe-action-bar-btn--disabled' : ''}`}
                   onClick={selectedItems.size > 0 ? handleEditTryOnSelected : undefined}
