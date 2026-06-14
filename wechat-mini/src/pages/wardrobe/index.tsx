@@ -27,11 +27,15 @@ interface TypeGroup {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  tshirt: icons['shirt'], shirt: icons['shirt'], blouse: icons['shirt'], sweater: icons['shirt'], jacket: icons['shirt'],
-  coat: icons['shirt'], vest: icons['shirt'], hoodie: icons['shirt'], pants: icons['shirt'], jeans: icons['shirt'],
-  shorts: icons['shirt'], skirt: icons['shirt'], dress: icons['shirt'], shoes: icons['shirt'], sneakers: icons['shirt'],
-  boots: icons['shirt'], sandals: icons['shirt'], loafers: icons['shirt'], hat: icons['crown'], cap: icons['crown'],
-  scarf: icons['shirt'], bag: icons['briefcase'], belt: icons['shirt'], watch: '⌚', sunglasses: icons['sun'],
+  tshirt: icons['shirt'], shirt: icons['shirt'], blouse: icons['shirt'], top: icons['shirt'],
+  sweater: icons['shirt'], hoodie: icons['shirt'],
+  blazer: icons['briefcase'], jacket: icons['shirt'], coat: icons['shirt'], vest: icons['shirt'],
+  pants: icons['shirt'], jeans: icons['shirt'], shorts: icons['shirt'], skirt: icons['shirt'],
+  dress: icons['shirt'],
+  shoes: icons['shirt'], sneakers: icons['shirt'], boots: icons['shirt'], sandals: icons['shirt'], loafers: icons['shirt'],
+  hat: icons['crown'], cap: icons['crown'],
+  bag: icons['briefcase'],
+  scarf: icons['shirt'], belt: icons['shirt'], watch: '⌚', sunglasses: icons['sun'],
   jewelry: icons['gem'], accessory: icons['shirt'], underwear: icons['shirt'], socks: icons['shirt'],
 }
 

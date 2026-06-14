@@ -23,10 +23,14 @@ export const TYPE_LABELS: Record<string, string> = {
 
 // Category filter mapping: category key → list of clothing types
 export const CATEGORY_TYPES: Record<string, string[]> = {
-  'top': ['shirt', 't-shirt', 'sweater', 'hoodie', 'blazer', 'jacket', 'coat', 'top'],
+  'top': ['shirt', 't-shirt', 'top', 'blouse'],
+  'outerwear': ['sweater', 'hoodie', 'blazer', 'jacket', 'coat', 'vest'],
   'bottom': ['pants', 'jeans', 'shorts', 'skirt'],
-  'shoes': ['shoes', 'sneakers', 'boots'],
-  'accessories': ['accessories', 'hat', 'bag'],
+  'dress': ['dress'],
+  'shoes': ['shoes', 'sneakers', 'boots', 'sandals', 'loafers'],
+  'bag': ['bag'],
+  'hat': ['hat', 'cap'],
+  'accessories': ['accessories', 'scarf', 'belt', 'watch', 'sunglasses', 'jewelry'],
 }
 
 // 材质英文→中文映射
