@@ -418,6 +418,7 @@ export default function ParsePage() {
             </View>
 
             <ScrollView className='parse-garment-scroll' scrollY enhanced showScrollbar={false}>
+              <View className='parse-garment-grid'>
               {result.items.map((item, idx) => (
                 <View
                   key={idx}
@@ -470,6 +471,7 @@ export default function ParsePage() {
                   </View>
                 </View>
               ))}
+              </View>
             </ScrollView>
 
             <View className='parse-retry-link' onClick={handleRetry}>
