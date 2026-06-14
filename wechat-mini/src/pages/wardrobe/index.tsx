@@ -37,7 +37,7 @@ const TYPE_ICONS: Record<string, string> = {
 
 export default function WardrobePage() {
   const [items, setItems] = useState<ClothingItem[]>([])
-  const [, setTotal] = useState(0)
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ total: 0, favorites: 0, needsWash: 0 })
   const [hasMore, setHasMore] = useState(true)
@@ -45,7 +45,7 @@ export default function WardrobePage() {
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
   const [showSortPopup, setShowSortPopup] = useState(false)
   const [displayMode, setDisplayMode] = useState<'category' | 'color'>('category')
-  const [sortMode, setSortMode] = useState<'default' | 'wear_count' | 'price' | 'created_at'>('default')
+  const [sortMode, setSortMode] = useState<'default' | 'wear_count' | 'purchase_price' | 'created_at'>('default')
   const [closetTab, setClosetTab] = useState<'wardrobe' | 'tryon'>('wardrobe')
   const [contentKey, setContentKey] = useState(0)
   const [tryOnVisible, setTryOnVisible] = useState(false)
@@ -66,7 +66,7 @@ export default function WardrobePage() {
   useEffect(() => {
     loadItems(true)
     setContentKey(prev => prev + 1)
-  }, [closetTab])
+  }, [closetTab, sortMode])
 
   const handleTryOnSingle = useCallback((itemId: string, itemName: string) => {
     setTryOnItemIds([itemId])
@@ -150,11 +150,21 @@ export default function WardrobePage() {
         params.tryon_ready = 'true'
       }
 
+      // Sorting
+      if (sortMode !== 'default') {
+        params.sort_by = sortMode
+        params.sort_order = sortMode === 'wear_count' ? 'desc' : 'desc'
+      }
+
       const data = await api.get<ItemsResponse>('/items', params)
       const fetchedItems = data.items || []
 
       if (reset) {
         setItems(fetchedItems)
+        // Calculate stats from all items
+        const favCount = fetchedItems.filter(i => (i as any).favorite).length
+        const washCount = fetchedItems.filter(i => (i as any).needs_wash).length
+        setStats({ total: data.total || 0, favorites: favCount, needsWash: washCount })
       } else {
         setItems(prev => {
           const existingIds = new Set(prev.map(i => i.id))
@@ -240,14 +250,18 @@ export default function WardrobePage() {
     const { itemId, itemName } = contextMenu
     setContextMenu(null)
 
+    // Find current item for toggle operations
+    const currentItem = items.find(i => i.id === itemId)
+
     switch (action) {
       case 'detail':
         Taro.navigateTo({ url: `/pages/item-detail/index?id=${itemId}` })
         break
       case 'favorite':
         try {
-          await api.patch(`/items/${itemId}`, { favorite: true })
-          Taro.showToast({ title: '已收藏', icon: 'success', duration: 1000 })
+          const newFav = !(currentItem as any)?.favorite
+          await api.patch(`/items/${itemId}`, { favorite: newFav })
+          Taro.showToast({ title: newFav ? '已收藏' : '已取消收藏', icon: 'success', duration: 1000 })
           loadItems(true)
         } catch (e) { Taro.showToast({ title: '操作失败', icon: 'none' }) }
         break
@@ -275,7 +289,7 @@ export default function WardrobePage() {
         })
         break
     }
-  }, [contextMenu, loadItems])
+  }, [contextMenu, items, loadItems])
 
   const toggleTypeCollapse = (type: string) => {
     setCollapsedTypes(prev => {
@@ -292,22 +306,27 @@ export default function WardrobePage() {
   const getGroupedItems = (): TypeGroup[] => {
     const groups: Record<string, ClothingItem[]> = {}
     items.forEach(item => {
-      const type = item.type || 'unknown'
-      if (!groups[type]) groups[type] = []
-      groups[type].push(item)
+      let key: string
+      if (displayMode === 'color') {
+        key = (item as any).primary_color || 'unknown'
+      } else {
+        key = item.type || 'unknown'
+      }
+      if (!groups[key]) groups[key] = []
+      groups[key].push(item)
     })
     return Object.entries(groups)
       .map(([type, groupItems]) => ({
         type,
-        label: getTypeLabel(type),
-        icon: TYPE_ICONS[type] || icons['shirt'],
+        label: displayMode === 'color' ? (type || '未知') : getTypeLabel(type),
+        icon: displayMode === 'color' ? '🎨' : (TYPE_ICONS[type] || icons['shirt']),
         items: groupItems,
         collapsed: collapsedTypes.has(type),
       }))
       .sort((a, b) => b.items.length - a.items.length)
   }
 
-  const groupedItems = useMemo(() => getGroupedItems(), [items, collapsedTypes])
+  const groupedItems = useMemo(() => getGroupedItems(), [items, collapsedTypes, displayMode])
 
   const renderItemCard = (item: ClothingItem) => (
     <View
@@ -379,7 +398,7 @@ export default function WardrobePage() {
     { key: 'color', label: '按颜色展示', isDisplay: true },
     { key: 'default', label: '默认排序', isDisplay: false },
     { key: 'wear_count', label: '按穿着次数排序（OOTD）', isDisplay: false },
-    { key: 'price', label: '按穿着成本排序（CPW）', isDisplay: false },
+    { key: 'purchase_price', label: '按穿着成本排序（CPW）', isDisplay: false },
     { key: 'created_at', label: '按购买时间排序', isDisplay: false },
   ]
 
@@ -390,7 +409,7 @@ export default function WardrobePage() {
         <Text className='wardrobe-title'>我的衣橱</Text>
         <View className='wardrobe-filter-chip' onClick={() => setShowSortPopup(true)}>
           <Image src={icons['filter']} className='wardrobe-filter-chip-icon' style={{width: '28rpx', height: '28rpx'}} />
-          <Text className='wardrobe-filter-chip-text'>筛选</Text>
+          <Text className='wardrobe-filter-chip-text'>排序</Text>
         </View>
       </View>
 
@@ -407,7 +426,7 @@ export default function WardrobePage() {
           className={`wardrobe-closet-tab ${closetTab === 'tryon' ? 'wardrobe-closet-tab--active' : ''}`}
           onClick={() => setClosetTab('tryon')}
         >
-          <Image src={icons['shirt']} className='wardrobe-closet-tab-icon' style={{width: '48rpx', height: '48rpx'}} />
+          <Image src={icons['user']} className='wardrobe-closet-tab-icon' style={{width: '48rpx', height: '48rpx'}} />
           <Text className='wardrobe-closet-tab-text'>试衣间</Text>
         </View>
       </View>
@@ -435,8 +454,8 @@ export default function WardrobePage() {
       {/* Toolbar */}
       <View className='wardrobe-toolbar'>
         <View className='wardrobe-toolbar-left'>
-          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['clock']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-stats'>衣橱统计</Text></View>
-          <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['settings']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-settings'>衣橱设置</Text></View>
+          <View style={{display: 'flex', alignItems: 'center'}} onClick={() => Taro.navigateTo({ url: '/pages/analytics/index' })}><Image src={icons['clock']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-stats'>衣橱统计</Text></View>
+          <View style={{display: 'flex', alignItems: 'center'}} onClick={() => Taro.showToast({ title: '即将开放', icon: 'none' })}><Image src={icons['settings']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-settings'>衣橱设置</Text></View>
           <View className='wardrobe-toolbar-new-badge'>
             <Text className='wardrobe-toolbar-new-text'>NEW</Text>
           </View>
@@ -523,14 +542,14 @@ export default function WardrobePage() {
       {/* Context Menu Overlay */}
       {contextMenu && (
         <View className='ctx-overlay' onClick={() => setContextMenu(null)}>
-          <View className='ctx-menu animate-fade-in-up' style={{top: Math.min(contextMenu.y - 60, 600) + 'px', right: '32rpx'}}>
+          <View className='ctx-menu animate-fade-in-up' style={{top: Math.max(80, Math.min(contextMenu.y - 60, 600)) + 'px', left: Math.min(contextMenu.x, 400) + 'rpx'}}>
             <View className='ctx-menu-item' onClick={() => handleContextMenuAction('detail')}>
               <Image src={icons['eye']} className='ctx-menu-icon' style={{width: '32rpx', height: '32rpx'}} />
               <Text className='ctx-menu-text'>查看详情</Text>
             </View>
             <View className='ctx-menu-item' onClick={() => handleContextMenuAction('favorite')}>
               <Image src={icons['heart']} className='ctx-menu-icon' style={{width: '32rpx', height: '32rpx'}} />
-              <Text className='ctx-menu-text'>标记收藏</Text>
+              <Text className='ctx-menu-text'>{(items.find(i => i.id === contextMenu.itemId) as any)?.favorite ? '取消收藏' : '标记收藏'}</Text>
             </View>
             <View className='ctx-menu-item' onClick={() => handleContextMenuAction('wash')}>
               <Image src={icons['droplets']} className='ctx-menu-icon' style={{width: '32rpx', height: '32rpx'}} />

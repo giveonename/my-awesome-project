@@ -7,55 +7,6 @@
   background: $bg-page-default;
 }
 
-// ===== Batch Notification =====
-.wardrobe-batch-notify {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: $spacing-sm $spacing-md;
-  padding: $spacing-sm $spacing-md;
-  background: linear-gradient(135deg, #f0ebff 0%, #e8f4ff 100%);
-  border-radius: $radius-lg;
-  border: 1.5rpx solid rgba(124, 111, 235, 0.15);
-  animation: slideUp 0.4s ease-out;
-  transition: transform 150ms ease;
-
-  &:active { transform: scale(0.98); }
-}
-
-.wardrobe-batch-notify-left {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-}
-
-.wardrobe-batch-notify-icon {
-  font-size: 36rpx;
-}
-
-.wardrobe-batch-notify-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.wardrobe-batch-notify-title {
-  font-size: $font-body-size;
-  font-weight: 600;
-  color: $text-primary;
-}
-
-.wardrobe-batch-notify-desc {
-  font-size: $font-caption-size;
-  color: $text-tertiary;
-  margin-top: 2rpx;
-}
-
-.wardrobe-batch-notify-arrow {
-  font-size: 36rpx;
-  color: $text-tertiary;
-  font-weight: 300;
-}
-
 // ===================== Top Bar =====================
 
 .wardrobe-top-bar {
@@ -79,15 +30,6 @@
   &:active {
     background: #EDE8FF;
   }
-}
-
-.wardrobe-filter-icon {
-  font-size: 24rpx;
-}
-
-.wardrobe-filter-text {
-  @include text-caption;
-  color: $color-primary;
 }
 
 // ===================== Toolbar =====================
@@ -357,13 +299,6 @@
   display: block;
 }
 
-.wardrobe-fab-label {
-  font-size: 18rpx;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
-  line-height: 1;
-}
-
 // ===================== Sort Popup =====================
 
 .sort-overlay {
@@ -378,14 +313,11 @@
   align-items: flex-end;
 }
 
-.sort-popup-overlay {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
 .sort-popup {
   @include popup-base;
   width: 100%;
   padding: $spacing-lg $spacing-lg 48rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
 .sort-popup-handle {
@@ -557,20 +489,6 @@
 
 // ===================== Tryon Badge =====================
 
-.wardrobe-item-tryon-badge {
-  position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  background: rgba(99, 102, 241, 0.9);
-  border-radius: $radius-sm;
-  padding: 4rpx 12rpx;
-}
-
-.wardrobe-item-tryon-badge-text {
-  font-size: 18rpx;
-  color: #fff;
-}
-
 // ===================== Tryon Item Button =====================
 
 .wardrobe-item-tryon-btn {
@@ -587,16 +505,6 @@
   font-size: 20rpx;
   color: #fff;
   font-weight: 600;
-}
-
-// ===================== Batch Try-On Bar (legacy, kept for compat) =====================
-
-.wardrobe-tryon-bar {
-  position: fixed;
-  bottom: 240rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
 }
 
 // ===================== Selection Checkbox =====================
