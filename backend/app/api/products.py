@@ -860,10 +860,8 @@ def _check_seasonal_needs(gaps: list[WardrobeGap], season: str, gender: str | No
     SEASONAL_NEEDS = {
         "winter": {
             "outerwear": ("保暖外套", "冬天需要一件好外套"),
-            "shoes": ("靴子", "换季需要一双靴子"),
         },
         "summer": {
-            "shoes": ("凉鞋", "夏天到了，备双凉鞋"),
             "top": ("短袖", "夏天需要透气的上衣"),
         },
         "spring": {
@@ -879,12 +877,11 @@ def _check_seasonal_needs(gaps: list[WardrobeGap], season: str, gender: str | No
     gap_cats = {g.category: g for g in gaps}
     for cat, (keyword, reason) in needs.items():
         if cat in gap_cats and gap_cats[cat].count == 0:
-            # Apply gender to keyword
             gender_kw = _GENDER_KEYWORDS.get(cat, {}).get(gk, [keyword])
             return {
                 "keyword": gender_kw[0] if gender_kw else keyword,
                 "reason": reason,
-                "category": cat,
+                "category": "",
             }
     return None
 
@@ -931,7 +928,7 @@ def _check_repeat_pattern(recent_worn: dict[str, int], gender: str | None) -> di
             keywords = _GENDER_KEYWORDS.get(cat, {}).get(gk, ["服装"])
             # Pick a different keyword than what they've been wearing
             kw = random.choice(keywords) if keywords else "服装"
-            return {"keyword": kw, "reason": reason, "category": cat}
+            return {"keyword": kw, "reason": reason, "category": ""}
     return None
 
 
