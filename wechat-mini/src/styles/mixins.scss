@@ -1,4 +1,4 @@
-@import './tokens.scss';
+﻿@import './tokens.scss';
 
 // ===== 文字样式混入 =====
 
@@ -233,6 +233,6 @@
   left: 0;
   width: 100%;
   height: 40rpx;
-  background: linear-gradient(to bottom, rgba(155, 143, 255, 0), rgba(155, 143, 255, 0.6));
+  background: linear-gradient(to bottom, rgba(129, 140, 248, 0), rgba(129, 140, 248, 0.6));
   animation: scan 2s linear infinite alternate;
 }

@@ -1,4 +1,4 @@
-import { View, Text, Slider, Image} from '@tarojs/components'
+﻿import { View, Text, Slider, Image} from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useCallback } from 'react'
 import { getBodyProfile, updateBodyProfile, BodyProfileData, getBodyPhoto, uploadBodyPhoto, resolveImageUrl } from '../../utils/api'
@@ -220,9 +220,9 @@ export default function BodyProfilePage() {
             max={210}
             step={1}
             value={profile.height_cm as number}
-            activeColor='#9B8FFF'
-            backgroundColor='#F3F1FE'
-            blockColor='#9B8FFF'
+            activeColor='#818CF8'
+            backgroundColor='#EEF2FF'
+            blockColor='#818CF8'
             blockSize={28}
             onChange={(e) => update({ height_cm: e.detail.value })}
           />
@@ -245,9 +245,9 @@ export default function BodyProfilePage() {
             max={150}
             step={1}
             value={profile.weight_kg as number}
-            activeColor='#9B8FFF'
-            backgroundColor='#F3F1FE'
-            blockColor='#9B8FFF'
+            activeColor='#818CF8'
+            backgroundColor='#EEF2FF'
+            blockColor='#818CF8'
             blockSize={28}
             onChange={(e) => update({ weight_kg: e.detail.value })}
           />

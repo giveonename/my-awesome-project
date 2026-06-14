@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  Custom TabBar — Premium with bounce animations
 // ============================================================
 
@@ -135,12 +135,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.35);
+  box-shadow: 0 8rpx 24rpx rgba(99, 102, 241, 0.35);
   transition: transform 150ms ease, box-shadow 150ms ease;
 
   &:active {
     transform: scale(0.9);
-    box-shadow: 0 4rpx 12rpx rgba(124, 111, 235, 0.3);
+    box-shadow: 0 4rpx 12rpx rgba(99, 102, 241, 0.3);
   }
 }
 
@@ -148,7 +148,7 @@
   position: absolute;
   inset: -8rpx;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(155, 143, 255, 0.3), transparent 70%);
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.3), transparent 70%);
   animation: centerGlow 2.5s ease-in-out infinite;
 }
 

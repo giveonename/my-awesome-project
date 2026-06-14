@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image} from '@tarojs/components'
+﻿import { View, Text, ScrollView, Image} from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './index.scss'
@@ -205,7 +205,7 @@ export default function EvaluationPage() {
           {/* 三个测评入口卡片 */}
           <View className='ev-features'>
             <View className='ev-feature-card animate-fade-in-up' style={{ animationDelay: '0ms' }}>
-              <View className='ev-feature-icon-wrap' style={{ background: 'linear-gradient(135deg, #E8E4FD, #D4CCFA)' }}>
+              <View className='ev-feature-icon-wrap' style={{ background: 'linear-gradient(135deg, #E0E7FF, #C7D2FE)' }}>
                 <Image src={icons['palette']} className='ev-feature-icon' style={{width: '48rpx', height: '48rpx'}} />
               </View>
               <Text className='ev-feature-title'>适合色彩</Text>

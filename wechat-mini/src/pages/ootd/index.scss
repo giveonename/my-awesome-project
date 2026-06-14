@@ -1,4 +1,4 @@
-@import '../../styles/tokens.scss';
+﻿@import '../../styles/tokens.scss';
 @import '../../styles/mixins.scss';
 @import '../../styles/animations.scss';
 
@@ -162,7 +162,7 @@
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  border: 4rpx solid rgba(155, 143, 255, 0.3);
+  border: 4rpx solid rgba(129, 140, 248, 0.3);
   border-top-color: $color-primary;
   animation: spin 0.8s linear infinite;
 }

@@ -1,4 +1,4 @@
-@import '../../styles/tokens.scss';
+﻿@import '../../styles/tokens.scss';
 @import '../../styles/mixins.scss';
 @import '../../styles/animations.scss';
 
@@ -264,10 +264,10 @@
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9B8FFF 0%, #7C6FEB 50%, #6358D1 100%);
+  background: linear-gradient(135deg, #818CF8 0%, #6366F1 50%, #4F46E5 100%);
   box-shadow:
-    0 8rpx 32rpx rgba(124, 111, 235, 0.45),
-    0 2rpx 8rpx rgba(124, 111, 235, 0.2),
+    0 8rpx 32rpx rgba(99, 102, 241, 0.45),
+    0 2rpx 8rpx rgba(99, 102, 241, 0.2),
     inset 0 1rpx 0 rgba(255, 255, 255, 0.2);
   @include flex-center;
   flex-direction: column;
@@ -283,13 +283,13 @@
     right: -8rpx;
     bottom: -8rpx;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(124, 111, 235, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
     z-index: -1;
   }
 
   &:active {
     transform: scale(0.9);
-    box-shadow: 0 4rpx 16rpx rgba(124, 111, 235, 0.3);
+    box-shadow: 0 4rpx 16rpx rgba(99, 102, 241, 0.3);
   }
 }
 
@@ -355,7 +355,7 @@
   &--active {
     background: $color-primary;
     border-color: $color-primary;
-    box-shadow: 0 0 0 4rpx rgba(124, 111, 235, 0.15);
+    box-shadow: 0 0 0 4rpx rgba(99, 102, 241, 0.15);
     transform: scale(1.05);
   }
 }
@@ -710,7 +710,7 @@
 
   &--primary {
     background: $color-accent-gradient;
-    box-shadow: 0 4rpx 16rpx rgba(124, 111, 235, 0.25);
+    box-shadow: 0 4rpx 16rpx rgba(99, 102, 241, 0.25);
 
     &:active {
       transform: scale(0.96);

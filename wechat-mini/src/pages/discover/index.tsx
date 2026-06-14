@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+﻿import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow, useReachBottom } from '@tarojs/taro'
 import { useState, useCallback, useRef } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
@@ -35,7 +35,7 @@ const MOCK_POSTS: DiscoverPost[] = [
 ]
 
 const MOCK_RECOMMENDATIONS = [
-  { id: 'r1', title: '本周热门搭配', subtitle: '1.2万人在看', color: 'linear-gradient(135deg, #E8E4FD, #D4CCFA)' },
+  { id: 'r1', title: '本周热门搭配', subtitle: '1.2万人在看', color: 'linear-gradient(135deg, #E0E7FF, #C7D2FE)' },
   { id: 'r2', title: '春季必入单品', subtitle: '精选推荐', color: 'linear-gradient(135deg, #D4F0E7, #B8E6D0)' },
   { id: 'r3', title: '通勤穿搭灵感', subtitle: '职场必备', color: 'linear-gradient(135deg, #FDE8D0, #FAD4A8)' },
   { id: 'r4', title: '约会穿搭合集', subtitle: '甜蜜风格', color: 'linear-gradient(135deg, #FFE0E6, #FFD0D8)' },

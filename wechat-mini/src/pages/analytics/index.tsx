@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image} from '@tarojs/components'
+﻿import { View, Text, ScrollView, Image} from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
@@ -78,7 +78,7 @@ interface LearningData {
 // ===== Color Palette =====
 
 const CHART_COLORS = [
-  '#7C6FEB', '#9B8FFF', '#5AC8FA', '#34C759', '#FF9500',
+  '#6366F1', '#818CF8', '#5AC8FA', '#34C759', '#FF9500',
   '#FF3B30', '#FF6B8A', '#30D5C8', '#BF5AF2', '#FFD60A',
 ]
 
