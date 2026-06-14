@@ -417,7 +417,7 @@ export default function ParsePage() {
               </View>
             </View>
 
-            <ScrollView className='parse-garment-scroll' scrollY enhanced showScrollbar={false}>
+            <ScrollView className='parse-garment-scroll' scrollY enhanced showScrollbar={false} enable-flex>
               <View className='parse-garment-grid'>
               {result.items.map((item, idx) => (
                 <View
