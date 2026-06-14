@@ -6,7 +6,7 @@ import { uploadFile } from '../../utils/upload'
 import CachedImage from '../../components/CachedImage'
 import VirtualTryOnModal from '../../components/VirtualTryOnModal'
 import { ClothingItem } from '../../types'
-import { getItemDisplayName, getTypeLabel } from '../../constants'
+import { getItemDisplayName, getTypeLabel, TYPE_TO_CATEGORY, CATEGORY_LABELS } from '../../constants'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
@@ -27,17 +27,26 @@ interface TypeGroup {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  tshirt: icons['shirt'], shirt: icons['shirt'], blouse: icons['shirt'], top: icons['shirt'],
+  // Category-level icons
+  top: icons['shirt'],
+  outerwear: icons['shirt'],
+  bottom: icons['shirt'],
+  dress: icons['shirt'],
+  shoes: icons['shirt'],
+  bag: icons['briefcase'],
+  hat: icons['crown'],
+  accessories: icons['gem'],
+  // Per-type fallbacks (for color mode or unmapped types)
+  tshirt: icons['shirt'], shirt: icons['shirt'], blouse: icons['shirt'],
   'tank-top': icons['shirt'], polo: icons['shirt'],
   sweater: icons['shirt'], hoodie: icons['shirt'],
   blazer: icons['briefcase'], jacket: icons['shirt'], coat: icons['shirt'], vest: icons['shirt'],
   cardigan: icons['shirt'],
   pants: icons['shirt'], jeans: icons['shirt'], shorts: icons['shirt'], skirt: icons['shirt'],
-  dress: icons['shirt'], jumpsuit: icons['shirt'],
-  shoes: icons['shirt'], sneakers: icons['shirt'], boots: icons['shirt'],
+  jumpsuit: icons['shirt'],
+  sneakers: icons['shirt'], boots: icons['shirt'],
   sandals: icons['shirt'], loafers: icons['shirt'],
-  hat: icons['crown'], cap: icons['crown'],
-  bag: icons['briefcase'],
+  cap: icons['crown'],
   scarf: icons['shirt'], belt: icons['shirt'], watch: '⌚', sunglasses: icons['sun'],
   jewelry: icons['gem'], accessory: icons['shirt'], underwear: icons['shirt'], socks: icons['shirt'],
   tie: icons['shirt'],
@@ -318,7 +327,7 @@ export default function WardrobePage() {
       if (displayMode === 'color') {
         key = (item as any).primary_color || 'unknown'
       } else {
-        key = item.type || 'unknown'
+        key = TYPE_TO_CATEGORY[item.type] || item.type || 'unknown'
       }
       if (!groups[key]) groups[key] = []
       groups[key].push(item)
@@ -326,7 +335,9 @@ export default function WardrobePage() {
     return Object.entries(groups)
       .map(([type, groupItems]) => ({
         type,
-        label: displayMode === 'color' ? (type || '未知') : getTypeLabel(type),
+        label: displayMode === 'color'
+          ? (type || '未知')
+          : (CATEGORY_LABELS[type] || getTypeLabel(type)),
         icon: displayMode === 'color' ? '🎨' : (TYPE_ICONS[type] || icons['shirt']),
         items: groupItems,
         collapsed: collapsedTypes.has(type),

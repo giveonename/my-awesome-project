@@ -46,6 +46,26 @@ export const CATEGORY_TYPES: Record<string, string[]> = {
   'accessories': ['accessories', 'scarf', 'belt', 'watch', 'sunglasses', 'jewelry', 'socks', 'tie'],
 }
 
+// Reverse mapping: type → category key
+export const TYPE_TO_CATEGORY: Record<string, string> = {}
+for (const [cat, types] of Object.entries(CATEGORY_TYPES)) {
+  for (const t of types) {
+    TYPE_TO_CATEGORY[t] = cat
+  }
+}
+
+// Category display labels
+export const CATEGORY_LABELS: Record<string, string> = {
+  'top': '上衣',
+  'outerwear': '外套',
+  'bottom': '下装',
+  'dress': '连衣裙',
+  'shoes': '鞋子',
+  'bag': '包包',
+  'hat': '帽子',
+  'accessories': '配饰',
+}
+
 // 材质英文→中文映射
 export const MATERIAL_LABELS_CN: Record<string, string> = {
   'cotton': '棉',
