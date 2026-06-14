@@ -950,14 +950,12 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
     # Priority 1: Seasonal needs (cold weather without coat, etc.)
     strategy = _check_seasonal_needs(gaps, season, gender)
     if strategy:
-        parts = [p for p in [user_style, strategy["keyword"]] if p]
-        return " ".join(parts), strategy["reason"], strategy["category"]
+        return strategy["keyword"], strategy["reason"], strategy["category"]
 
     # Priority 2: Repeat pattern (wearing same shoes 4 days straight)
     strategy = _check_repeat_pattern(recent_worn, gender)
     if strategy:
-        parts = [p for p in [user_style, strategy["keyword"]] if p]
-        return " ".join(parts), strategy["reason"], strategy["category"]
+        return strategy["keyword"], strategy["reason"], strategy["category"]
 
     # Fallback: Xiaohongshu-trending keywords for women — varied, safe, high-conversion
     _SAFE_KEYWORDS = [
