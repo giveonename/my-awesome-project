@@ -962,37 +962,18 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
         parts = [p for p in [user_style, strategy["keyword"]] if p]
         return " ".join(parts), strategy["reason"], strategy["category"]
 
-    # Priority 3: Gap-based (most missing category)
-    if gaps:
-        gap = gaps[0]
-        keywords = _GENDER_KEYWORDS.get(gap.category, {}).get(gk, [gap.keyword])
-        kw = random.choice(keywords) if keywords else gap.keyword
-        parts = [p for p in [user_style, kw] if p]
-        return " ".join(parts), f"填补{gap.label}缺口", gap.category
-
-    # Priority 4: Style upgrade (based on learned preferences)
-    if learning and learning.learned_style_scores:
-        best_style = max(learning.learned_style_scores, key=learning.learned_style_scores.get)
-        if learning.learned_style_scores[best_style] > 0.3:
-            style_cn = STYLE_LABELS.get(best_style, "")
-            cat = random.choice(["top", "bottom", "shoes"])
-            keywords = _GENDER_KEYWORDS.get(cat, {}).get(gk, ["服装"])
-            kw = random.choice(keywords) if keywords else "服装"
-            parts = [p for p in [style_cn, kw] if p]
-            return " ".join(parts), f"升级你的{style_cn}风格", cat
-
-    # Fallback: safe versatile keywords pool — varied categories, easy to match
+    # Fallback: safe versatile keywords pool — varied categories, no target_cat filter
     _SAFE_KEYWORDS = [
-        ("简约 百搭 基础款", "推荐百搭基础单品", "top"),
-        ("通勤 休闲裤 百搭", "职场百搭下装", "bottom"),
-        ("小白鞋 休闲 百搭", "百搭休闲鞋", "shoes"),
-        ("针织衫 纯色 简约", "温柔百搭上衣", "top"),
-        ("牛仔裤 直筒 经典", "经典百搭牛仔裤", "bottom"),
-        ("简约 连衣裙 日常", "日常百搭连衣裙", "dress"),
-        ("轻薄 外套 百搭", "换季必备外套", "outerwear"),
-        ("帆布包 休闲 百搭", "实用百搭包包", "accessories"),
-        ("运动鞋 舒适 百搭", "舒适百搭运动鞋", "shoes"),
-        ("衬衫 纯色 简约", "百搭衬衫", "top"),
+        ("简约 百搭 基础款", "推荐百搭基础单品", ""),
+        ("通勤 休闲裤 百搭", "职场百搭下装", ""),
+        ("小白鞋 休闲 百搭", "百搭休闲鞋", ""),
+        ("针织衫 纯色 简约", "温柔百搭上衣", ""),
+        ("牛仔裤 直筒 经典", "经典百搭牛仔裤", ""),
+        ("简约 连衣裙 日常", "日常百搭连衣裙", ""),
+        ("轻薄 外套 百搭", "换季必备外套", ""),
+        ("帆布包 休闲 百搭", "实用百搭包包", ""),
+        ("运动鞋 舒适 百搭", "舒适百搭运动鞋", ""),
+        ("衬衫 纯色 简约", "百搭衬衫", ""),
     ]
     kw, reason, cat = random.choice(_SAFE_KEYWORDS)
     parts = [p for p in [user_style, kw] if p]
