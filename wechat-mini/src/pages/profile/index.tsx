@@ -83,9 +83,7 @@ export default function ProfilePage() {
 
   const MENU_GROUPS = [
     [
-      { icon: icons['camera'], label: '数字分身与身材档案', page: '/pages/body-profile/index', desc: hasBodyPhoto ? '全身照已就绪 · 体型数据与偏好' : '上传全身照，管理体型与偏好' },
-      { icon: icons['settings'], label: '偏好设置', page: '/pages/preferences/index', desc: '风格、场合偏好' },
-      { icon: icons['pencil'], label: '修改个人资料', page: '/pages/onboarding/index', desc: '重新编辑个人信息' },
+      { icon: icons['user'], label: '个人档案', page: '/pages/profile-settings/index', desc: '基本信息、身材数据、风格偏好' },
     ],
     [
       { icon: icons['bar-chart-3'], label: '衣橱统计', page: '/pages/analytics/index', desc: '穿搭数据洞察' },

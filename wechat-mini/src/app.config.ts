@@ -24,6 +24,7 @@ export default defineAppConfig({
     'pages/evaluation/index',
     'pages/discover/index',
     'pages/ootd/index',
+    'pages/profile-settings/index',
   ],
   requiredPrivateInfos: ['getLocation'],
   permission: {

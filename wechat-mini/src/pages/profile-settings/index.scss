@@ -1,0 +1,233 @@
+@import '../../styles/tokens.scss';
+@import '../../styles/mixins.scss';
+
+.ps-page {
+  min-height: 100vh;
+  background: $bg-page-default;
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-loading {
+  @include flex-center;
+  height: 100vh;
+}
+
+// Tabs
+.ps-tabs {
+  display: flex;
+  background: $card-bg;
+  padding: 0 $spacing-lg;
+  border-bottom: 1rpx solid $color-gray-200;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ps-tab {
+  flex: 1;
+  @include flex-center;
+  padding: $spacing-md 0;
+  position: relative;
+
+  &--active .ps-tab-text {
+    color: $color-primary;
+    font-weight: 600;
+  }
+}
+
+.ps-tab-text {
+  @include text-body;
+  color: $text-secondary;
+}
+
+.ps-tab-indicator {
+  position: absolute;
+  bottom: 0;
+  width: 48rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+  background: $color-accent-gradient;
+}
+
+// Content
+.ps-content {
+  flex: 1;
+  padding: $spacing-md $spacing-lg;
+}
+
+.ps-section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+// Group
+.ps-group {
+  @include card-base;
+  padding: $spacing-md;
+}
+
+.ps-group-title {
+  @include text-h3;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+// Options grid
+.ps-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.ps-option {
+  padding: 12rpx 24rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-primary-50;
+    border: 1rpx solid $color-primary;
+
+    .ps-option-text {
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.ps-option-text {
+  @include text-caption;
+}
+
+.ps-option-desc {
+  @include text-tag;
+  color: $text-tertiary;
+  display: block;
+  margin-top: 2rpx;
+}
+
+// Color options (skin tone)
+.ps-color-options {
+  display: flex;
+  gap: $spacing-md;
+}
+
+.ps-color-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  transition: all 0.2s ease;
+
+  &--active {
+    .ps-color-swatch {
+      box-shadow: 0 0 0 4rpx $color-primary;
+    }
+    .ps-color-label {
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
+}
+
+.ps-color-swatch {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  border: 2rpx solid $color-gray-200;
+}
+
+.ps-color-label {
+  @include text-tag;
+}
+
+// Color chips (favorites)
+.ps-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.ps-color-chip {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 16rpx;
+  border-radius: $radius-pill;
+  background: $color-gray-100;
+  transition: all 0.2s ease;
+
+  &--active {
+    background: $color-primary-50;
+    border: 1rpx solid $color-primary;
+  }
+}
+
+.ps-color-circle {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 1rpx solid $color-gray-200;
+}
+
+.ps-color-name {
+  @include text-tag;
+}
+
+// Slider
+.ps-slider {
+  margin: $spacing-xs 0;
+}
+
+// Photo area
+.ps-photo-area {
+  width: 100%;
+  height: 400rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+  background: $color-gray-100;
+}
+
+.ps-photo-img {
+  width: 100%;
+  height: 100%;
+}
+
+.ps-photo-placeholder {
+  @include flex-column;
+  @include flex-center;
+  height: 100%;
+  gap: $spacing-xs;
+}
+
+.ps-photo-icon {
+  font-size: 64rpx;
+  opacity: 0.5;
+}
+
+.ps-photo-hint {
+  @include text-caption;
+  color: $text-tertiary;
+}
+
+// Save button
+.ps-save-btn {
+  @include btn-primary;
+  @include flex-center;
+  height: 88rpx;
+  border-radius: $radius-md;
+  margin-top: $spacing-sm;
+}
+
+.ps-save-text {
+  @include text-body;
+  color: $text-on-primary;
+  font-weight: 600;
+}
