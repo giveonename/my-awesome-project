@@ -35,6 +35,25 @@ from app.utils.signed_urls import sign_image_url
 
 logger = logging.getLogger(__name__)
 
+COLOR_CN = {
+    "black": "黑色", "white": "白色", "gray": "灰色", "grey": "灰色",
+    "beige": "米色", "navy": "藏蓝", "cream": "奶油色", "khaki": "卡其色",
+    "brown": "棕色", "red": "红色", "blue": "蓝色", "green": "绿色",
+    "pink": "粉色", "purple": "紫色", "orange": "橙色", "yellow": "黄色",
+    "olive": "橄榄绿", "camel": "驼色", "wine": "酒红", "burgundy": "酒红",
+    "teal": "青色", "coral": "珊瑚色", "mint": "薄荷绿", "lavender": "薰衣草紫",
+    "denim": "牛仔蓝", "khaki": "卡其色", "cream": "奶油色", "ivory": "象牙白",
+}
+
+STYLE_CN = {
+    "casual": "休闲", "minimalist": "简约", "elegant": "优雅",
+    "street": "街头", "sporty": "运动", "korean": "韩系",
+    "japanese": "日系", "french": "法式", "retro": "复古",
+    "sweet": "甜美", "mature": "知性", "preppy": "学院",
+    "bohemian": "波西米亚", "formal": "正式", "office": "通勤",
+    "artistic": "文艺", "streetwear": "潮流", "bold": "大胆",
+}
+
 
 class PairSignalType(enum.Enum):
     intent = "intent"
@@ -925,13 +944,14 @@ class LearningService:
 
             if top_colors and top_colors[0][1] > 0.3:
                 best_color = top_colors[0][0]
+                color_cn = COLOR_CN.get(best_color, best_color)
                 insights.append(
                     StyleInsight(
                         user_id=user_id,
                         category="color",
                         insight_type="positive",
-                        title=f"You love {best_color}!",
-                        description=f"Your feedback shows a strong preference for {best_color} items. We'll prioritize these in your recommendations.",
+                        title=f"你偏爱{color_cn}！",
+                        description=f"你的反馈显示你很喜欢{color_cn}单品，推荐中会优先考虑这个颜色。",
                         confidence=Decimal(str(min(0.95, abs(top_colors[0][1])))),
                         supporting_data={"color": best_color, "score": top_colors[0][1]},
                         expires_at=expiry,
@@ -941,13 +961,14 @@ class LearningService:
             # Look for avoided colors
             avoided = [c for c, s in profile.learned_color_scores.items() if s < -0.3]
             if avoided:
+                avoided_cn = COLOR_CN.get(avoided[0], avoided[0])
                 insights.append(
                     StyleInsight(
                         user_id=user_id,
                         category="color",
                         insight_type="negative",
-                        title=f"Not a fan of {avoided[0]}",
-                        description=f"You tend to reject outfits with {avoided[0]}. We'll suggest alternatives.",
+                        title=f"不太喜欢{avoided_cn}",
+                        description=f"你倾向于拒绝{avoided_cn}单品，推荐中会减少这类颜色。",
                         confidence=Decimal("0.7"),
                         supporting_data={"colors": avoided},
                         expires_at=expiry,
@@ -963,8 +984,8 @@ class LearningService:
                         user_id=user_id,
                         category="overall",
                         insight_type="positive",
-                        title="Great match!",
-                        description=f"You accept {rate * 100:.0f}% of our suggestions. We're learning your style well!",
+                        title="搭配很合你心意！",
+                        description=f"你采纳了 {rate * 100:.0f}% 的推荐，我们在越来越了解你的风格了。",
                         confidence=Decimal("0.9"),
                         supporting_data={"acceptance_rate": rate},
                         expires_at=expiry,
@@ -976,8 +997,8 @@ class LearningService:
                         user_id=user_id,
                         category="overall",
                         insight_type="suggestion",
-                        title="Help us learn your style",
-                        description="You've rejected many suggestions. Consider updating your preferences to help us improve.",
+                        title="帮你更了解你的风格",
+                        description="你拒绝了较多推荐，可以试试更新风格偏好，让推荐更精准。",
                         confidence=Decimal("0.8"),
                         supporting_data={"acceptance_rate": rate},
                         expires_at=expiry,
@@ -992,13 +1013,14 @@ class LearningService:
                 reverse=True,
             )[:2]
             if top_styles and top_styles[0][1] > 0.2:
+                style_labels = [STYLE_CN.get(s, s) for s, _ in top_styles]
                 insights.append(
                     StyleInsight(
                         user_id=user_id,
                         category="style",
                         insight_type="pattern",
-                        title=f"Your style: {top_styles[0][0]}",
-                        description=f"Based on your feedback, you gravitate towards {', '.join(s for s, _ in top_styles)} styles.",
+                        title=f"你的风格：{style_labels[0]}",
+                        description=f"根据你的反馈，你更倾向于{'、'.join(style_labels)}风格。",
                         confidence=Decimal(str(min(0.9, abs(top_styles[0][1])))),
                         supporting_data={"styles": dict(top_styles)},
                         expires_at=expiry,
