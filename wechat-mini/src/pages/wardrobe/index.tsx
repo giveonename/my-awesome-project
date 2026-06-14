@@ -340,7 +340,7 @@ export default function WardrobePage() {
           <CachedImage
             className='wardrobe-item-img'
             src={resolveImageUrl(item.thumbnail_url) || ''}
-            mode='aspectFill'
+            mode='aspectFit'
           />
         ) : (
           <View className='wardrobe-item-placeholder'>
