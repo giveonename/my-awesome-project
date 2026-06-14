@@ -1078,7 +1078,7 @@ export default function SuggestPage() {
         <View className='suggest-body'>
           {/* 场景选择器 */}
           <ScrollView className='occasion-selector' scrollX enableFlex>
-            {OCCASIONS.map(o => (
+            {OCCASION_OPTIONS.map(o => (
               <View
                 key={o.key}
                 className={`occasion-tag ${occasion === o.key ? 'occasion-tag--active' : ''}`}
