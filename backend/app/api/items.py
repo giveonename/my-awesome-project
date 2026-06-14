@@ -779,12 +779,6 @@ async def log_item_wash(
             detail="Item not found",
         )
 
-    if item.wears_since_wash == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Item is already clean (0 wears since last wash)",
-        )
-
     # Use user's timezone to determine today if washed_at not provided
     if request.washed_at is None:
         try:
