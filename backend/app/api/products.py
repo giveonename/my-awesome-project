@@ -959,18 +959,23 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
         parts = [p for p in [user_style, strategy["keyword"]] if p]
         return " ".join(parts), strategy["reason"], strategy["category"]
 
-    # Fallback: safe versatile keywords pool — varied categories, no target_cat filter
+    # Fallback: Xiaohongshu-trending keywords for women — varied, safe, high-conversion
     _SAFE_KEYWORDS = [
-        ("简约 百搭 基础款", "推荐百搭基础单品", ""),
-        ("通勤 休闲裤 百搭", "职场百搭下装", ""),
-        ("小白鞋 休闲 百搭", "百搭休闲鞋", ""),
-        ("针织衫 纯色 简约", "温柔百搭上衣", ""),
-        ("牛仔裤 直筒 经典", "经典百搭牛仔裤", ""),
-        ("简约 连衣裙 日常", "日常百搭连衣裙", ""),
-        ("轻薄 外套 百搭", "换季必备外套", ""),
-        ("帆布包 休闲 百搭", "实用百搭包包", ""),
-        ("运动鞋 舒适 百搭", "舒适百搭运动鞋", ""),
-        ("衬衫 纯色 简约", "百搭衬衫", ""),
+        ("韩系 针织衫 显瘦 百搭", "温柔韩系上衣", ""),
+        ("法式 碎花裙 氛围感 显瘦", "法式连衣裙", ""),
+        ("阔腿裤 高腰 显腿长 百搭", "显瘦百搭下装", ""),
+        ("极简 白衬衫 质感 通勤", "百搭质感衬衫", ""),
+        ("直筒牛仔裤 复古 显瘦", "经典百搭牛仔裤", ""),
+        ("吊带裙 夏季 氛围感 显瘦", "夏日连衣裙", ""),
+        ("乐福鞋 百搭 舒适 质感", "百搭质感鞋", ""),
+        ("托特包 通勤 大容量 百搭", "实用百搭包包", ""),
+        ("开衫 薄款 防晒 百搭", "夏季薄外套", ""),
+        ("工装裤 高腰 显瘦 酷", "甜酷工装裤", ""),
+        ("新中式 连衣裙 气质", "新中式连衣裙", ""),
+        ("polo领 T恤 简约 百搭", "百搭polo衫", ""),
+        ("玛丽珍鞋 复古 甜美", "复古玛丽珍鞋", ""),
+        ("鲨鱼裤 外穿 显瘦 收腹", "百搭鲨鱼裤", ""),
+        ("帆布包 文艺 百搭 通勤", "文艺帆布包", ""),
     ]
     kw, reason, cat = random.choice(_SAFE_KEYWORDS)
     parts = [p for p in [user_style, kw] if p]
