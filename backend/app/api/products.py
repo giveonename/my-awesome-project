@@ -386,6 +386,7 @@ async def _build_smart_keyword(
         scene_kw = SCENE_KEYWORDS.get(scene, scene)
         # Pick a gap category or default to "bottom"
         target_keyword = "服装"
+        target_cat = gap_category or ''
         if gap_category:
             cat_info = CATEGORY_MAP.get(gap_category, {})
             target_keyword = cat_info.get("keywords", ["服装"])[0]
