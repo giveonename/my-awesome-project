@@ -428,12 +428,12 @@ export default function ProfileSettingsPage() {
             {/* Height & Weight */}
             <View className='ps-group'>
               <Text className='ps-group-title'>身高 {height}cm</Text>
-              <Slider className='ps-slider' min={140} max={210} step={1} value={height} activeColor='#6366F1' onChanging={(e) => setHeight(e.detail.value)} />
+              <Slider className='ps-slider' min={140} max={210} step={1} value={height} activeColor='#2D6A4F' onChanging={(e) => setHeight(e.detail.value)} />
             </View>
 
             <View className='ps-group'>
               <Text className='ps-group-title'>体重 {weight}kg</Text>
-              <Slider className='ps-slider' min={35} max={150} step={1} value={weight} activeColor='#6366F1' onChanging={(e) => setWeight(e.detail.value)} />
+              <Slider className='ps-slider' min={35} max={150} step={1} value={weight} activeColor='#2D6A4F' onChanging={(e) => setWeight(e.detail.value)} />
             </View>
 
             {/* Body Shape */}

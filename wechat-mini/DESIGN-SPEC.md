@@ -10,16 +10,17 @@
 ### 1.1 色彩体系
 
 ```scss
-// ===== 主色调 =====
-$color-primary: #5B4FC4;           // 深靛蓝（按钮/标签/选中态）
-$color-primary-light: #6C5CE7;     // 亮紫（悬浮按钮/渐变起点）
-$color-primary-dark: #4A3FA8;      // 深紫（按压态）
-$color-accent-gradient: linear-gradient(135deg, #6C5CE7 0%, #5B4FC4 100%);
+// ===== 主色调（2026-10 换色：深墨绿 + 奶油白，画廊式衬托衣物照片） =====
+$color-primary: #2D6A4F;           // 深墨绿（按钮/标签/选中态）
+$color-primary-light: #5E9C82;     // 浅鼠尾草绿
+$color-primary-dark: #1B4D3E;      // 深松绿（按压态）
+$color-accent-gold: #C2A878;       // 米金点缀（克制使用）
+$color-accent-gradient: #2D6A4F;   // 实色，去掉渐变
 
-// ===== 背景渐变 =====
-$bg-home-gradient: linear-gradient(180deg, #FFF0E6 0%, #FFE8F0 40%, #F5F0FF 100%);  // 首页：暖桃→淡粉→淡紫
-$bg-profile-gradient: linear-gradient(180deg, #EDE0F5 0%, #D8E8F0 100%);             // 个人中心：薰衣草→淡蓝
-$bg-page-default: #F8F7FF;          // 默认页面背景
+// ===== 背景 =====
+$bg-home-gradient: #FAF7F2;        // 奶油白（暖）
+$bg-profile-gradient: #FAF7F2;
+$bg-page-default: #FAF7F2;
 
 // ===== 卡片 =====
 $card-bg: #FFFFFF;
@@ -97,17 +98,17 @@ $tag-badge-red: #FF4757;
 - 4个Tab + 1个中间悬浮按钮
 - Tab高度：100rpx（不含安全区）
 - 悬浮按钮直径：108rpx，位于TabBar上方16rpx
-- 悬浮按钮渐变：`linear-gradient(135deg, #6C5CE7, #5B4FC4)`
-- 悬浮按钮投影：`0 4px 16px rgba(108, 92, 231, 0.35)`
+- 悬浮按钮背景：`#2D6A4F`（实色）
+- 悬浮按钮投影：`0 4px 16px rgba(45, 106, 79, 0.35)`
 
 ### 2.2 Tab图标规格
 
 | Tab | 未选中色 | 选中色 | 图标尺寸 |
 |-----|---------|--------|---------|
-| 衣橱 | #9E9EB8 | #5B4FC4 | 48rpx |
-| 搭配 | #9E9EB8 | #5B4FC4 | 48rpx |
-| 发现 | #9E9EB8 | #5B4FC4 | 48rpx |
-| 我的 | #9E9EB8 | #5B4FC4 | 48rpx |
+| 首页 | #8F8B84 | #2D6A4F | 48rpx |
+| 衣橱 | #8F8B84 | #2D6A4F | 48rpx |
+| 搭配 | #8F8B84 | #2D6A4F | 48rpx |
+| 我的 | #8F8B84 | #2D6A4F | 48rpx |
 
 - 图标风格：手绘线条风（line icons），非填充
 - Tab文字大小：20rpx

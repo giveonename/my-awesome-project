@@ -1,59 +1,60 @@
-// ===== 主色调（低饱和灰调紫，现代简约高级感） =====
-$color-primary: #6366F1;           // 主色紫（低饱和）
-$color-primary-light: #818CF8;     // 亮紫
-$color-primary-dark: #4F46E5;      // 深紫（按压态）
-$color-primary-50: #EEF2FF;        // 极浅紫（背景高亮）
-$color-primary-100: #E0E7FF;       // 浅紫（tag 背景）
-$color-accent-gradient: #6366F1;   // 实色，去掉渐变
+// ===== 主色调（深墨绿 + 奶油白，画廊式高级感；主色退后衬托衣物照片） =====
+$color-primary: #2D6A4F;           // 深墨绿（按钮/标签/选中态）
+$color-primary-light: #5E9C82;     // 浅鼠尾草绿
+$color-primary-dark: #1B4D3E;      // 深松绿（按压态）
+$color-primary-50: #F0F7F3;        // 极浅绿（背景高亮）
+$color-primary-100: #DCEEE4;       // 浅绿（tag 背景）
+$color-accent-gold: #C2A878;       // 米金点缀（VIP/星标等，克制使用）
+$color-accent-gradient: #2D6A4F;   // 实色，去掉渐变
 
-// ===== 中性色阶 =====
-$color-gray-50: #FAFAFA;
-$color-gray-100: #F5F5F5;
-$color-gray-200: #EEEEEE;
-$color-gray-300: #E0E0E0;
-$color-gray-400: #BDBDBD;
-$color-gray-500: #9E9E9E;
-$color-gray-600: #757575;
-$color-gray-700: #616161;
-$color-gray-800: #424242;
-$color-gray-900: #333333;
+// ===== 中性色阶（暖灰/greige，配合奶油白底） =====
+$color-gray-50: #FAF9F7;
+$color-gray-100: #F4F2EE;
+$color-gray-200: #EAE7E1;
+$color-gray-300: #DDD9D1;
+$color-gray-400: #C0BBB2;
+$color-gray-500: #A19B90;
+$color-gray-600: #7A756C;
+$color-gray-700: #615D56;
+$color-gray-800: #45423D;
+$color-gray-900: #2E2C29;
 
 // ===== 背景 =====
-$bg-home-gradient: #FFFFFF;
-$bg-profile-gradient: #FFFFFF;
-$bg-page-default: #F8F9FA;          // 极浅冷灰
+$bg-home-gradient: #FAF7F2;
+$bg-profile-gradient: #FAF7F2;
+$bg-page-default: #FAF7F2;          // 奶油白（暖）
 
 // ===== 卡片 =====
 $card-bg: #FFFFFF;
-$card-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04), 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
-$card-shadow-hover: 0 4rpx 12rpx rgba(0, 0, 0, 0.06), 0 16rpx 40rpx rgba(0, 0, 0, 0.10);
+$card-shadow: 0 2rpx 8rpx rgba(64, 56, 44, 0.04), 0 8rpx 24rpx rgba(64, 56, 44, 0.06);
+$card-shadow-hover: 0 4rpx 12rpx rgba(64, 56, 44, 0.06), 0 16rpx 40rpx rgba(64, 56, 44, 0.10);
 $card-border-radius: 32rpx;         // 大卡片圆角
 $card-inner-border-radius: 24rpx;
 
-// ===== 语义化阴影 =====
-$shadow-xs: 0 1rpx 2rpx rgba(0, 0, 0, 0.04);
-$shadow-sm: 0 2rpx 6rpx rgba(0, 0, 0, 0.05), 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
-$shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.06), 0 12rpx 32rpx rgba(0, 0, 0, 0.08);
-$shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.08), 0 24rpx 64rpx rgba(0, 0, 0, 0.12);
-$shadow-focus: 0 0 0 4rpx rgba(99, 102, 241, 0.15);  // 主色聚焦光环（更淡）
+// ===== 语义化阴影（暖棕黑，避免冷灰阴影发蓝） =====
+$shadow-xs: 0 1rpx 2rpx rgba(64, 56, 44, 0.04);
+$shadow-sm: 0 2rpx 6rpx rgba(64, 56, 44, 0.05), 0 4rpx 12rpx rgba(64, 56, 44, 0.04);
+$shadow-md: 0 4rpx 12rpx rgba(64, 56, 44, 0.06), 0 12rpx 32rpx rgba(64, 56, 44, 0.08);
+$shadow-lg: 0 8rpx 24rpx rgba(64, 56, 44, 0.08), 0 24rpx 64rpx rgba(64, 56, 44, 0.12);
+$shadow-focus: 0 0 0 4rpx rgba(45, 106, 79, 0.15);  // 主色聚焦光环
 
-// ===== 文字 =====
-$text-primary: #333333;            // 主文字
-$text-secondary: #666666;          // 副文字
-$text-tertiary: #999999;           // 辅助文字
+// ===== 文字（暖黑系） =====
+$text-primary: #2E2C29;            // 主文字
+$text-secondary: #615D56;          // 副文字
+$text-tertiary: #9A948B;           // 辅助文字
 $text-on-primary: #FFFFFF;          // 主色上的文字
-$text-placeholder: #BDBDBD;        // 占位符文字
+$text-placeholder: #C0BBB2;        // 占位符文字
 
 // ===== 功能色 =====
 $color-success: #34C759;           // iOS 风格绿
 $color-warning: #FF9500;           // iOS 风格橙
 $color-danger: #FF3B30;            // iOS 风格红
 $color-info: #5AC8FA;              // iOS 风格蓝
-$color-ai-glow: rgba(99, 102, 241, 0.15);  // AI 光效（克制）
+$color-ai-glow: rgba(45, 106, 79, 0.12);  // AI 光效（克制）
 
 // ===== 标签/徽章 =====
-$tag-ai-bg: #EEF2FF;               // 浅紫实色
-$tag-vip-bg: #1F2937;              // 深灰
+$tag-ai-bg: #DCEEE4;               // 浅绿实色（AI 标签）
+$tag-vip-bg: #1B4D3E;              // 深松绿（会员）
 $tag-badge-red: #FF4757;
 
 // ===== 圆角体系 =====

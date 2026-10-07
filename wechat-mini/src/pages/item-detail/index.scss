@@ -10,11 +10,11 @@
 $bg-page: #F8F7FF;
 $text-primary: #1E1B4B;
 $text-secondary: #94A3B8;
-$accent-primary: #6366f1;
-$accent-secondary: #8b5cf6;
+$accent-primary: #2D6A4F;
+$accent-secondary: #5E9C82;
 $accent-light: #E8E5FF;
 $card-bg: #FFFFFF;
-$card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
+$card-shadow: 0 2px 16px rgba(45, 106, 79, 0.06);
 
 .detail-page {
   min-height: 100vh;
@@ -93,7 +93,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, $accent-light 0%, #ddd6fe 100%);
+  background: linear-gradient(135deg, $accent-light 0%, #DCEEE4 100%);
 }
 
 .detail-hero-emoji {
@@ -277,7 +277,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid rgba(99, 102, 241, 0.1);
+  border: 2px solid rgba(45, 106, 79, 0.1);
   flex-shrink: 0;
 }
 
@@ -523,7 +523,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
   padding: 22px;
   text-align: center;
   margin-top: 8px;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 16px rgba(45, 106, 79, 0.25);
   transition: transform 0.15s ease;
 
   &:active {
@@ -631,7 +631,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
   position: absolute;
   top: 16rpx;
   right: 16rpx;
-  background: rgba(99, 102, 241, 0.9);
+  background: rgba(45, 106, 79, 0.9);
   backdrop-filter: blur(10px);
   border-radius: 16rpx;
   padding: 8rpx 20rpx;
@@ -651,7 +651,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
 }
 
 .detail-action-btn--recommend {
-  background: linear-gradient(135deg, #818CF8, #6366F1) !important;
+  background: linear-gradient(135deg, #5E9C82, #2D6A4F) !important;
   border-radius: $radius-pill;
   .detail-action-icon, .detail-action-text { color: #fff !important; }
 }

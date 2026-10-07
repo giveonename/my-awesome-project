@@ -7,11 +7,11 @@
 $bg-page: #F8F7FF;
 $text-primary: #1E1B4B;
 $text-secondary: #94A3B8;
-$accent-primary: #6366f1;
-$accent-secondary: #8b5cf6;
+$accent-primary: #2D6A4F;
+$accent-secondary: #5E9C82;
 $accent-light: #E8E5FF;
 $card-bg: #FFFFFF;
-$card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
+$card-shadow: 0 2px 16px rgba(45, 106, 79, 0.06);
 
 .prefs-page {
   min-height: 100vh;
@@ -141,7 +141,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
 
 .option-chip--active {
   background: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.2);
 }
 
 .option-chip-text {

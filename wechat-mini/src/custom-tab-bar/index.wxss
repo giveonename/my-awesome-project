@@ -40,7 +40,7 @@
 }
 
 .tabbar-item--active .tabbar-item-text {
-  color: #7C6FEB;
+  color: #2D6A4F;
   font-weight: 600;
 }
 
@@ -78,13 +78,13 @@
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9B8FFF 0%, #7C6FEB 40%, #6C5CE7 100%);
+  background: linear-gradient(135deg, #5E9C82 0%, #2D6A4F 40%, #1B4D3E 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   margin-top: -40rpx;
-  box-shadow: 0 8rpx 24rpx rgba(124, 111, 235, 0.35);
+  box-shadow: 0 8rpx 24rpx rgba(45, 106, 79, 0.35);
   transition: transform 0.15s ease;
 }
 
@@ -99,7 +99,7 @@
   right: -8rpx;
   bottom: -8rpx;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 111, 235, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(45, 106, 79, 0.15) 0%, transparent 70%);
   z-index: -1;
 }
 

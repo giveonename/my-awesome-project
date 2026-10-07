@@ -1,14 +1,14 @@
 // ============================================================
 //  魔搭幻穿 Login — 现代简约高级感
-//  纯白底 + 低饱和紫强调色 + 极简层级
+//  奶油白底 + 深墨绿强调色 + 画廊式层级
 // ============================================================
 
-$accent-primary: #6366F1;
-$accent-primary-dark: #4F46E5;
+$accent-primary: #2D6A4F;
+$accent-primary-dark: #1B4D3E;
 
 .login-page {
   min-height: 100vh;
-  background: #FFFFFF;
+  background: #FAF7F2;
   display: flex;
   flex-direction: column;
   padding: 0 48px;
@@ -53,14 +53,14 @@ $accent-primary-dark: #4F46E5;
 .login-brand-name {
   font-size: 52px;
   font-weight: 800;
-  color: #1F2937;
+  color: #2E2C29;
   letter-spacing: 4px;
   margin-bottom: 12px;
 }
 
 .login-brand-tagline {
   font-size: 28px;
-  color: #6B7280;
+  color: #615D56;
   font-weight: 400;
   letter-spacing: 2px;
 }
@@ -82,7 +82,7 @@ $accent-primary-dark: #4F46E5;
   padding: 28px 32px;
   background: #FFFFFF;
   border-radius: 24px;
-  border: 1rpx solid #F0F0F0;
+  border: 1rpx solid #EAE7E1;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
   opacity: 0;
   transform: translateY(20px);
@@ -115,13 +115,13 @@ $accent-primary-dark: #4F46E5;
 .login-feature-title {
   font-size: 30px;
   font-weight: 600;
-  color: #1F2937;
+  color: #2E2C29;
   margin-bottom: 4px;
 }
 
 .login-feature-desc {
   font-size: 24px;
-  color: #9CA3AF;
+  color: #9A948B;
 }
 
 // ---- CTA ----
@@ -163,7 +163,7 @@ $accent-primary-dark: #4F46E5;
   overflow: hidden;
   position: relative;
   background: $accent-primary;
-  box-shadow: 0 4rpx 16rpx rgba(99, 102, 241, 0.2);
+  box-shadow: 0 4rpx 16rpx rgba(45, 106, 79, 0.2);
   transition: transform 150ms ease, box-shadow 150ms ease;
 
   &:active {
@@ -206,7 +206,7 @@ $accent-primary-dark: #4F46E5;
 
 .login-footer {
   font-size: 22px;
-  color: #D1D5DB;
+  color: #C0BBB2;
   text-align: center;
   margin-top: 32px;
 }

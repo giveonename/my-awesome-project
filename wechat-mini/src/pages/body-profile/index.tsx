@@ -220,9 +220,9 @@ export default function BodyProfilePage() {
             max={210}
             step={1}
             value={profile.height_cm as number}
-            activeColor='#818CF8'
-            backgroundColor='#EEF2FF'
-            blockColor='#818CF8'
+            activeColor='#5E9C82'
+            backgroundColor='#EDF5EF'
+            blockColor='#5E9C82'
             blockSize={28}
             onChange={(e) => update({ height_cm: e.detail.value })}
           />
@@ -245,9 +245,9 @@ export default function BodyProfilePage() {
             max={150}
             step={1}
             value={profile.weight_kg as number}
-            activeColor='#818CF8'
-            backgroundColor='#EEF2FF'
-            blockColor='#818CF8'
+            activeColor='#5E9C82'
+            backgroundColor='#EDF5EF'
+            blockColor='#5E9C82'
             blockSize={28}
             onChange={(e) => update({ weight_kg: e.detail.value })}
           />

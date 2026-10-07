@@ -7,11 +7,11 @@
 $bg-page: #F8F7FF;
 $text-primary: #1E1B4B;
 $text-secondary: #94A3B8;
-$accent-primary: #6366f1;
-$accent-secondary: #8b5cf6;
+$accent-primary: #2D6A4F;
+$accent-secondary: #5E9C82;
 $accent-light: #E8E5FF;
 $card-bg: #FFFFFF;
-$card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
+$card-shadow: 0 2px 16px rgba(45, 106, 79, 0.06);
 
 .history-page {
   min-height: 100vh;
@@ -92,7 +92,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
 
 .calendar-cell--today {
   background: $accent-light;
-  border: 1.5px solid rgba(99, 102, 241, 0.2);
+  border: 1.5px solid rgba(45, 106, 79, 0.2);
 }
 
 .calendar-cell--has-outfit {
@@ -105,7 +105,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
 
 .calendar-cell--selected {
   background: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.25);
 
   .calendar-day {
     color: #fff;
@@ -221,7 +221,7 @@ $card-shadow: 0 2px 16px rgba(99, 102, 241, 0.06);
   padding: 24px;
   margin-bottom: 16px;
   box-shadow: $card-shadow;
-  border: 1px solid rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(45, 106, 79, 0.05);
 }
 
 .history-card-header {

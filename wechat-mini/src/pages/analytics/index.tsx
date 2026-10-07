@@ -78,8 +78,8 @@ interface LearningData {
 // ===== Color Palette =====
 
 const CHART_COLORS = [
-  '#6366F1', '#818CF8', '#5AC8FA', '#34C759', '#FF9500',
-  '#FF3B30', '#FF6B8A', '#30D5C8', '#BF5AF2', '#FFD60A',
+  '#2D6A4F', '#5E9C82', '#5AC8FA', '#34C759', '#FF9500',
+  '#FF3B30', '#FF6B8A', '#30D5C8', '#C2A878', '#FFD60A',
 ]
 
 // ===== Hooks =====
