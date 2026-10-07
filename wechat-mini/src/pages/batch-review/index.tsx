@@ -76,8 +76,18 @@ export default function BatchReviewPage() {
       Taro.showToast({ title: '请至少选择一件衣物', icon: 'none' })
       return
     }
+    if (!batchStatus?.items?.length) return
+
     setSaving(true)
     try {
+      const allIds = batchStatus.items.map(i => i.id)
+      const unselectedIds = allIds.filter(id => !selectedIds.has(id))
+
+      // 删除未选中的衣物
+      if (unselectedIds.length > 0) {
+        await api.post('/items/bulk/delete', { item_ids: unselectedIds })
+      }
+
       const count = selectedIds.size
       Taro.showToast({ title: `已保存 ${count} 件衣物`, icon: 'success' })
       setTimeout(() => {
@@ -89,7 +99,7 @@ export default function BatchReviewPage() {
     } finally {
       setSaving(false)
     }
-  }, [selectedIds])
+  }, [selectedIds, batchStatus])
 
   if (loading) {
     return (
