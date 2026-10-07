@@ -9,19 +9,4 @@ repos:
       - id: ruff-format
         files: ^backend/
 
-  # Frontend: TypeScript and ESLint
-  - repo: local
-    hooks:
-      - id: frontend-typecheck
-        name: Frontend TypeScript check
-        entry: bash -c 'cd frontend && npx tsc --noEmit'
-        language: system
-        files: ^frontend/.*\.(ts|tsx)$
-        pass_filenames: false
-
-      - id: frontend-lint
-        name: Frontend ESLint
-        entry: bash -c 'cd frontend && npm run lint'
-        language: system
-        files: ^frontend/.*\.(ts|tsx)$
-        pass_filenames: false
+  # WeChat Mini Program: compile check via `npm run build:weapp`

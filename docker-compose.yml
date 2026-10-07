@@ -41,20 +41,16 @@ services:
     container_name: wardrobe-backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    dns:
-      - 192.168.1.1
-      - 8.8.8.8
     environment:
       DEBUG: ${DEBUG:-false}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-wardrobe}:${POSTGRES_PASSWORD:-wardrobe}@postgres:5432/${POSTGRES_DB:-wardrobe}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000", "http://frontend:3000"]'}
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000"]'}
       STORAGE_PATH: /data/wardrobe
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
-      AUTH_TRUST_HEADER: ${AUTH_TRUST_HEADER:-false}
       AI_BASE_URL: ${AI_BASE_URL:-http://host.docker.internal:11434/v1}
       AI_VISION_MODEL: ${AI_VISION_MODEL:-gpt-4o}
       AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gpt-4o}
@@ -103,23 +99,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
-
-  # Next.js Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: wardrobe-frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
-      DEV_MODE: ${DEBUG:-false}
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
-    depends_on:
-      - backend
     restart: unless-stopped
 
 # Background Worker for AI Tagging

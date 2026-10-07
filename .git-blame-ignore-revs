@@ -1,5 +1,0 @@
-# Commits to ignore in git blame
-# Configure with: git config blame.ignoreRevsFile .git-blame-ignore-revs
-
-# chore: fix linting errors and add missing type properties
-f1c484883d766961410977de1a81837679a8630f
