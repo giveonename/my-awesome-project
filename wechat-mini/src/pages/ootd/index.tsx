@@ -2,6 +2,8 @@ import { View, Text, ScrollView, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { api, resolveImageUrl } from '../../utils/api'
+import { getLocationAndSave } from '../../utils/location'
+import { WEATHER_CONDITION_CN } from '../../constants'
 import CachedImage from '../../components/CachedImage'
 import './index.scss'
 import { icons } from '../../constants/icons'
@@ -30,62 +32,167 @@ interface OutfitRecord {
   scheduled_for?: string
 }
 
-// ===== Mock Weather (保留，未来接入真实 API) =====
-
-const MOCK_LOCATION = '贵阳市花溪区'
-
-const MOCK_WEATHER: WeatherDay[] = [
-  { date: '2026-06-02', weekday: '今日', icon: icons['sun'], condition: '晴', tempMin: 20, tempMax: 28, humidity: 45, wind: '微风', tip: '天气不错，短袖+薄外套刚刚好' },
-  { date: '2026-06-03', weekday: '明日', icon: icons['cloud'], condition: '多云', tempMin: 19, tempMax: 26, humidity: 55, wind: '微风', tip: '多云天适合浅色系穿搭' },
-  { date: '2026-06-04', weekday: '周四', icon: icons['sun'], condition: '小雨', tempMin: 17, tempMax: 23, humidity: 80, wind: '北风3级', tip: '记得带伞，穿防水面料的外套' },
-  { date: '2026-06-05', weekday: '周五', icon: icons['sun'], condition: '中雨', tempMin: 16, tempMax: 22, humidity: 85, wind: '北风4级', tip: '雨天穿搭以深色为主，不容易显脏' },
-  { date: '2026-06-06', weekday: '周六', icon: icons['cloud'], condition: '多云', tempMin: 18, tempMax: 25, humidity: 60, wind: '微风', tip: '周末出门，休闲风很合适' },
-  { date: '2026-06-07', weekday: '周日', icon: icons['sun'], condition: '晴', tempMin: 21, tempMax: 30, humidity: 40, wind: '微风', tip: '高温天注意防晒，浅色透气面料优先' },
-  { date: '2026-06-08', weekday: '周一', icon: icons['sun'], condition: '晴', tempMin: 22, tempMax: 31, humidity: 38, wind: '微风', tip: '又是晴天，短裤短袖安排上' },
-]
+interface ForecastDay {
+  date: string
+  temp_min: number
+  temp_max: number
+  precipitation_chance: number
+  condition: string
+  condition_code: number
+}
 
 // ===== Helpers =====
 
+const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+function getWeatherIcon(condition: string): string {
+  const c = (condition || '').toLowerCase()
+  if (c.includes('sunny') || c === 'clear') return icons['sun']
+  if (c.includes('cloud') || c === 'overcast') return icons['cloud']
+  if (c.includes('rain') || c.includes('drizzle')) return icons['cloud-rain']
+  if (c.includes('snow')) return icons['snowflake']
+  if (c.includes('thunder')) return icons['cloud-lightning']
+  if (c.includes('fog')) return icons['cloud-fog']
+  return icons['cloud-sun']
+}
+
+function getConditionCN(condition: string): string {
+  const c = (condition || '').toLowerCase()
+  if (c.includes('sunny') || c === 'clear') return '晴'
+  if (c === 'overcast') return '阴'
+  if (c.includes('cloud')) return '多云'
+  if (c.includes('rain') || c.includes('drizzle')) return '雨'
+  if (c.includes('snow')) return '雪'
+  return WEATHER_CONDITION_CN[condition] || condition || ''
+}
+
+function getWeatherTip(condition: string, tempMin: number, tempMax: number): string {
+  const c = (condition || '').toLowerCase()
+  const avg = (tempMin + tempMax) / 2
+
+  if (c.includes('rain') || c.includes('drizzle')) {
+    if (c.includes('heavy')) return '大雨天尽量少出门，室内穿搭也要精致'
+    return '记得带伞，穿防水面料的外套'
+  }
+  if (c.includes('snow')) return '雪天注意保暖，深色系不容易显脏'
+  if (c.includes('thunder')) return '雷雨天待在室内，明天再美美出门'
+  if (c.includes('fog')) return '雾天能见度低，穿亮色外套更安全'
+
+  if (avg >= 33) return '高温天注意防晒，浅色透气面料优先'
+  if (avg >= 28) return '天气炎热，短袖短裤安排上'
+  if (avg >= 23) return '天气不错，短袖+薄外套刚刚好'
+  if (avg >= 18) return '微凉天气，长袖或薄针织很舒适'
+  if (avg >= 13) return '有点冷了，记得加件外套'
+  if (avg >= 5) return '天气较冷，大衣+围巾保暖又有型'
+  return '严寒天气，羽绒服是刚需，注意保暖'
+}
+
 function getBgGradient(condition: string): string {
-  if (condition.includes('晴')) return 'linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #F7F8FA 100%)'
-  if (condition.includes('多云')) return 'linear-gradient(180deg, #A8C0D0 0%, #C8D8E4 40%, #F7F8FA 100%)'
-  if (condition.includes('雨')) return 'linear-gradient(180deg, #708090 0%, #A0AEB8 40%, #F7F8FA 100%)'
-  if (condition.includes('雪')) return 'linear-gradient(180deg, #E8EEF4 0%, #F0F4F8 40%, #F7F8FA 100%)'
+  const c = (condition || '').toLowerCase()
+  if (c.includes('sunny') || c === 'clear') return 'linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #F7F8FA 100%)'
+  if (c.includes('cloud') || c === 'overcast') return 'linear-gradient(180deg, #A8C0D0 0%, #C8D8E4 40%, #F7F8FA 100%)'
+  if (c.includes('rain') || c.includes('drizzle')) return 'linear-gradient(180deg, #708090 0%, #A0AEB8 40%, #F7F8FA 100%)'
+  if (c.includes('snow')) return 'linear-gradient(180deg, #E8EEF4 0%, #F0F4F8 40%, #F7F8FA 100%)'
+  if (c.includes('thunder')) return 'linear-gradient(180deg, #4A5568 0%, #718096 40%, #F7F8FA 100%)'
   return 'linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #F7F8FA 100%)'
 }
 
-// ===== Weather API 坑位（未来接入） =====
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function fetchWeather(_latitude?: number, _longitude?: number): Promise<WeatherDay[]> {
-  // TODO: 接入 GET /weather/forecast 真实 API
-  // const data = await api.get<{ forecast: WeatherDay[] }>('/weather/forecast', {
-  //   latitude: String(latitude),
-  //   longitude: String(longitude),
-  //   days: '7',
-  // })
-  // return data.forecast || []
-  return MOCK_WEATHER
+function getWeekday(dateStr: string, todayStr: string): string {
+  if (dateStr === todayStr) return '今日'
+  const tomorrow = new Date(todayStr)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (dateStr === tomorrow.toISOString().slice(0, 10)) return '明日'
+  const d = new Date(dateStr)
+  return WEEKDAY_NAMES[d.getDay()]
+}
+
+function formatWind(speed: number): string {
+  if (speed < 2) return '无风'
+  if (speed < 12) return '微风'
+  if (speed < 20) return '3级风'
+  if (speed < 29) return '4级风'
+  if (speed < 39) return '5级风'
+  return '大风'
 }
 
 // ===== Component =====
 
 export default function OotdPage() {
-  const [selectedDate, setSelectedDate] = useState(MOCK_WEATHER[0].date)
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const [selectedDate, setSelectedDate] = useState(todayStr)
   const [outfit, setOutfit] = useState<OutfitRecord | null>(null)
   const [loadingOutfit, setLoadingOutfit] = useState(false)
-  const [weather, setWeather] = useState<WeatherDay[]>(MOCK_WEATHER)
+  const [weather, setWeather] = useState<WeatherDay[]>([])
+  const [locationName, setLocationName] = useState('')
+  const [loadingWeather, setLoadingWeather] = useState(true)
 
   const selectedDay = useMemo(() =>
-    weather.find(d => d.date === selectedDate) || weather[0],
-    [selectedDate, weather]
+    weather.find(d => d.date === selectedDate) || weather[0] || {
+      date: todayStr, weekday: '今日', icon: icons['cloud-sun'], condition: '',
+      tempMin: 0, tempMax: 0, humidity: 0, wind: '', tip: '正在获取天气...'
+    },
+    [selectedDate, weather, todayStr]
   )
 
   const bgGradient = useMemo(() => getBgGradient(selectedDay.condition), [selectedDay.condition])
-  const isToday = selectedDate === weather[0]?.date
+  const isToday = selectedDate === todayStr
 
-  // 加载天气（预留真实 API）
+  // 加载真实天气数据
   useEffect(() => {
-    fetchWeather().then(setWeather)
+    const loadWeather = async () => {
+      setLoadingWeather(true)
+      try {
+        const loc = await Promise.race([
+          getLocationAndSave(),
+          new Promise<null>(r => setTimeout(() => r(null), 5000))
+        ])
+
+        const wp: Record<string, string> = {}
+        if (loc) {
+          wp.latitude = String(loc.latitude)
+          wp.longitude = String(loc.longitude)
+        }
+
+        // 并行请求当前天气（获取城市名）和 7 天预报
+        const [currentRes, forecastRes] = await Promise.allSettled([
+          api.get<any>('/weather/current', wp).catch(() => null),
+          api.get<any>('/weather/forecast', { ...wp, days: '7' }).catch(() => null),
+        ])
+
+        // 城市名
+        if (currentRes.status === 'fulfilled' && currentRes.value) {
+          setLocationName(currentRes.value.city || '')
+        }
+
+        // 预报数据
+        if (forecastRes.status === 'fulfilled' && forecastRes.value?.forecast) {
+          const forecast: ForecastDay[] = forecastRes.value.forecast
+          const days: WeatherDay[] = forecast.map((d) => ({
+            date: d.date,
+            weekday: getWeekday(d.date, todayStr),
+            icon: getWeatherIcon(d.condition),
+            condition: getConditionCN(d.condition),
+            tempMin: Math.round(d.temp_min),
+            tempMax: Math.round(d.temp_max),
+            humidity: 50,
+            wind: '',
+            tip: getWeatherTip(d.condition, d.temp_min, d.temp_max),
+          }))
+          if (days.length > 0) {
+            setWeather(days)
+            // 如果当前选中日期不在预报范围内，选第一天
+            if (!days.find(d => d.date === selectedDate)) {
+              setSelectedDate(days[0].date)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Load weather failed:', err)
+      } finally {
+        setLoadingWeather(false)
+      }
+    }
+    loadWeather()
   }, [])
 
   // 查询选中日期的穿搭记录
@@ -122,7 +229,7 @@ export default function OotdPage() {
       sizeType: ['compressed'],
       success: (res) => {
         if (res.tempFiles?.length) {
-          Taro.navigateTo({ url: '/pages/evaluation/index' })
+          Taro.navigateTo({ url: '/pages/parse/index?tab=flat&auto=1' })
         }
       },
     })
@@ -143,7 +250,7 @@ export default function OotdPage() {
         {/* 定位 */}
         <View className='ootd-location'>
           <Image src={icons['map-pin']} className='ootd-location-icon' style={{width: '48rpx', height: '48rpx'}} />
-          <Text className='ootd-location-text'>{MOCK_LOCATION}</Text>
+          <Text className='ootd-location-text'>{locationName || '定位中...'}</Text>
         </View>
 
         {/* 当前天气大字 */}
@@ -159,6 +266,11 @@ export default function OotdPage() {
         </View>
 
         {/* 7天预报条 */}
+        {loadingWeather && weather.length === 0 ? (
+          <View className='ootd-forecast-loading'>
+            <Text className='ootd-forecast-loading-text'>获取天气中...</Text>
+          </View>
+        ) : (
         <ScrollView scrollX className='ootd-forecast-scroll'>
           <View className='ootd-forecast-list'>
             {weather.map((day) => {
@@ -178,6 +290,7 @@ export default function OotdPage() {
             })}
           </View>
         </ScrollView>
+        )}
       </View>
 
       {/* ===== 核心内容区 ===== */}
