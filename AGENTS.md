@@ -1,28 +1,29 @@
 # AGENTS.md — Wardrowbe（魔搭幻穿）
 
-> AI 穿搭助手微信小程序：FastAPI 后端 + Taro/React 小程序 + Next.js Web 前端
+> AI 穿搭助手微信小程序：FastAPI 后端 + Taro/React 小程序
+> 本文件是 AI 助手的权威工作文档；面向人的项目介绍见 `README.md`，历史方案见 `docs/archive/`。
 
 ## 技术栈
 
 | 层 | 技术 |
 |---|------|
 | 小程序 | Taro 4.2 + React 18 + TypeScript + SCSS |
-| Web 前端 | Next.js 14 + TypeScript + Tailwind + shadcn/ui + vitest |
 | 后端 | FastAPI + SQLAlchemy (async) + Pydantic v2 + Python ≥3.11 |
 | 数据库 | PostgreSQL 15 + Redis 7 |
-| 后台任务 | arq（衣物识别、通知推送、学习模型更新） |
-| AI 文本 | 小米 MiMo API（OpenAI 兼容格式） |
-| AI 虚拟试衣 | DashScope OutfitAnyone |
-| 图像处理 | 阿里云视觉智能 + OSS |
+| 后台任务 | arq（衣物识别、通知推送、学习画像更新） |
+| AI 文本/视觉理解 | 小米 MiMo API（OpenAI 兼容格式，走 AI_* 环境变量） |
+| AI 虚拟试衣 | DashScope OutfitAnyone（aitryon-plus / aitryon-refiner / aitryon-parsing-v1） |
+| 图像处理 | 阿里云视觉智能（分割）+ 阿里云 OSS（公网存储） |
 | 天气 | 和风天气 v7（国内优先）+ Open-Meteo（fallback） |
 | 电商 | 淘宝联盟 API |
-| 认证 | 微信小程序登录 + OIDC |
+| 认证 | 微信小程序登录（OIDC 为兼容保留） |
 
-## 三个子项目
+> 历史：本项目基于开源模板 Anyesh/wardrowbe（英文自托管衣橱）二次开发，模板的 Next.js Web 前端已于 2026-10 移除，仅小程序端活跃。
+
+## 两个子项目
 
 - `backend/` — FastAPI 后端，入口 `app/main.py`，路由注册 `app/api/router.py`
-- `frontend/` — Next.js Web 前端（暂未重点开发）
-- `wechat-mini/` — Taro 微信小程序，入口 `src/app.ts`，路由配置 `src/app.config.ts`
+- `wechat-mini/` — Taro 微信小程序，入口 `src/app.ts`，路由配置 `src/app.config.ts`（22 个注册页面）
 
 ## 常用命令
 
@@ -41,15 +42,12 @@ backend\.venv\Scripts\python.exe -m arq app.workers.worker.WorkerSettings
 
 # === Lint & 格式化 ===
 ruff check --fix backend/app/ && ruff format backend/app/   # 后端（line-length=100, py311）
-cd frontend && npm run lint                                   # 前端 ESLint
-cd frontend && npx tsc --noEmit                               # 前端类型检查
 
-# === 测试 ===
-docker compose exec backend python -m pytest tests/ -v --tb=short  # 后端测试
-cd frontend && npm test                                              # 前端测试（vitest）
+# === 测试（需要运行中的 PostgreSQL + Redis，conftest 会建 wardrobe_test 库并跑迁移）===
+docker compose exec backend python -m pytest tests/ -v --tb=short
 
-# === 数据库迁移 ===
-docker compose exec backend alembic heads      # 查看所有 head（有多个！）
+# === 数据库迁移（图已损坏，务必先看 heads！）===
+docker compose exec backend alembic heads      # 查看所有 head（当前 5 个）
 docker compose exec backend alembic upgrade <revision>  # 逐个执行每个 head
 
 # === 健康检查 ===
@@ -57,6 +55,14 @@ curl http://localhost:8000/api/v1/health
 ```
 
 ## 重要约定 & 踩坑
+
+### 数据库迁移图已损坏（动手前必读！）
+
+`migrations/versions/` 现状：**5 个 head**（`a1b2c3d4e5f6`、`add_public_url`、`e1f2g3h4i5j6`、`d2b280660baa`、`f1a2b3c4d5e6`）+ **重复 revision ID**（`add_wash_tracking.py` 与 `a1b2c3d4e5f6_add_full_body_photo_url.py` 共用 `a1b2c3d4e5f6`，Alembic 加载时告警）+ `f1a2b3c4d5e6` 的 `down_revision=None` 是个假根。因此：
+
+- `alembic upgrade head` 只会升级其中一个 head，永远不完整
+- 正确做法：`alembic heads` 列出全部 → 逐个 `alembic upgrade <revision>`
+- 线上库是靠逐个 upgrade 打上来的；修复迁移图（线性化）属于高风险重构，需单独规划
 
 ### ChatMessage.metadata 字段映射
 
@@ -83,7 +89,7 @@ AI 对话中搭配方案用 `<<<OUTFIT>>>...<<<END>>>` 标记。AI 有时输出 
 
 ### 衣物识别中文保障
 
-Prompt 用英文指令（模型更易遵守），强制 `name`/`description` 用中文。后处理检测到英文描述会自动重写为中文。
+Prompt 用英文指令（模型更易遵守），强制 `name`/`description` 用中文。后处理检测到英文描述会自动重写为中文。衣物分割/多件拆分由 `aliyun_vision_service.py`（SegmentCommodity / SegmentBody）完成。
 
 ### 天气服务链路
 
@@ -92,15 +98,19 @@ Prompt 用英文指令（模型更易遵守），强制 `name`/`description` 用
 
 ### 虚拟试衣链路
 
-选衣物 → 智能分类（上装/下装/整套）→ 整套则 aitryon-parsing-v1 拆分 → DashScope aitryon-plus 异步提交 → 轮询 → 可选 aitryon-refiner 增强。全身照在 `BodyProfile.full_body_photo_url`。
+选衣物 → 智能分类（上装/下装/整套）→ 整套则 aitryon-parsing-v1 拆分 → DashScope aitryon-plus 异步提交 → 轮询 → 可选 aitryon-refiner 增强；另有 `swap_background`（SegmentBody 抠图 + PIL 羽化/色彩迁移/投影合成）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图，硬编码在 `virtual_tryon_service.py`）。
 
 ### 淘宝联盟
 
-无 API Key 时自动 Mock（8 个硬编码商品）。真实模式调用 `taobao.tbk.dg.material.optional.upgrade`，MD5 签名。
+无 API Key 时自动 Mock（约 35 个硬编码商品，带关键词/风格打分匹配）。真实模式调用 `taobao.tbk.dg.material.optional.upgrade`，MD5 签名。
 
 ### 虚拟试衣任务存储
 
-Task store 在内存中，重启丢失（后续可改 Redis）。
+Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
+
+### 小程序环境地址
+
+`wechat-mini/src/env.ts` 由 `get-local-ip.cjs` 在 predev/prebuild 钩子自动生成（局域网 IP），不要手改；真机预览要求手机与后端同局域网，生产需替换为公网 HTTPS 域名。
 
 ## Docker 服务
 
@@ -110,27 +120,29 @@ Task store 在内存中，重启丢失（后续可改 Redis）。
 | redis | wardrobe-redis | 6379 |
 | backend | wardrobe-backend | 8000 |
 | worker | wardrobe-worker | — |
-| frontend | wardrobe-frontend | 3000 |
 
 数据卷：`postgres_data`、`redis_data`、`wardrobe_data`（图片）
 
 ## 关键文件速查
 
-- `backend/app/services/virtual_tryon_service.py` — 虚拟试衣核心
-- `backend/app/services/chat_service.py` — AI 对话逻辑
+- `backend/app/services/virtual_tryon_service.py` — 虚拟试衣核心（提交/轮询/增强/背景切换）
+- `backend/app/services/chat_service.py` — AI 对话逻辑（人设"小衣"）
 - `backend/app/services/recommendation_service.py` — AI 推荐引擎（含智能关键词、上下文感知）
-- `backend/app/services/taobao_service.py` — 淘宝联盟集成
 - `backend/app/services/learning_service.py` — 持续学习系统
-- `backend/app/services/aliyun_vision_service.py` — 图像预处理
-- `backend/app/prompts/` — AI Prompt 模板（中文）
+- `backend/app/services/aliyun_vision_service.py` — 图像预处理/分割
+- `backend/app/services/taobao_service.py` — 淘宝联盟集成
+- `backend/app/api/products.py` — 智能搜索词 `_build_smart_keyword`（基于衣物/补缺/场景三模式）
+- `backend/app/prompts/` — AI Prompt 模板（5 个，UTF-8 无 BOM）
 - `backend/app/workers/worker.py` — arq 配置（7 job + 5 cron）
+- `wechat-mini/src/utils/api.ts` — 请求封装（token、401 跳登录、错误中文化）
 - `wechat-mini/src/constants/index.ts` — 中英文映射
-- `wechat-mini/src/components/VirtualTryOnModal/` — 试衣 UI
+- `wechat-mini/src/constants/icons.ts` — 内联 base64 图标（约 130KB，由 gen-icons.cjs 生成）
+- `wechat-mini/src/components/VirtualTryOnModal/` — 试衣弹窗（suggest/item-detail/diy/wardrobe 共用）
 - `wechat-mini/src/pages/suggest/index.tsx` — 搭配灵感（AI搭配 + 我的搭配 + 搭配灵感）
+- `wechat-mini/src/pages/parse/index.tsx` — 统一上传识别页（平铺图/穿搭照双 tab）
 - `wechat-mini/src/pages/diy/index.tsx` — DIY 搭配画板
-- `wechat-mini/src/pages/outfit-detail/index.tsx` — 搭配详情页
 
-## AI搭配功能（本次新增）
+## AI搭配功能
 
 ### 架构概述
 
@@ -171,7 +183,11 @@ Task store 在内存中，重启丢失（后续可改 Redis）。
 
 ## 已知问题
 
+- **数据库迁移图损坏**（见上"重要约定"），5 head + 重复 revision ID；新环境初始化务必逐个 upgrade
 - Docker 容器不挂载源码，改后端需 `.\sync-backend.cmd` 同步
-- Alembic 有多个迁移头，需逐个 upgrade
+- 虚拟试衣任务存内存，backend 重启丢失
 - 会员支付未实现（UI 已就绪，显示"即将开放"）
 - AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）
+- `ootd` 页面功能完整（真实天气+穿搭记录）但未接入任何导航入口（保留现状，待决定入口位置）
+- 小程序 `suggest/index.tsx` 超过 1200 行、`api/items.py` 超过 1900 行，属技术债，改动时注意局部化
+- 仓库 git remote 此前指向模板仓库 Anyesh/wardrowbe，已于 2026-10 断开；推送前需自行 `git remote add origin <你的仓库>`

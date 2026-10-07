@@ -48,41 +48,21 @@ postgres_data/
 redis_data/
 uploads/
 
-# Kubernetes secrets (NEVER commit actual secrets)
-k8s/secrets.yaml.local
-k8s/*.secret.yaml
+# Generated files
+wechat-mini/src/env.ts
 
-# Local development
-*.local
+# Local AI-assistant / thesis working files (keep out of the repo)
 .claude/
 CLAUDE.md
-deploy.sh
-graphify*
-.graphify*
-
-# Temporary debug files
-temp_*
-_debug*
-test_official_person.png
-test123.txt
-blazer_resp.json
-items_response.json
-*.b64
-src.txt
-src_oss.txt
-w.js
-wf.js
-wf2.js
-wf3.js
-write.js
-write_test.js
-write_files.bat
-findings.md
-progress.md
-task_plan.md
-SYSTEM_AUDIT_REPORT.md
-pic/
+.planning/
+thesis-context.md
+.agents/skills/*/data/
+.agents/skills/*/scripts/
 skills-lock.json
-backend/_debug*.py
-.mimocode/
+
+# Local debug output
+pic/
+
+# Build cache / local agent files
 .swc/
+.agents/
