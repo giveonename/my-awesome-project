@@ -160,7 +160,7 @@ export default function HomePage() {
               </View>
             </View>
             <View className='home-hero-card-right-col'>
-              <View className='home-hero-card home-hero-card--ootd' onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}>
+              <View className='home-hero-card home-hero-card--ootd' onClick={() => Taro.navigateTo({ url: '/pages/ootd/index' })}>
                 <Image src={icons['camera']} className='home-hero-card-sm-icon' style={{width: '48rpx', height: '48rpx'}} />
                 <Text className='home-hero-card-sm-title'>今日穿搭</Text>
                 <Text className='home-hero-card-sm-desc'>记录今天穿了啥</Text>

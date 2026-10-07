@@ -121,7 +121,6 @@ ruff check --fix backend/app/ && ruff format backend/app/
 - **数据库迁移多 head**：迁移图存在 5 个 head 且有一个重复的 revision ID（`a1b2c3d4e5f6`，Alembic 会告警但可加载）。升级请使用 `alembic heads` + 逐个 `upgrade`，切勿在未检查的情况下直接 `upgrade head`。
 - **虚拟试衣任务存储在内存**：backend 重启后进行中的试衣任务会丢失（计划迁移 Redis）。
 - **会员支付未实现**：UI 已就绪，点击显示"即将开放"。
-- **ootd 页面暂无入口**：每日穿搭页功能完整但未接入导航（保留代码）。
 - **通知通道为兼容保留**：ntfy/SMTP/Mattermost 是模板遗留配置，小程序端实际使用微信订阅消息路径。
 
 ## License
