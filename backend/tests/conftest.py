@@ -27,7 +27,7 @@ from app.database import get_db
 from app.main import app
 from app.models import User, UserPreference
 
-# Test database URL from environment — set in docker-compose.dev.yml, never falls back to DATABASE_URL.
+# Test database URL from environment — set in the test environment, never falls back to DATABASE_URL.
 TEST_DATABASE_URL = os.environ["TEST_DATABASE_URL"]
 _ADMIN_DSN = TEST_DATABASE_URL.replace("+asyncpg", "").rsplit("/", 1)[0] + "/postgres"
 

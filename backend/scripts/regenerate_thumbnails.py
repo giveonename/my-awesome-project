@@ -6,7 +6,7 @@ Usage:
     docker compose exec backend python scripts/regenerate_thumbnails.py
 
 Or in production:
-    docker compose -f docker-compose.prod.yml exec backend python scripts/regenerate_thumbnails.py
+    docker compose exec backend python scripts/regenerate_thumbnails.py
 """
 
 import asyncio
