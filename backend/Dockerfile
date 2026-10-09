@@ -2,6 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Use China mirrors for apt & pip (much faster on CN networks)
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null \
+    || sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -10,11 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt requirements-extras.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-extras.txt
-
-# Pre-download rembg model so first request is instant
-RUN python -c "from rembg import new_session; new_session()"
+COPY requirements.txt ./
+RUN pip install --no-cache-dir \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    -r requirements.txt
 
 # Copy application code
 COPY . .
