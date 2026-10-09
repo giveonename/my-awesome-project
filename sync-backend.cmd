@@ -1,4 +1,5 @@
 @echo off
+@REM [LEGACY] 改后端代码推荐: docker compose up -d --build backend worker
 echo ========================================
 echo  Wardrobe Backend - Sync & Restart
 echo ========================================

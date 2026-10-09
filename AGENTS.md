@@ -11,7 +11,7 @@
 | 后端 | FastAPI + SQLAlchemy (async) + Pydantic v2 + Python ≥3.11 |
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 后台任务 | arq（衣物识别、通知推送、学习画像更新） |
-| AI 文本/视觉理解 | 小米 MiMo API（OpenAI 兼容格式，走 AI_* 环境变量） |
+| AI 文本/视觉理解 | DeepSeek（OpenAI 兼容格式，走 AI_* 环境变量；模型 ID `deepseek-flash`，区分大小写） |
 | AI 虚拟试衣 | DashScope OutfitAnyone（aitryon-plus / aitryon-refiner / aitryon-parsing-v1） |
 | 图像处理 | 阿里云视觉智能（分割）+ 阿里云 OSS（公网存储） |
 | 天气 | 和风天气 v7（国内优先）+ Open-Meteo（fallback） |
@@ -30,7 +30,9 @@
 ```bash
 # === 构建 & 启动 ===
 docker compose up -d --build          # 全部启动
-.\sync-backend.cmd                    # 后端改代码后同步到容器（容器不挂载源码！）
+# 后端改代码后（容器从镜像启动、不挂载源码）：重建后端即可（首选！镜像构建已配国内 apt/pip 镜像源）
+docker compose up -d --build backend worker
+# .\sync-backend.cmd 为遗留的手动同步方式，曾导致容器与仓库代码漂移，不再推荐
 cd wechat-mini && npm run build:weapp # 构建小程序（产物在 dist/）
 
 # === 后端开发（本地热重载）===
@@ -184,7 +186,9 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 ## 已知问题
 
 - **数据库迁移图损坏**（见上"重要约定"），5 head + 重复 revision ID；新环境初始化务必逐个 upgrade
-- Docker 容器不挂载源码，改后端需 `.\sync-backend.cmd` 同步
+- Docker 容器从镜像启动（不挂载源码）：改后端代码用 `docker compose up -d --build backend worker`（优选）；`sync-backend.cmd` 为遗留手动同步方式（曾导致容器与仓库代码漂移），不再推荐
+- 背景移除：rembg 已退役（`background_removal.py` 中 rembg 走桩会转阿里云）；`BG_REMOVAL_PROVIDER` 有效值为 `aliyun`（推荐）或 `http`
+- OSS 曾过期停服：虚拟试衣依赖 OSS 公网 URL，续费后需验证上传与试衣链路；旧的 OSS 公网链接在停服期间不可访问
 - 虚拟试衣任务存内存，backend 重启丢失
 - 会员支付未实现（UI 已就绪，显示"即将开放"）
 - AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）

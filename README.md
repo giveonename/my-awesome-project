@@ -21,7 +21,7 @@
 | 后端 | FastAPI + SQLAlchemy (async) + Pydantic v2 + Python ≥3.11 |
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 后台任务 | arq（AI 识别、通知推送、学习画像更新） |
-| AI 能力 | 小米 MiMo（文本/视觉理解）· DashScope OutfitAnyone（试衣）· 阿里云视觉智能（图像分割） |
+| AI 能力 | DeepSeek（文本/视觉理解）· DashScope OutfitAnyone（试衣）· 阿里云视觉智能（图像分割） |
 | 天气 | 和风天气 v7（国内优先）→ Open-Meteo（fallback）→ Redis 缓存降级 |
 | 电商 | 淘宝联盟 API（未配置 Key 时自动 Mock） |
 | 认证 | 微信小程序登录 |
@@ -32,7 +32,7 @@
 微信小程序 (Taro)
       │  HTTPS /api/v1
       ▼
-FastAPI Backend ──► arq Worker ──► AI 服务（MiMo / DashScope / 阿里云视觉）
+FastAPI Backend ──► arq Worker ──► AI 服务（DeepSeek / DashScope / 阿里云视觉）
       │                                   │
       ├──► PostgreSQL 15                  └──► 阿里云 OSS（图片公网存储）
       └──► Redis 7（缓存 / 任务队列）
@@ -46,7 +46,7 @@ wardrowbe/
 ├── wechat-mini/        # Taro 微信小程序（src/pages · components · utils）
 ├── docs/               # 项目文档（archive/ 内为历史方案与审计报告）
 ├── docker-compose.yml  # postgres / redis / backend / worker 四个服务
-├── sync-backend.cmd    # Windows：后端代码热同步进容器（容器不挂载源码）
+├── sync-backend.cmd    # 遗留工具：手动同步后端文件进容器（推荐改用镜像重建，见"后端开发"）
 └── .env.example        # 环境变量模板
 ```
 
@@ -106,7 +106,9 @@ cd backend
 backend\.venv\Scripts\python.exe -m arq app.workers.worker.WorkerSettings
 ```
 
-> 若使用全容器模式（Docker 不挂载源码），改完后端后运行 `.\sync-backend.cmd` 同步进容器。
+> 若使用全容器模式（容器从镜像启动、不挂载源码）：改完后端代码后运行
+> `docker compose up -d --build backend worker` 一步重建即可（镜像构建已配国内
+> apt/pip 镜像源，速度很快）。`sync-backend.cmd` 是遗留的手动同步方式，已不推荐。
 
 ```bash
 # 测试（需要正在运行的 PostgreSQL + Redis）
@@ -122,6 +124,7 @@ ruff check --fix backend/app/ && ruff format backend/app/
 - **虚拟试衣任务存储在内存**：backend 重启后进行中的试衣任务会丢失（计划迁移 Redis）。
 - **会员支付未实现**：UI 已就绪，点击显示"即将开放"。
 - **通知通道为兼容保留**：ntfy/SMTP/Mattermost 是模板遗留配置，小程序端实际使用微信订阅消息路径。
+- **OSS 依赖虚拟试衣**：试衣要求图片公网可达（OSS）；OSS 停服期间试衣不可用。日常浏览走本地图片服务（后端签名 URL），不受 OSS 影响。
 
 ## License
 
