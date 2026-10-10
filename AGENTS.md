@@ -13,7 +13,7 @@
 | 后台任务 | arq（衣物识别、通知推送、学习画像更新） |
 | AI 文本/视觉理解 | DeepSeek（OpenAI 兼容格式，走 AI_* 环境变量；模型 ID `deepseek-flash`，区分大小写） |
 | AI 虚拟试衣 | DashScope qwen-image-3.0（原 OutfitAnyone/aitryon 全家已于 2026-10-10 下线） |
-| 图像处理 | 阿里云视觉智能（分割）+ 阿里云 OSS（公网存储） |
+| 图像处理 | 阿里云视觉智能（分割）；图片存储为本地卷+签名 URL（OSS 可选，仅历史数据/公网部署） |
 | 天气 | 和风天气 v7（国内优先）+ Open-Meteo（fallback） |
 | 电商 | 淘宝联盟 API |
 | 认证 | 微信小程序登录（OIDC 为兼容保留） |
@@ -110,7 +110,7 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 
 ### 虚拟试衣链路（2026-10 迁移至 qwen-image-3.0）
 
-选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，缺失时前端渐变兜底）。
+选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，6 张图已入库；缺失时前端自动渐变兜底）。
 
 ### 淘宝联盟
 
@@ -169,9 +169,9 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 
 1. 前端调用 `POST /outfits/suggest-batch`（一次返回6套）
 2. 后端并行生成搭配方案
-3. 异步触发试穿图生成（使用基础 aitryon，非 aitryon-plus）
+3. 异步触发试穿图生成（qwen-image-3.0，约 80-100 秒，结果转存本地）
 4. 前端轮询 `POST /outfits/batch-check` 获取试穿图
-5. 试穿图使用 `aitryon` 基础模型（10-30秒），质量优先场景用 `aitryon-plus`
+5. 试穿图生成走统一的 `virtual_tryon_service`（模型由 `DASHSCOPE_TRYON_MODEL` 配置）
 
 ### 我的搭配核心流程
 
@@ -189,8 +189,7 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 
 ### 虚拟试衣参数
 
-- 基础版（aitryon）：速度优先（10-30秒），用于AI搭配快速预览
-- Plus版（aitryon-plus）：质量优先（30-60秒），用于虚拟试衣详情页
+- 模型：`qwen-image-3.0`（单一模型；0.18 元/张、约 80-100 秒。原 aitryon 基础版/Plus 双模型方案随 2026-10 下线废弃）
 - 全身照来源：`BodyProfile.full_body_photo_url`，无则使用 `DEFAULT_PERSON_URL`
 
 ## 已知问题
