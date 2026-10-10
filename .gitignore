@@ -66,3 +66,6 @@ pic/
 # Build cache / local agent files
 .swc/
 .agents/
+
+# ZCode tool artifact
+.zcodeignore
