@@ -724,17 +724,19 @@ async def swap_background(
     """Full pipeline: download image -> segment person -> composite with background.
 
     Args:
-        image_url: URL of the try-on result image (from DashScope)
+        image_url: try-on result reference (local signed URL, storage path, or http URL)
         background_id: Background template ID
 
     Returns:
         JPEG bytes of the final composited image
     """
-    from app.services.aliyun_vision_service import download_image, AliyunVisionService
+    from app.services.aliyun_vision_service import AliyunVisionService
 
-    # Step 1: Download the try-on result
-    logger.info("Downloading image for background swap: %s", image_url[:80])
-    image_bytes = await download_image(image_url)
+    # Step 1: Load the source image (storage path, signed URL, or http URL)
+    logger.info("Loading image for background swap: %s", image_url[:80])
+    image_bytes = await asyncio.to_thread(_load_image_bytes, image_url)
+    if not image_bytes:
+        raise RuntimeError("无法读取试穿图片")
 
     # Step 2: Segment person from background
     logger.info("Segmenting person from background...")
