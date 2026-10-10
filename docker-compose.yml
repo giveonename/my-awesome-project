@@ -67,7 +67,7 @@ services:
       QWEATHER_API_KEY: ${QWEATHER_API_KEY:-}
       # Alibaba Cloud DashScope - Virtual Try-On
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
-      DASHSCOPE_TRYON_MODEL: ${DASHSCOPE_TRYON_MODEL:-aitryon-plus}
+      DASHSCOPE_TRYON_MODEL: ${DASHSCOPE_TRYON_MODEL:-qwen-image-3.0}
       DASHSCOPE_REFINE_MODEL: ${DASHSCOPE_REFINE_MODEL:-aitryon-refiner}
       DASHSCOPE_PARSE_MODEL: ${DASHSCOPE_PARSE_MODEL:-aitryon-parsing-v1}
       DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/api/v1}

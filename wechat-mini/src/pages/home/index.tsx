@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Image} from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { api, getAccessToken, resolveImageUrl } from '../../utils/api'
+import { api, getAccessToken, resolveImageUrl, API_BASE } from '../../utils/api'
 import { getLocationAndSave } from '../../utils/location'
 import { WeatherData, UserProfile, ClothingItem } from '../../types'
 import { WEATHER_CONDITION_CN, getItemDisplayName } from '../../constants'
@@ -9,13 +9,17 @@ import CachedImage from '../../components/CachedImage'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
-const OSS_BASE = 'https://wardrowbe-images.oss-cn-chengdu.aliyuncs.com/weather-bg'
-const sunny = OSS_BASE + '/sunny.png'
-const cloudy = OSS_BASE + '/cloudy.png'
-const rainy = OSS_BASE + '/rainy.png'
-const snowy = OSS_BASE + '/snowy.png'
-const foggy = OSS_BASE + '/foggy.png'
-const thunderstorm = OSS_BASE + '/thunderstorm.png'
+// Weather hero backgrounds are served by the backend itself (local assets in
+// backend/app/assets/weather-bg/, replacing the retired OSS bucket). When a
+// file is absent, the gradient layer below keeps the hero looking right.
+const WEATHER_BG_BASE = `${API_BASE}/weather/backgrounds`
+const sunny = WEATHER_BG_BASE + '/sunny.png'
+const cloudy = WEATHER_BG_BASE + '/cloudy.png'
+const rainy = WEATHER_BG_BASE + '/rainy.png'
+const snowy = WEATHER_BG_BASE + '/snowy.png'
+const foggy = WEATHER_BG_BASE + '/foggy.png'
+const thunderstorm = WEATHER_BG_BASE + '/thunderstorm.png'
+const WEATHER_BG_FALLBACK = 'linear-gradient(135deg, #DCEEE4 0%, #FAF7F2 100%)'
 
 // ===== Helpers =====
 
@@ -134,7 +138,7 @@ export default function HomePage() {
       <ScrollView className='home-scroll' scrollY>
         {/* ===== Hero Zone ===== */}
         <View className='home-hero'>
-          <View className='home-hero-bg' style={{ backgroundImage: weatherBg ? `url(${weatherBg})` : 'none' }} />
+          <View className='home-hero-bg' style={{ backgroundImage: weatherBg ? `url(${weatherBg}), ${WEATHER_BG_FALLBACK}` : 'none' }} />
           <View className='home-hero-weather'>
             <View className='home-hero-weather-left'>
               <Image src={getWeatherEmoji(weather?.condition || '')} style={{width: '64rpx', height: '64rpx'}} />

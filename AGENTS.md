@@ -12,7 +12,7 @@
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 后台任务 | arq（衣物识别、通知推送、学习画像更新） |
 | AI 文本/视觉理解 | DeepSeek（OpenAI 兼容格式，走 AI_* 环境变量；模型 ID `deepseek-flash`，区分大小写） |
-| AI 虚拟试衣 | DashScope OutfitAnyone（aitryon-plus / aitryon-refiner / aitryon-parsing-v1） |
+| AI 虚拟试衣 | DashScope qwen-image-3.0（原 OutfitAnyone/aitryon 全家已于 2026-10-10 下线） |
 | 图像处理 | 阿里云视觉智能（分割）+ 阿里云 OSS（公网存储） |
 | 天气 | 和风天气 v7（国内优先）+ Open-Meteo（fallback） |
 | 电商 | 淘宝联盟 API |
@@ -108,9 +108,9 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 和风天气 v7（国内）→ Open-Meteo（海外 fallback）→ Redis 缓存降级（1h TTL）。
 和风天气 icon 代码需映射到 condition，映射失败时使用 API 返回的中文 `text` 字段。
 
-### 虚拟试衣链路
+### 虚拟试衣链路（2026-10 迁移至 qwen-image-3.0）
 
-选衣物 → 智能分类（上装/下装/整套）→ 整套则 aitryon-parsing-v1 拆分 → DashScope aitryon-plus 异步提交 → 轮询 → 可选 aitryon-refiner 增强；另有 `swap_background`（SegmentBody 抠图 + PIL 羽化/色彩迁移/投影合成）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图，硬编码在 `virtual_tryon_service.py`）。
+选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，缺失时前端渐变兜底）。
 
 ### 淘宝联盟
 
@@ -198,7 +198,7 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 - **数据库迁移图损坏**（见上"重要约定"），5 head + 重复 revision ID；新环境初始化务必逐个 upgrade
 - Docker 容器从镜像启动（不挂载源码）：改后端代码用 `docker compose up -d --build backend worker`（优选）；`sync-backend.cmd` 为遗留手动同步方式（曾导致容器与仓库代码漂移），不再推荐
 - 背景移除：rembg 已退役（`background_removal.py` 中 rembg 走桩会转阿里云）；`BG_REMOVAL_PROVIDER` 有效值为 `aliyun`（推荐）或 `http`
-- OSS 曾过期停服：虚拟试衣依赖 OSS 公网 URL，续费后需验证上传与试衣链路；旧的 OSS 公网链接在停服期间不可访问
+- 图片服务已全面本地化：浏览/识别/试衣（本地图 Base64）/天气背景均不依赖 OSS；OSS 停服仅影响历史 public_url 与公网部署场景
 - 虚拟试衣任务存内存，backend 重启丢失
 - 会员支付未实现（UI 已就绪，显示"即将开放"）
 - AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）

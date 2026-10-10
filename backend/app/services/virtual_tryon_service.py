@@ -1,40 +1,36 @@
-"""
-Virtual Try-On service using Alibaba Cloud DashScope OutfitAnyone API.
+"""Virtual Try-On service (qwen-image-3.0 via DashScope).
 
-Official API documentation:
-  - aitryon: https://help.aliyun.com/zh/model-studio/outfitanyone-api
-  - aitryon-plus: https://help.aliyun.com/zh/model-studio/aitryon-plus-api
-  - aitryon-refiner: https://help.aliyun.com/zh/model-studio/ai-fitting-picture-finishing-api-details
-  - aitryon-parsing-v1: https://help.aliyun.com/zh/model-studio/aitryon-parsing-api
+History: the aitryon model family (aitryon / aitryon-plus / aitryon-refiner /
+aitryon-parsing-v1) was retired by Alibaba Cloud on 2026-10-10; the official
+replacement is qwen-image-3.0 (multimodal-generation, sync call).
 
-Key API facts (from official docs):
-  - All images must be PUBLIC HTTP/HTTPS URLs (no local paths, no data URIs)
-  - Request fields: person_image_url + top_garment_url + bottom_garment_url
-  - Required parameters: resolution (-1), restore_face (true)
-  - Response: output.image_url (string, valid for 24h)
-  - Task endpoint: POST .../services/aigc/image2image/image-synthesis
-  - Poll endpoint: GET .../tasks/{task_id}
-  - Parsing endpoint: POST .../services/vision/image-process/process
+Key facts (verified 2026-10, official docs + live tests):
+  - Endpoint: POST {base}/services/aigc/multimodal-generation/generation (sync)
+  - Input: 1-3 reference images as public URL or base64 data URI + one text
+  - Output: 2K image URL (expires in 24h -> always download and re-store)
+  - Latency ~80-100s per generation; price ~0.18 CNY/image
+  - Base64 input means try-on no longer depends on OSS public URLs
 """
 
 import asyncio
+import base64
+import io
 import logging
 import time
+import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
-from pathlib import Path
 
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Official default images from DashScope docs (for testing/demo)
+# Official default person image from DashScope docs (fallback when no body photo)
 DEFAULT_PERSON_URL = "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250626/ubznva/model_person.png"
-DEFAULT_TOP_GARMENT_URL = "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250626/epousa/short_sleeve.jpeg"
-DEFAULT_BOTTOM_GARMENT_URL = "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250626/rchumi/pants.jpeg"
 
 
 @dataclass
@@ -82,17 +78,6 @@ def _get_headers() -> dict[str, str]:
     }
 
 
-def _classify_garment_urls(garment_urls: list[str]) -> dict[str, str]:
-    """Legacy: classify URLs by position (first=top, second=bottom)."""
-    input_data: dict[str, str] = {}
-    if len(garment_urls) >= 2:
-        input_data["top_garment_url"] = garment_urls[0]
-        input_data["bottom_garment_url"] = garment_urls[1]
-    elif len(garment_urls) == 1:
-        input_data["top_garment_url"] = garment_urls[0]
-    return input_data
-
-
 def _is_top_type(item_type: str | None) -> bool:
     """Check if an item type is a top/upper garment."""
     return bool(item_type) and item_type.lower() in _TOP_TYPES
@@ -108,470 +93,302 @@ def _is_outfit_type(item_type: str | None) -> bool:
     return bool(item_type) and item_type.lower() in _OUTFIT_TYPES
 
 
-async def resolve_garment_input(
-    items: list[dict],
-) -> dict[str, str]:
-    """Resolve garment items into DashScope API input fields.
+def resolve_tryon_inputs(items: list[dict]) -> tuple[list[str], list[dict], bool]:
+    """Resolve selected items into (garment_refs, descriptors, is_outfit).
 
-    Each item dict should have: {"url": str, "type": str, "source_scene": str}
-
-    Scenarios:
-      1. Two items, one top + one bottom -> assign directly
-      2. Single item, explicit top or bottom type -> assign to correct slot
-      3. Single item, outfit/full_body type -> call parsing-v1 to split
-      4. Fallback -> first item as top
-
-    Returns dict with "top_garment_url" and/or "bottom_garment_url".
+    Each item dict should carry: ref (storage-relative path or URL), type,
+    name, primary_color.
+    - Any outfit-type item wins: its whole image is passed as ONE reference
+      (no more parsing-v1 splitting — qwen handles whole outfits directly).
+    - Otherwise pick one top + one bottom (max 2 garment references; the API
+      accepts person + up to 2 garments).
     """
     if not items:
-        return {}
+        return [], [], False
 
-    # Scenario 1: Multiple items -- classify each by type
-    if len(items) >= 2:
-        input_data: dict[str, str] = {}
-        for item in items:
-            url = item.get("url", "")
-            item_type = item.get("type", "")
-            if not url:
-                continue
-            if _is_bottom_type(item_type) and "bottom_garment_url" not in input_data:
-                input_data["bottom_garment_url"] = url
-            elif _is_top_type(item_type) and "top_garment_url" not in input_data:
-                input_data["top_garment_url"] = url
-            elif "top_garment_url" not in input_data:
-                input_data["top_garment_url"] = url
-            elif "bottom_garment_url" not in input_data:
-                input_data["bottom_garment_url"] = url
-        return input_data
+    outfits = [it for it in items if _is_outfit_type(it.get("type"))]
+    if outfits:
+        it = outfits[0]
+        return [it.get("ref", "")], [it], True
 
-    # Single item
-    single = items[0]
-    url = single.get("url", "")
-    item_type = single.get("type", "")
-    if not url:
-        return {}
-
-    # Scenario 2a: Explicit bottom type
-    if _is_bottom_type(item_type):
-        return {"bottom_garment_url": url}
-
-    # Scenario 2b: Explicit top type (including dress)
-    if _is_top_type(item_type):
-        return {"top_garment_url": url}
-
-    # Scenario 3: Outfit/full_body -- use parsing-v1 to split
-    if _is_outfit_type(item_type):
-        try:
-            logger.info("Outfit item detected, calling parsing-v1 to split: %s", url[:80])
-            parsed = await parse_garment_regions(url)
-            crop_urls = parsed.get("crop_img_url", [])
-            if len(crop_urls) >= 2:
-                logger.info("Parsing-v1 split into %d crops", len(crop_urls))
-                return {
-                    "top_garment_url": crop_urls[0],
-                    "bottom_garment_url": crop_urls[1],
-                }
-            elif len(crop_urls) == 1:
-                logger.info("Parsing-v1 returned single crop, using as top")
-                return {"top_garment_url": crop_urls[0]}
-            else:
-                logger.warning("Parsing-v1 returned no crops, falling back to original as top")
-                return {"top_garment_url": url}
-        except Exception as e:
-            logger.warning("Parsing-v1 failed for outfit, using original as top: %s", e)
-            return {"top_garment_url": url}
-
-    # Scenario 4: Unknown type -- default to top
-    return {"top_garment_url": url}
+    tops = [it for it in items if _is_top_type(it.get("type"))]
+    bottoms = [it for it in items if _is_bottom_type(it.get("type"))]
+    chosen: list[dict] = []
+    if tops:
+        chosen.append(tops[0])
+    if bottoms:
+        chosen.append(bottoms[0])
+    if not chosen:
+        chosen = [items[0]]
+    return [c.get("ref", "") for c in chosen], chosen, False
 
 
-async def submit_tryon_task(
-    person_image_url: str,
-    garment_urls: list[str],
-    model: str | None = None,
-    garment_input: dict[str, str] | None = None,
-) -> TryOnTask:
+def _describe_item(item: dict) -> str:
+    """Build a short Chinese garment descriptor from item metadata."""
+    name = (item.get("name") or "").strip()
+    color = (item.get("primary_color") or "").strip()
+    if not name:
+        name = item.get("type") or "服装"
+    if color and color not in name:
+        name = f"{color}{name}"
+    return name
+
+
+def build_tryon_prompt(descs: list[dict], is_outfit: bool) -> str:
+    """Build the qwen-image try-on prompt.
+
+    Four-section structure validated by live A/B tests (2026-10):
+    - explicit person-preservation + garment-fidelity + prohibitions
+    - attribute claims come from real item metadata; length is left to the
+      product image ("衣长比例") because a wrong length claim distorts output.
     """
-    Submit a virtual try-on task to DashScope (async mode).
-
-    Official request format:
-    {
-        "model": "aitryon-plus",
-        "input": {
-            "person_image_url": "...",
-            "top_garment_url": "...",
-            "bottom_garment_url": "..."
-        },
-        "parameters": {
-            "resolution": -1,
-            "restore_face": true
-        }
-    }
-    """
-    settings = get_settings()
-    model_name = model or settings.dashscope_tryon_model
-    url = f"{settings.dashscope_base_url}/services/aigc/image2image/image-synthesis"
-
-    headers = _get_headers()
-    headers["X-DashScope-Async"] = "enable"
-
-    # Build garment input (official format)
-    if garment_input is None:
-        garment_input = _classify_garment_urls(garment_urls)
-
-    # Official request body
-    payload = {
-        "model": model_name,
-        "input": {
-            "person_image_url": person_image_url,
-            **garment_input,
-        },
-        "parameters": {
-            "resolution": -1,        # Match original image size
-            "restore_face": True,    # Preserve original face
-        },
-    }
-
-    # Verify all image URLs are accessible by DashScope
-    all_image_urls = {"person": person_image_url, **garment_input}
-    for url_key, img_url in all_image_urls.items():
-        if not img_url or not img_url.startswith("http"):
-            continue
-        # Skip DashScope internal URLs (parsing-v1 crop results)
-        if "dashscope" in img_url and "oss-cn-" in img_url:
-            logger.info("  %s is DashScope internal URL, skipping reachability check", url_key)
-            continue
-        try:
-            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as check_client:
-                head_resp = await check_client.head(img_url)
-                logger.info("  %s reachability: HTTP %d", url_key, head_resp.status_code)
-                if head_resp.status_code >= 400:
-                    logger.error("Aborting try-on: %s returned HTTP %d", url_key, head_resp.status_code)
-                    return TryOnTask(task_id="", status="FAILED", error=f"Image not accessible: {url_key} (HTTP {head_resp.status_code})", model_used=model_name)
-        except Exception as ve:
-            logger.error("Aborting try-on: %s", ve)
-            return TryOnTask(task_id="", status="FAILED", error=f"Image not accessible: {url_key}", model_used=model_name)
-
-    logger.info(
-        "Submitting try-on: model=%s, person=%s, garments=%s",
-        model_name, person_image_url[:80], list(garment_input.keys()),
-    )
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(url, json=payload, headers=headers)
-        data = response.json()
-
-    if response.status_code != 200 or "output" not in data:
-        error_msg = data.get("message", data.get("error", {}).get("message", "Unknown error"))
-        code = data.get("code", "")
-        logger.error("DashScope submit failed: %s — %s (%s)", response.status_code, error_msg, code)
-        task = TryOnTask(task_id="", status="FAILED", error=f"{code}: {error_msg}", model_used=model_name)
-        return task
-
-    output = data["output"]
-    task_id = output.get("task_id", "")
-    status = output.get("task_status", "PENDING")
-
-    task = TryOnTask(task_id=task_id, status=status, model_used=model_name)
-    _tasks[task_id] = task
-
-    logger.info("Try-on task submitted: task_id=%s, status=%s", task_id, status)
-    return task
-
-
-async def check_task_once(task_id: str) -> TryOnTask | None:
-    """Single non-blocking check of DashScope task status."""
-    settings = get_settings()
-    url = f"{settings.dashscope_base_url}/tasks/{task_id}"
-    headers = _get_headers()
-
-    task = _tasks.get(task_id)
-    if not task:
-        task = TryOnTask(task_id=task_id)
-        _tasks[task_id] = task
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url, headers=headers)
-            data = response.json()
-
-        output = data.get("output", {})
-        task_status = output.get("task_status", "")
-
-        if task_status == "SUCCEEDED":
-            task.image_url = (output.get("image_url", "") or "").replace("http://", "https://")
-            task.status = "SUCCEEDED"
-            logger.info("Try-on completed: task_id=%s", task_id)
-        elif task_status == "FAILED":
-            code = output.get("code", "")
-            message = output.get("message", "Task failed")
-            task.status = "FAILED"
-            task.error = f"{code}: {message}"
-            logger.error("Try-on failed: task_id=%s, error=%s", task_id, task.error)
-        else:
-            task.status = task_status or "RUNNING"
-    except Exception as e:
-        logger.warning("Check error for task %s: %s", task_id, e)
-
-    return task
-
-async def poll_task(task_id: str, max_wait: int = 120, interval: float = 3.0) -> TryOnTask:
-    """
-    Poll DashScope task status until completed.
-
-    Official poll endpoint: GET /api/v1/tasks/{task_id}
-    Official response fields:
-      output.task_status: PENDING/PRE-PROCESSING/RUNNING/POST-PROCESSING/SUCCEEDED/FAILED
-      output.image_url: result image URL (24h validity)
-      output.code: error code (on failure)
-      output.message: error message (on failure)
-    """
-    settings = get_settings()
-    url = f"{settings.dashscope_base_url}/tasks/{task_id}"
-    headers = _get_headers()
-
-    task = _tasks.get(task_id)
-    if not task:
-        task = TryOnTask(task_id=task_id)
-        _tasks[task_id] = task
-
-    start = time.time()
-    while time.time() - start < max_wait:
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.get(url, headers=headers)
-                data = response.json()
-
-            output = data.get("output", {})
-            status = output.get("task_status", "")
-
-            if status == "SUCCEEDED":
-                # Official response: output.image_url (direct string)
-                task.image_url = (output.get("image_url", "") or "").replace("http://", "https://")
-                task.status = "SUCCEEDED"
-                logger.info("Try-on completed: task_id=%s, image=%s", task_id, task.image_url[:80] if task.image_url else "None")
-                return task
-
-            elif status == "FAILED":
-                code = output.get("code", "")
-                message = output.get("message", "Task failed")
-                task.status = "FAILED"
-                task.error = f"{code}: {message}"
-                logger.error("Try-on failed: task_id=%s, error=%s", task_id, task.error)
-                return task
-
-            # Still running (PENDING/PRE-PROCESSING/RUNNING/POST-PROCESSING)
-            task.status = status or "RUNNING"
-
-        except Exception as e:
-            logger.warning("Poll error for task %s: %s", task_id, e)
-
-        await asyncio.sleep(interval)
-
-    # Timeout
-    task.status = "FAILED"
-    task.error = f"Timeout after {max_wait}s"
-    logger.error("Try-on timed out: task_id=%s", task_id)
-    return task
-
-
-async def virtual_tryon(
-    person_image_url: str,
-    garment_urls: list[str],
-    model: str | None = None,
-    use_refiner: bool = False,
-    garment_input: dict[str, str] | None = None,
-) -> TryOnResult:
-    """
-    Full virtual try-on flow: submit → poll → optional refine.
-
-    Args:
-        person_image_url: Public HTTP/HTTPS URL of the person/model image
-        garment_urls: Public HTTP/HTTPS URLs of garment images
-        model: DashScope model name (aitryon or aitryon-plus)
-        use_refiner: Whether to apply aitryon-refiner post-processing
-
-    Returns:
-        TryOnResult with image_url or error
-    """
-    settings = get_settings()
-    start_time = time.time()
-
-    if not settings.dashscope_api_key:
-        return TryOnResult(success=False, error="DashScope API key not configured")
-
-    # Step 1: Submit try-on task
-    task = await submit_tryon_task(person_image_url, garment_urls, model, garment_input=garment_input)
-
-    if task.status == "FAILED":
-        return TryOnResult(
-            success=False,
-            task_id=task.task_id,
-            model_used=task.model_used,
-            error=task.error,
-            elapsed_seconds=time.time() - start_time,
+    if is_outfit:
+        cloth = (
+            "图2是一整套搭配的服装图，请把图2中的整套搭配完整地穿到图1的人物身上，"
+            "保持各件服装之间的搭配关系不变；严格保持每件服装的颜色、图案、文字与标识、"
+            "面料纹理、款式版型以及衣长比例与图2完全一致。"
         )
-
-    # Step 2: Poll for completion (aitryon-plus: ~90s)
-    task = await poll_task(task.task_id, max_wait=settings.virtual_tryon_timeout)
-
-    if task.status != "SUCCEEDED" or not task.image_url:
-        return TryOnResult(
-            success=False,
-            task_id=task.task_id,
-            model_used=task.model_used,
-            error=task.error or "Try-on generation failed",
-            elapsed_seconds=time.time() - start_time,
+    elif len(descs) >= 2:
+        d1, d2 = _describe_item(descs[0]), _describe_item(descs[1])
+        cloth = (
+            f"图2是一件「{d1}」、图3是一件「{d2}」，请把这两件服装都穿到图1的人物身上，"
+            "并保持两件服装之间的搭配关系；严格保持每件服装的颜色、图案、文字与标识、"
+            "面料纹理、款式版型以及衣长比例与其商品图完全一致。"
         )
-
-    result_url = task.image_url
-
-    # Step 3: Optional refinement with aitryon-refiner
-    if use_refiner and result_url:
-        refiner_result = await _refine_image(
-            coarse_image_url=result_url,
-            person_image_url=person_image_url,
-            garment_urls=garment_urls,
+    else:
+        d1 = _describe_item(descs[0]) if descs else "服装"
+        cloth = (
+            f"让图1中的人物穿上图2的服装：这是一件「{d1}」。"
+            "严格保持该服装的颜色、图案、文字与标识、面料纹理、款式版型以及衣长比例"
+            "与商品图完全一致。"
         )
-        if refiner_result:
-            result_url = refiner_result
-
-    elapsed = time.time() - start_time
-    logger.info("Virtual try-on completed in %.1fs: %s", elapsed, result_url[:80])
-
-    return TryOnResult(
-        success=True,
-        image_url=result_url,
-        task_id=task.task_id,
-        model_used=task.model_used,
-        elapsed_seconds=elapsed,
+    return (
+        "你是一名专业的电商服装摄影师与修图师，请完成一张虚拟试穿照片：\n\n"
+        "【保持人物】图1中人物的面部特征、发型、肤色、体型、姿势以及背景完全保持不变。\n"
+        f"【穿着服装】{cloth}\n"
+        "【成片要求】照片级真实感，服装自然贴合人体，褶皱与光影合理，人物比例协调，画面干净清晰。\n"
+        "【禁止】不要改变人物长相与背景，不要添加图片中不存在的服装或道具，不要艺术化或卡通化处理。"
     )
 
 
-async def _refine_image(
-    coarse_image_url: str,
-    person_image_url: str,
-    garment_urls: list[str],
-) -> str | None:
-    """
-    Apply aitryon-refiner for image quality enhancement.
+# ===== qwen-image-3.0 generation =====
 
-    Official request format:
-    {
-        "model": "aitryon-refiner",
-        "input": {
-            "top_garment_url": "...",
-            "bottom_garment_url": "...",
-            "person_image_url": "...",
-            "coarse_image_url": "..."
-        },
-        "parameters": {
-            "gender": "woman" or "man"
-        }
-    }
-    """
+
+def _load_image_bytes(ref: str) -> bytes | None:
+    """Load image bytes from storage-relative path, signed URL, or http(s) URL."""
+    if not ref:
+        return None
     settings = get_settings()
-    url = f"{settings.dashscope_base_url}/services/aigc/image2image/image-synthesis"
+    storage = Path(settings.storage_path)
 
-    headers = _get_headers()
-    headers["X-DashScope-Async"] = "enable"
+    if ref.startswith("http://") or ref.startswith("https://"):
+        try:
+            resp = httpx.get(ref, timeout=60, follow_redirects=True)
+            if resp.status_code == 200 and resp.content:
+                return resp.content
+            logger.warning("Failed to download image ref %s: HTTP %d", ref[:80], resp.status_code)
+        except Exception as e:
+            logger.warning("Failed to download image ref %s: %s", ref[:80], e)
+        return None
 
-    garment_input = _classify_garment_urls(garment_urls)
-
-    payload = {
-        "model": settings.dashscope_refine_model,
-        "input": {
-            "person_image_url": person_image_url,
-            "coarse_image_url": coarse_image_url,
-            **garment_input,
-        },
-        "parameters": {
-            "gender": "woman",  # Default; could be derived from user profile
-        },
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            data = response.json()
-
-        if response.status_code != 200 or "output" not in data:
-            logger.warning("Refiner submit failed: %s", data.get("message", ""))
-            return None
-
-        output = data["output"]
-        refiner_task_id = output.get("task_id", "")
-        if not refiner_task_id:
-            return None
-
-        # Poll refiner task (shorter timeout — refiner is faster ~5-15s)
-        refiner_task = await poll_task(refiner_task_id, max_wait=60)
-        if refiner_task.status == "SUCCEEDED" and refiner_task.image_url:
-            return refiner_task.image_url
-
-    except Exception as e:
-        logger.warning("Refinement failed: %s", e)
-
+    path = ref
+    if path.startswith("/api/v1/images/"):
+        path = path[len("/api/v1/images/"):]
+    path = path.split("?")[0]
+    full = storage / path
+    if full.exists():
+        return full.read_bytes()
+    logger.warning("Image file not found: %s", full)
     return None
 
 
-async def parse_garment_regions(image_url: str) -> dict:
-    """
-    Detect garment regions using aitryon-parsing-v1.
+def _prepare_image_b64(raw: bytes, max_dim: int, quality: int = 90) -> str:
+    """Resize/convert to JPEG and return a data URI for the generation API."""
+    img = Image.open(io.BytesIO(raw))
+    if img.mode != "RGB":
+        rgba = img.convert("RGBA")
+        bg = Image.new("RGB", rgba.size, (255, 255, 255))
+        bg.paste(rgba, mask=rgba.split()[3])
+        img = bg
+    if max(img.size) > max_dim:
+        img.thumbnail((max_dim, max_dim))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=quality)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
-    Official endpoint: POST .../services/vision/image-process/process
-    NOT the same as aitryon/aitryon-plus endpoint.
 
-    Request:
-    {
-        "model": "aitryon-parsing-v1",
-        "input": { "image_url": "..." },
-        "parameters": { "clothes_type": ["upper", "lower"] }
+_GENERATION_PATH = "/services/aigc/multimodal-generation/generation"
+
+
+async def _call_qwen_generation(person_b64: str, garment_b64s: list[str], prompt: str) -> str:
+    """Call qwen-image generation (sync). Returns the result image URL."""
+    import json as _json
+
+    settings = get_settings()
+    url = f"{settings.dashscope_base_url}{_GENERATION_PATH}"
+    content: list[dict] = [{"image": person_b64}]
+    content.extend({"image": g} for g in garment_b64s)
+    content.append({"text": prompt})
+    payload = {
+        "model": settings.dashscope_tryon_model,
+        "input": {"messages": [{"role": "user", "content": content}]},
+        "parameters": {"watermark": False},
     }
+    timeout = httpx.Timeout(settings.virtual_tryon_timeout, connect=15.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, json=payload, headers=_get_headers())
+    try:
+        data = resp.json()
+    except Exception:
+        data = {}
+    if resp.status_code != 200:
+        msg = data.get("message") or _json.dumps(data, ensure_ascii=False)[:200]
+        code = data.get("code", "")
+        raise RuntimeError(f"{code}: {msg}" if code else str(msg))
+    try:
+        parts = data["output"]["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as e:
+        raise RuntimeError(f"Unexpected generation response: {str(data)[:200]}") from e
+    image_url = next(
+        (p.get("image") for p in parts if isinstance(p, dict) and p.get("image")), None
+    )
+    if not image_url:
+        raise RuntimeError("Generation response contained no image")
+    return image_url
 
-    Response:
-    {
-        "output": {
-            "crop_img_url": ["url1", "url2"],
-            "parsing_img_url": ["url1", "url2"],
-            "bbox": [[x1,y1,x2,y2], ...]
-        }
-    }
-    """
+
+async def _run_generation(
+    person_ref: str,
+    garment_refs: list[str],
+    descs: list[dict],
+    is_outfit: bool,
+    user_id,
+) -> str:
+    """Load local images, generate the try-on image, store it, return its URL."""
+    person_raw = await asyncio.to_thread(_load_image_bytes, person_ref)
+    if not person_raw:
+        raise RuntimeError("无法读取人物照片（请先上传全身照）")
+
+    garment_b64s: list[str] = []
+    for ref in garment_refs[:2]:
+        raw = await asyncio.to_thread(_load_image_bytes, ref)
+        if not raw:
+            raise RuntimeError(f"无法读取衣物图片: {ref[:60]}")
+        garment_b64s.append(await asyncio.to_thread(_prepare_image_b64, raw, 1400))
+    if not garment_b64s:
+        raise RuntimeError("没有可用的衣物图片")
+
+    person_b64 = await asyncio.to_thread(_prepare_image_b64, person_raw, 1600)
+    prompt = build_tryon_prompt(descs, is_outfit)
+
+    result_url = await _call_qwen_generation(person_b64, garment_b64s, prompt)
+
+    # Result URLs expire in 24h — download and re-store in our own storage.
+    async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
+        img_resp = await client.get(result_url)
+    if img_resp.status_code != 200 or len(img_resp.content) < 1000:
+        raise RuntimeError(f"试穿结果下载失败 (HTTP {img_resp.status_code})")
+
+    from app.services.image_service import ImageService
+    from app.utils.signed_urls import sign_image_url
+
+    image_service = ImageService()
+    paths = await image_service.process_and_store(
+        user_id=user_id,
+        image_data=img_resp.content,
+        original_filename="tryon_result.jpg",
+    )
+    return sign_image_url(paths["image_path"])
+
+
+def _spawn_task(
+    person_ref: str,
+    garment_refs: list[str],
+    descs: list[dict],
+    is_outfit: bool,
+    user_id,
+) -> TryOnTask:
+    """Create a task record and run the generation in the background."""
+    task_id = uuid.uuid4().hex
+    task = TryOnTask(
+        task_id=task_id,
+        status="RUNNING",
+        model_used=get_settings().dashscope_tryon_model,
+    )
+    _tasks[task_id] = task
+
+    async def _runner() -> None:
+        try:
+            image_url = await _run_generation(
+                person_ref, garment_refs, descs, is_outfit, user_id
+            )
+            task.image_url = image_url
+            task.status = "SUCCEEDED"
+            logger.info("Try-on completed: task_id=%s", task_id)
+        except Exception as e:
+            task.status = "FAILED"
+            task.error = str(e)[:300]
+            logger.error("Try-on failed: task_id=%s, error=%s", task_id, e, exc_info=True)
+
+    asyncio.create_task(_runner())
+    return task
+
+
+async def submit_tryon_task(
+    person_ref: str,
+    garment_refs: list[str],
+    descs: list[dict] | None = None,
+    is_outfit: bool = False,
+    user_id=None,
+) -> TryOnTask:
+    """Submit a try-on task — returns task_id immediately, generation runs async."""
     settings = get_settings()
     if not settings.dashscope_api_key:
-        raise ValueError("DashScope API key not configured")
+        return TryOnTask(task_id="", status="FAILED", error="DashScope API key not configured")
+    logger.info(
+        "Submitting try-on: model=%s, garments=%d, outfit=%s",
+        settings.dashscope_tryon_model, len(garment_refs), is_outfit,
+    )
+    return _spawn_task(person_ref, garment_refs, descs or [], is_outfit, user_id)
 
-    # IMPORTANT: Different endpoint for parsing!
-    url = f"{settings.dashscope_base_url}/services/vision/image-process/process"
 
-    headers = {
-        "Authorization": f"Bearer {settings.dashscope_api_key}",
-        "Content-Type": "application/json",
-    }
+async def check_task_once(task_id: str) -> TryOnTask | None:
+    """Single non-blocking check of the local try-on task state."""
+    return _tasks.get(task_id)
 
-    payload = {
-        "model": settings.dashscope_parse_model,
-        "input": {
-            "image_url": image_url,
-        },
-        "parameters": {
-            "clothes_type": ["upper", "lower"],
-        },
-    }
 
-    logger.info("Submitting garment parsing for: %s", image_url[:80])
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(url, json=payload, headers=headers)
-        data = response.json()
-
-    if response.status_code != 200:
-        error_msg = data.get("message", "Unknown error")
-        logger.error("Garment parsing failed: %s", error_msg)
-        raise RuntimeError(f"Garment parsing failed: {error_msg}")
-
-    return data.get("output", {})
+async def virtual_tryon(
+    person_ref: str,
+    garment_refs: list[str],
+    descs: list[dict] | None = None,
+    is_outfit: bool = False,
+    user_id=None,
+) -> TryOnResult:
+    """Synchronous try-on: generate and return the stored result URL (~80-100s)."""
+    settings = get_settings()
+    start_time = time.time()
+    if not settings.dashscope_api_key:
+        return TryOnResult(success=False, error="DashScope API key not configured")
+    try:
+        image_url = await _run_generation(
+            person_ref, garment_refs, descs or [], is_outfit, user_id
+        )
+    except Exception as e:
+        logger.error("Virtual try-on failed: %s", e, exc_info=True)
+        return TryOnResult(
+            success=False,
+            model_used=settings.dashscope_tryon_model,
+            error=str(e)[:300],
+            elapsed_seconds=time.time() - start_time,
+        )
+    elapsed = time.time() - start_time
+    logger.info("Virtual try-on completed in %.1fs", elapsed)
+    return TryOnResult(
+        success=True,
+        image_url=image_url,
+        model_used=settings.dashscope_tryon_model,
+        elapsed_seconds=elapsed,
+    )
 
 
 def get_task_status(task_id: str) -> TryOnTask | None:

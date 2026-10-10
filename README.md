@@ -21,7 +21,7 @@
 | 后端 | FastAPI + SQLAlchemy (async) + Pydantic v2 + Python ≥3.11 |
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 后台任务 | arq（AI 识别、通知推送、学习画像更新） |
-| AI 能力 | DeepSeek（文本/视觉理解）· DashScope OutfitAnyone（试衣）· 阿里云视觉智能（图像分割） |
+| AI 能力 | DeepSeek（文本/视觉理解）· DashScope qwen-image-3.0（虚拟试衣，原 OutfitAnyone 已于 2026-10 下线）· 阿里云视觉智能（图像分割） |
 | 天气 | 和风天气 v7（国内优先）→ Open-Meteo（fallback）→ Redis 缓存降级 |
 | 电商 | 淘宝联盟 API（未配置 Key 时自动 Mock） |
 | 认证 | 微信小程序登录 |
@@ -124,7 +124,7 @@ ruff check --fix backend/app/ && ruff format backend/app/
 - **虚拟试衣任务存储在内存**：backend 重启后进行中的试衣任务会丢失（计划迁移 Redis）。
 - **会员支付未实现**：UI 已就绪，点击显示"即将开放"。
 - **通知通道为兼容保留**：ntfy/SMTP/Mattermost 是模板遗留配置，小程序端实际使用微信订阅消息路径。
-- **OSS 依赖虚拟试衣**：试衣要求图片公网可达（OSS）；OSS 停服期间试衣不可用。日常浏览走本地图片服务（后端签名 URL），不受 OSS 影响。
+- **图片服务已全面本地化**：浏览、识别、虚拟试衣（本地图 Base64 直传）与天气背景图（后端本地路由）均不依赖 OSS；OSS 仅与历史数据/公网部署相关。
 
 ## License
 

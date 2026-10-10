@@ -1,7 +1,10 @@
 import logging
+import re
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.models.user import User
@@ -11,6 +14,10 @@ from app.utils.auth import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
+
+# Local weather background assets (replaces the retired OSS bucket).
+_WEATHER_BG_DIR = Path(__file__).resolve().parent.parent / "assets" / "weather-bg"
+_WEATHER_BG_PATTERN = re.compile(r"^[a-z0-9_]+\.(png|jpg|jpeg|webp)$")
 
 
 class WeatherResponse(BaseModel):
@@ -136,3 +143,30 @@ async def get_weather_forecast(
         ],
     )
 
+
+
+@router.get("/backgrounds/{filename}")
+async def get_weather_background(filename: str) -> FileResponse:
+    """Serve local weather background images (public, replaces OSS assets).
+
+    Drop files named sunny.png / cloudy.png / rainy.png / snowy.png / foggy.png
+    / thunderstorm.png into backend/app/assets/weather-bg/. The mini program
+    falls back to a CSS gradient when a file is absent.
+    """
+    if not _WEATHER_BG_PATTERN.match(filename):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid background name")
+    path = _WEATHER_BG_DIR / filename
+    if not path.exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Background not found")
+    ext = filename.rsplit(".", 1)[-1].lower()
+    media_type = {
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
+    }.get(ext, "image/png")
+    return FileResponse(
+        path=str(path),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )

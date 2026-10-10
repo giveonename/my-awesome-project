@@ -18,7 +18,7 @@ interface VirtualTryOnModalProps {
 }
 
 const POLL_INTERVAL = 3000 // 3 seconds
-const MAX_POLLS = 60 // 3 minutes max (aitryon-plus ~45s)
+const MAX_POLLS = 80 // 4 minutes max (qwen-image-3.0 ~80-100s)
 
 export default function VirtualTryOnModal({
   visible,
@@ -416,12 +416,12 @@ export default function VirtualTryOnModal({
             <Text className='vtm-loading-desc'>{garmentLabel}</Text>
             <Text className='vtm-loading-time'>已等待 {elapsedTime} 秒</Text>
             <Text className='vtm-loading-hint'>
-              {elapsedTime < 15
+              {elapsedTime < 20
                 ? '正在分析衣物特征...'
-                : elapsedTime < 30
+                : elapsedTime < 50
                   ? '正在匹配模特身形...'
-                  : elapsedTime < 50
-                    ? '正在渲染试衣效果...'
+                  : elapsedTime < 90
+                    ? '正在渲染试衣效果（约需 1-2 分钟）...'
                     : '快好了，再等一小会儿...'}
             </Text>
             <View className='vtm-loading-dots'>

@@ -78,11 +78,11 @@ class Settings(BaseSettings):
 
     # Alibaba Cloud DashScope - Virtual Try-On (OutfitAnyone)
     dashscope_api_key: str | None = Field(default=None)
-    dashscope_tryon_model: str = Field(default="aitryon-plus")  # "aitryon" or "aitryon-plus"
+    dashscope_tryon_model: str = Field(default="qwen-image-3.0")  # aitryon retired 2026-10-10
     dashscope_refine_model: str = Field(default="aitryon-refiner")
     dashscope_parse_model: str = Field(default="aitryon-parsing-v1")
     dashscope_base_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1")
-    virtual_tryon_timeout: int = Field(default=120)  # seconds to wait for result
+    virtual_tryon_timeout: int = Field(default=300)  # generation call timeout (qwen ~80-100s)
 
     # Alibaba Cloud Vision Intelligence - Image Preprocessing
     aliyun_access_key_id: str | None = Field(default=None)

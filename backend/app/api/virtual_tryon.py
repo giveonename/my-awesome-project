@@ -1,4 +1,4 @@
-"""Virtual Try-On API endpoints using Alibaba Cloud DashScope OutfitAnyone."""
+"""Virtual Try-On API endpoints (DashScope qwen-image-3.0)."""
 
 import logging
 import time
@@ -17,11 +17,7 @@ from app.models.body_profile import BodyProfile
 from app.models.item import ClothingItem
 from app.models.user import User
 from app.services import virtual_tryon_service
-from app.services.virtual_tryon_service import (
-    DEFAULT_PERSON_URL,
-    DEFAULT_TOP_GARMENT_URL,
-    DEFAULT_BOTTOM_GARMENT_URL,
-)
+from app.services.virtual_tryon_service import DEFAULT_PERSON_URL
 from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -67,42 +63,16 @@ class TryOnDirectResponse(BaseModel):
 # ===== Helper =====
 
 
-async def _ensure_oss_url(item: "ClothingItem") -> str | None:
-    """Upload item image to OSS if not already there, return public URL."""
-    if not item.image_path:
-        return None
-    from app.services.oss_service import get_oss_service
-
-    oss = get_oss_service()
-    if not oss:
-        return None
-
-    settings = get_settings()
-    full_path = Path(settings.storage_path) / item.image_path
-    if not full_path.exists():
-        logger.warning("Image file not found for OSS upload: %s", full_path)
-        return None
-
-    ext = full_path.suffix.lower().lstrip(".")
-    content_type = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
-    object_key = f"images/{item.image_path}"
-
-    try:
-        import asyncio
-        url = await asyncio.to_thread(oss.upload_file, str(full_path), object_key, content_type)
-        logger.info("On-the-fly OSS upload for item %s: %s", str(item.id)[:8], url[:80])
-        return url
-    except Exception as e:
-        logger.error("On-the-fly OSS upload failed for item %s: %s", str(item.id)[:8], e)
-        return None
-
 async def _resolve_garment_items(
     db: AsyncSession,
     item_ids: list[str],
 ) -> list[dict]:
-    """Resolve clothing item IDs to garment info dicts for DashScope API."""
+    """Resolve clothing item IDs to local garment info dicts.
+
+    Try-on generation now consumes local storage refs (base64 upload to the
+    model), so no OSS/public URL is required.
+    """
     items_out: list[dict] = []
-    persist_map: dict[str, str] = {}  # item_id -> public_url to persist
     for item_id_str in item_ids:
         try:
             item_id = UUID(item_id_str)
@@ -113,7 +83,7 @@ async def _resolve_garment_items(
         result = await db.execute(
             select(ClothingItem).where(
                 ClothingItem.id == item_id,
-                ClothingItem.tryon_ready == True,
+                ClothingItem.tryon_ready == True,  # noqa: E712
             )
         )
         item = result.scalar_one_or_none()
@@ -122,56 +92,19 @@ async def _resolve_garment_items(
                 select(ClothingItem).where(ClothingItem.id == item_id)
             )
             item = result.scalar_one_or_none()
-        if not item:
-            logger.warning("Item not found: %s", item_id_str)
-            continue
-
-        url = None
-        if item.public_url:
-            url = item.public_url
-        else:
-            url = await _ensure_oss_url(item)
-            if url:
-                persist_map[str(item.id)] = url
-            else:
-                from app.utils.signed_urls import sign_image_url
-                signed = sign_image_url(item.image_path)
-                if signed.startswith("http"):
-                    url = signed
-
-        if not url:
-            logger.warning("Item %s has no accessible public URL", item_id_str)
+        if not item or not item.image_path:
+            logger.warning("Item not found or has no image: %s", item_id_str)
             continue
 
         items_out.append({
-            "url": url,
+            "ref": item.image_path,
             "type": item.type or "",
             "source_scene": item.source_scene or "commodity",
             "name": item.name or "",
+            "primary_color": item.primary_color or "",
         })
 
-    # Batch persist newly-resolved public_urls
-    if persist_map:
-        try:
-            from sqlalchemy import update
-            from app.models.item import ClothingItem as CI
-            for pid, purl in persist_map.items():
-                await db.execute(update(CI).where(CI.id == pid).values(public_url=purl))
-            await db.commit()
-            logger.info("Persisted public_url for %d items", len(persist_map))
-        except Exception as e:
-            logger.warning("Failed to persist public_urls: %s", e)
-
     return items_out
-
-
-async def _resolve_garment_urls(
-    db: AsyncSession,
-    item_ids: list[str],
-) -> list[str]:
-    """Legacy: resolve clothing item IDs to public image URLs."""
-    items = await _resolve_garment_items(db, item_ids)
-    return [it["url"] for it in items]
 
 
 # ===== Person image resolution =====
@@ -211,7 +144,7 @@ async def create_tryon(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TryOnDirectResponse:
-    """Generate virtual try-on image (waits for result, ~90s for aitryon-plus)."""
+    """Generate virtual try-on image (waits for result, ~80-100s with qwen-image-3.0)."""
     if not request.garment_item_ids:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "请至少选择一件衣物来试穿")
     if len(request.garment_item_ids) > 3:
@@ -221,21 +154,19 @@ async def create_tryon(
     if not garment_items:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "所选衣物没有可用的图片，请先上传衣物图片")
 
-    # Use smart garment classification (handles parsing-v1 for outfit items)
-    garment_input = await virtual_tryon_service.resolve_garment_input(garment_items)
-    if not garment_input:
+    garment_refs, descs, is_outfit = virtual_tryon_service.resolve_tryon_inputs(garment_items)
+    if not garment_refs:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "无法识别衣物类型，请重新选择")
 
-    person_url = await _resolve_person_url(db, current_user, request.model_image_url)
-    model_name = "aitryon-plus" if request.use_plus else "aitryon"
+    person_ref = await _resolve_person_url(db, current_user, request.model_image_url)
 
     try:
         result = await virtual_tryon_service.virtual_tryon(
-            person_image_url=person_url,
-            garment_urls=[],
-            model=model_name,
-            use_refiner=request.use_refiner,
-            garment_input=garment_input,
+            person_ref=person_ref,
+            garment_refs=garment_refs,
+            descs=descs,
+            is_outfit=is_outfit,
+            user_id=current_user.id,
         )
     except Exception as e:
         logger.error("Virtual try-on failed: %s", e, exc_info=True)
@@ -269,20 +200,19 @@ async def submit_tryon(
     if not garment_items:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "所选衣物没有可用的图片")
 
-    # Use smart garment classification (handles parsing-v1 for outfit items)
-    garment_input = await virtual_tryon_service.resolve_garment_input(garment_items)
-    if not garment_input:
+    garment_refs, descs, is_outfit = virtual_tryon_service.resolve_tryon_inputs(garment_items)
+    if not garment_refs:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "无法识别衣物类型，请重新选择")
 
-    person_url = await _resolve_person_url(db, current_user, request.model_image_url)
-    model_name = "aitryon-plus" if request.use_plus else "aitryon"
+    person_ref = await _resolve_person_url(db, current_user, request.model_image_url)
 
     try:
         task = await virtual_tryon_service.submit_tryon_task(
-            person_image_url=person_url,
-            garment_urls=[],
-            model=model_name,
-            garment_input=garment_input,
+            person_ref=person_ref,
+            garment_refs=garment_refs,
+            descs=descs,
+            is_outfit=is_outfit,
+            user_id=current_user.id,
         )
     except Exception as e:
         logger.error("Virtual tryon submit exception: %s", e, exc_info=True)
@@ -295,7 +225,7 @@ async def submit_tryon(
         task_id=task.task_id,
         status=task.status,
         model_used=task.model_used,
-        message="任务已提交，正在生成中",
+        message="任务已提交，正在生成中（约 1-2 分钟）",
     )
 
 

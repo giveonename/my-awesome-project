@@ -644,10 +644,9 @@ async def _generate_tryon_for_outfit(outfit_id: UUID, user_id: UUID):
     from app.models.item import ClothingItem
     from app.services.virtual_tryon_service import (
         DEFAULT_PERSON_URL,
-        submit_tryon_task,
-        check_task_once,
+        resolve_tryon_inputs,
+        virtual_tryon,
     )
-    from app.api.virtual_tryon import _ensure_oss_url
 
     try:
         # Create a new database session for this background task
@@ -663,104 +662,51 @@ async def _generate_tryon_for_outfit(outfit_id: UUID, user_id: UUID):
                 logger.error("Outfit %s not found for try-on generation", outfit_id)
                 return
 
-            # Get person image: BodyProfile.full_body_photo_url or default
+            # Get person image ref: BodyProfile value or the official default
             result = await db.execute(
                 select(BodyProfile).where(BodyProfile.user_id == user_id)
             )
             body_profile = result.scalar_one_or_none()
-            person_url = (
+            person_ref = (
                 body_profile.full_body_photo_url
                 if body_profile and body_profile.full_body_photo_url
                 else DEFAULT_PERSON_URL
             )
 
-            # Ensure person_url is a full HTTP URL
-            if person_url and not person_url.startswith("http"):
-                logger.warning("Person URL is not a full HTTP URL: %s, using default", person_url)
-                person_url = DEFAULT_PERSON_URL
-
-            # Classify items into top/bottom
-            top_items = []
-            bottom_items = []
-            for oi in outfit.items:
-                item = oi.item
-                if item.type in {
-                    "shirt", "t-shirt", "sweater", "hoodie", "blazer", "jacket",
-                    "coat", "top", "dress", "vest", "cardigan", "polo", "blouse", "tank-top",
-                }:
-                    top_items.append(item)
-                elif item.type in {"pants", "jeans", "shorts", "skirt"}:
-                    bottom_items.append(item)
-
-            if not top_items and not bottom_items:
-                logger.warning("No valid items found for try-on in outfit %s", outfit_id)
-                return
-
-            garment_input = {}
-            if top_items:
-                # Use public_url (full HTTP URL) or upload to OSS
-                url = top_items[0].public_url
-                if not url:
-                    logger.info("No public_url for top item %s, attempting OSS upload", top_items[0].id)
-                    url = await _ensure_oss_url(top_items[0])
-                    if url:
-                        # Persist the URL for future use
-                        top_items[0].public_url = url
-                        await db.commit()
-                if not url:
-                    logger.warning("Failed to get URL for top item %s, skipping try-on", top_items[0].id)
-                    return
-                garment_input["top_garment_url"] = url
-            if bottom_items:
-                url = bottom_items[0].public_url
-                if not url:
-                    logger.info("No public_url for bottom item %s, attempting OSS upload", bottom_items[0].id)
-                    url = await _ensure_oss_url(bottom_items[0])
-                    if url:
-                        # Persist the URL for future use
-                        bottom_items[0].public_url = url
-                        await db.commit()
-                if not url:
-                    logger.warning("Failed to get URL for bottom item %s, skipping try-on", bottom_items[0].id)
-                    return
-                garment_input["bottom_garment_url"] = url
-
-            if not garment_input:
+            items_payload = [
+                {
+                    "ref": oi.item.image_path,
+                    "type": oi.item.type or "",
+                    "name": oi.item.name or "",
+                    "primary_color": oi.item.primary_color or "",
+                }
+                for oi in outfit.items
+                if oi.item and oi.item.image_path
+            ]
+            garment_refs, descs, is_outfit = resolve_tryon_inputs(items_payload)
+            if not garment_refs:
+                logger.warning("No usable garment images for outfit %s", outfit_id)
                 return
 
             logger.info(
-                "Submitting try-on for outfit %s: person=%s, garments=%s",
-                outfit_id, person_url[:80], list(garment_input.keys()),
+                "Generating try-on for outfit %s (qwen, %d garment refs)",
+                outfit_id, len(garment_refs),
             )
-
-            # Submit try-on task using basic aitryon (faster)
-            task = await submit_tryon_task(
-                person_image_url=person_url,
-                garment_urls=[],
-                model="aitryon",  # Use basic model for speed
-                garment_input=garment_input,
+            tryon_result = await virtual_tryon(
+                person_ref=person_ref,
+                garment_refs=garment_refs,
+                descs=descs,
+                is_outfit=is_outfit,
+                user_id=user_id,
             )
-
-            if task.status == "FAILED":
-                logger.error("Try-on task failed for outfit %s: %s", outfit_id, task.error)
+            if not tryon_result.success:
+                logger.error(
+                    "Try-on generation failed for outfit %s: %s", outfit_id, tryon_result.error
+                )
                 return
-
-            # Poll for result (with timeout)
-            import asyncio as _asyncio
-            for _ in range(60):  # Max 5 minutes
-                await _asyncio.sleep(5)
-                checked = await check_task_once(task.task_id)
-                if checked and checked.status == "SUCCEEDED" and checked.image_url:
-                    # Update outfit with try-on image
-                    outfit.model_image_url = checked.image_url
-                    await db.commit()
-                    logger.info("Try-on image generated for outfit %s", outfit_id)
-                    return
-                elif checked and checked.status in {"FAILED", "CANCELED"}:
-                    logger.error("Try-on task %s ended with status: %s", task.task_id, checked.status)
-                    return
-
-            logger.warning("Try-on task %s timed out for outfit %s", task.task_id, outfit_id)
+            outfit.model_image_url = tryon_result.image_url
+            await db.commit()
+            logger.info("Try-on image generated for outfit %s", outfit_id)
 
     except Exception as e:
         logger.error("Try-on generation failed for outfit %s: %s", outfit_id, e, exc_info=True)
