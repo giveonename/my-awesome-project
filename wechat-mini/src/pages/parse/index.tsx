@@ -50,7 +50,7 @@ export default function ParsePage() {
               '/items/parse',
               imgPath,
               'image',
-              { scene_type: '' },
+              { scene_type: '', scene_hint: opts.tab === 'outfit' ? 'outfit' : 'flat' },
               300000
             )
             setResult({
@@ -139,7 +139,7 @@ export default function ParsePage() {
         '/items/parse',
         filePath,
         'image',
-        { scene_type: '' },
+        { scene_type: '', scene_hint: activeTab },
         300000
       )
       setResult({
@@ -176,7 +176,7 @@ export default function ParsePage() {
           '/items/parse',
           files[i],
           'image',
-          { scene_type: '' },
+          { scene_type: '', scene_hint: activeTab },
           300000
         )
         if (uploadResult.items?.length) {

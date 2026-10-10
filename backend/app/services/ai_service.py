@@ -46,6 +46,7 @@ class ClothingTags(BaseModel):
 
 TAGGING_PROMPT = load_prompt("clothing_analysis")
 DESCRIPTION_PROMPT = load_prompt("clothing_description")
+IMAGE_CLASSIFY_PROMPT = load_prompt("image_classify")
 
 # Valid values for validation
 VALID_TYPES = {
@@ -785,6 +786,97 @@ class AIService:
         )
 
         return valid_tags
+
+    @staticmethod
+    def _parse_scene_label(content: str | None) -> str:
+        """Map free-form model output to outfit / flat_multi / flat_single."""
+        text = (content or "").strip().lower()
+        if not text:
+            return ""
+        first_line = text.splitlines()[0].strip().strip(".:：*`\"'")
+        if first_line in ("outfit", "flat_multi", "flat_single"):
+            return first_line
+        for token, label in (
+            ("flat_multi", "flat_multi"),
+            ("flat multi", "flat_multi"),
+            ("flat_single", "flat_single"),
+            ("flat single", "flat_single"),
+            ("多件", "flat_multi"),
+            ("单件", "flat_single"),
+            ("整套", "outfit"),
+            ("outfit", "outfit"),
+            ("multi", "flat_multi"),
+            ("single", "flat_single"),
+        ):
+            if token in text:
+                return label
+        return ""
+
+    async def classify_image_type(
+        self,
+        image_path: str | Path,
+        user_endpoints: list[dict] | None = None,
+        hint: str | None = None,
+    ) -> str:
+        """Classify a clothing photo for upload routing.
+
+        Returns one of:
+          - "outfit":        one complete styled look (worn or arranged as a set)
+          - "flat_multi":    several separate garments laid out apart
+          - "flat_single":   a single garment
+        Returns "" when classification fails so callers can fall back.
+
+        ``hint`` ("outfit" | "flat") carries the upload entry's intent as soft
+        context for the model.
+        """
+        service = AIService(endpoints=user_endpoints) if user_endpoints else self
+        try:
+            image_base64 = service._preprocess_image(image_path)
+            if hint == "outfit":
+                hint_text = (
+                    "User context: uploaded from the fitting-room entry, "
+                    "a complete outfit is more likely."
+                )
+            elif hint == "flat":
+                hint_text = (
+                    "User context: uploaded from the wardrobe entry, "
+                    "individual garments are more likely."
+                )
+            else:
+                hint_text = ""
+            text_part = IMAGE_CLASSIFY_PROMPT
+            if hint_text:
+                text_part = f"{text_part}\n\n{hint_text}"
+
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
+                        },
+                        {"type": "text", "text": text_part},
+                    ],
+                },
+            ]
+
+            content, error, _ = await service._call_with_fallback(
+                messages, "image classification", use_vision_model=True
+            )
+            label = self._parse_scene_label(content)
+            if label:
+                logger.info("Image classified as %s", label)
+            else:
+                logger.warning(
+                    "Image classification returned unusable label (content=%r, error=%s)",
+                    content,
+                    error,
+                )
+            return label
+        except Exception as e:
+            logger.warning("Image classification failed: %s", e)
+            return ""
 
     async def check_health(self) -> dict:
         """Check health of all configured AI endpoints."""

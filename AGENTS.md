@@ -93,6 +93,16 @@ AI 对话中搭配方案用 `<<<OUTFIT>>>...<<<END>>>` 标记。AI 有时输出 
 
 Prompt 用英文指令（模型更易遵守），强制 `name`/`description` 用中文。后处理检测到英文描述会自动重写为中文。衣物分割/多件拆分由 `aliyun_vision_service.py`（SegmentCommodity / SegmentBody）完成。
 
+### 上传解析路由（AI 三分类，2026-10 重构）
+
+parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/flat），后端 `ai_service.classify_image_type`（prompt: `prompts/image_classify.txt`）用 DeepSeek 视觉把照片分为三类并路由：
+
+- `outfit`（一整套：穿身上或摆成一套）→ SegmentCloth 抠整套 → **1 条 outfit 记录进试衣间，不拆分**（原 parsing-v1 上装/下装拆分已按设计移除）
+- `flat_multi` / `flat_single`（散件平铺/单件）→ SegmentCommodity 抠图 + 连通域拆件 → 电子衣橱
+- 拆分靠 `_split_transparent_image` 的连通域 + "配对合并"（同款小件极近时合并，如鞋对；间距阈值 15% 画面宽，2026-10 从 40% 收紧）
+- 分割不可用时的兜底分支**只建 1 条记录**，避免"多件共图"的重复记录
+- 历史教训：分类器曾在 2026-06 只存在于容器内从未入库，容器重建即丢失；本文件与仓库是唯一真相，勿再只在容器里改代码
+
 ### 天气服务链路
 
 和风天气 v7（国内）→ Open-Meteo（海外 fallback）→ Redis 缓存降级（1h TTL）。

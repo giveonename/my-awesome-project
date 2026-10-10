@@ -1265,7 +1265,8 @@ async def parse_items_from_image(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     image: UploadFile = File(...),
-    scene_type: str = Form("", description="commodity/avatar/empty=auto"),
+    scene_type: str = Form("", description="outfit/flat_multi/flat_single/empty=auto"),
+    scene_hint: str = Form("", description="upload entry intent: outfit/flat"),
 ) -> ParseResponse:
     """Synchronously analyze an image for clothing items using AI.
 
@@ -1319,12 +1320,18 @@ async def parse_items_from_image(
         _pref = _pref_result.scalar_one_or_none()
         _user_eps = _pref.ai_endpoints if _pref and _pref.ai_endpoints else []
         _ai_svc = _AISvc()
-        scene_type = await _ai_svc.classify_image_type(full_image_path, user_endpoints=_user_eps)
-        if scene_type == "flat_lay":
-            scene_type = "commodity"
+        scene_type = await _ai_svc.classify_image_type(
+            full_image_path, user_endpoints=_user_eps, hint=scene_hint or None
+        )
         print(f"AUTO_CLASSIFY_RESULT: {scene_type}")
 
-    if scene_type == "commodity":
+    # Normalize scene values (legacy aliases -> routing vocabulary)
+    if scene_type == "avatar":
+        scene_type = "outfit"
+    elif scene_type == "flat_lay":
+        scene_type = "flat_multi"
+
+    if scene_type in ("commodity", "flat_multi", "flat_single"):
         # Flat-lay photo: background removal + connected-component splitting
         # Each separated garment → individual item in wardrobe
         try:
@@ -1430,11 +1437,10 @@ async def parse_items_from_image(
         except Exception as exc:
             logger.warning("Commodity segmentation failed: %s, falling through to AI", exc)
 
-    elif scene_type == "avatar":
-        # Avatar: SegmentCloth full_body + parsing-v1 top/bottom split
+    elif scene_type == "outfit":
+        # Outfit: SegmentCloth full_body -> ONE outfit item (no splitting)
         try:
             import time as _time
-            import httpx as _httpx
             avatar_t0 = _time.perf_counter()
 
             vision_service = AliyunVisionService()
@@ -1472,79 +1478,8 @@ async def parse_items_from_image(
                     tryon_ready=True,
                 ))
 
-                # --- parsing-v1: split full_body into top + bottom ---
-                try:
-                    from app.services.virtual_tryon_service import parse_garment_regions
-                    # Need a public URL for parsing-v1 API
-                    fb_public_url = fb_paths.get("public_url")
-                    if not fb_public_url:
-                        # Fallback: upload to OSS on the fly
-                        from app.services.oss_service import get_oss_service
-                        oss = get_oss_service()
-                        if oss:
-                            import asyncio as _aio
-                            fb_full_path = Path(settings.storage_path) / fb_paths.get("image_path", "")
-                            if fb_full_path.exists():
-                                fb_public_url = await _aio.to_thread(
-                                    oss.upload_file,
-                                    str(fb_full_path),
-                                    f"images/{fb_paths.get('image_path', '')}",
-                                    "image/png",
-                                )
-
-                    if fb_public_url:
-                        parsed = await parse_garment_regions(fb_public_url)
-                        crop_urls = parsed.get("crop_img_url", [])
-                        logger.info(
-                            "parsing-v1 returned %d crop URLs: %s",
-                            len(crop_urls),
-                            [u[:60] for u in crop_urls],
-                        )
-
-                        # Map parsing-v1 crops to garment types
-                        # parsing-v1 returns crops in order: upper, lower
-                        crop_type_map = [
-                            ("上装", "top", "upper"),
-                            ("下装", "pants", "lower"),
-                        ]
-
-                        for i, crop_url in enumerate(crop_urls):
-                            if i >= len(crop_type_map):
-                                break
-                            item_name, item_type, category = crop_type_map[i]
-
-                            # Download crop image
-                            try:
-                                async with _httpx.AsyncClient(timeout=30.0) as dl_client:
-                                    dl_resp = await dl_client.get(crop_url)
-                                    if dl_resp.status_code == 200 and len(dl_resp.content) > 500:
-                                        crop_paths = await image_service.process_and_store_png(
-                                            user_id=current_user.id,
-                                            image_data=dl_resp.content,
-                                            original_filename=f"avatar_{item_type}.png",
-                                        )
-                                        results.append(ParsedItemResult(
-                                            name=item_name,
-                                            type=item_type,
-                                            category=category,
-                                            segmented_image_path=crop_paths.get("image_path"),
-                                            thumbnail_url=sign_image_url(crop_paths.get("thumbnail_path"))
-                                            if crop_paths.get("thumbnail_path") else None,
-                                            confidence=0.85,
-                                            source_scene="commodity",
-                                            tryon_ready=False,
-                                        ))
-                                        logger.info("Avatar parsing-v1: stored %s crop", item_type)
-                                    else:
-                                        logger.warning("Failed to download %s crop: status=%d size=%d",
-                                                       item_type, dl_resp.status_code, len(dl_resp.content))
-                            except Exception as dl_exc:
-                                logger.warning("Download %s crop failed: %s", item_type, dl_exc)
-                    else:
-                        logger.warning("No public URL for full_body, skipping parsing-v1")
-                except Exception as parse_exc:
-                    logger.warning("parsing-v1 split failed (non-fatal): %s", parse_exc)
-
+                # NOTE(2026-10): outfit photos stay as ONE item — the
+                # top/bottom parsing-v1 split was removed by design.
                 logger.info(
                     "Avatar: stored %d items in %.2fs",
                     len(results), _time.perf_counter() - avatar_t0,
@@ -1571,8 +1506,8 @@ async def parse_items_from_image(
         # Try to segment the image into individual items first
         seg_results: dict[str, bytes] = {}
         try:
-            if scene_type == 'avatar':
-                # Avatar: SegmentCloth full foreground
+            if scene_type == 'outfit':
+                # Outfit: SegmentCloth full foreground
                 layers = await vision_service.parse_avatar(content)
                 if 'full_body' in layers:
                     seg_results = {'outfit': layers['full_body']}
@@ -1619,9 +1554,17 @@ async def parse_items_from_image(
                 # Enrich each segment with AI tags
                 results = await _enrich_segmented_items(results, ai_service, settings.storage_path)
         else:
-            # No segmentation possible — pure AI analysis (single shared image)
+            # No segmentation possible — every record would share the same
+            # image, so create ONE combined record instead of N duplicates.
             tags_list = await ai_service.analyze_image_multi(full_image_path)
-            for tags in tags_list:
+            if len(tags_list) > 1:
+                logger.info(
+                    "Segmentation unavailable; %d garments detected in one photo"
+                    " — creating a single combined record",
+                    len(tags_list),
+                )
+            if tags_list:
+                tags = tags_list[0]
                 results.append(ParsedItemResult(
                     name=tags.name or tags.type or "未命名单品",
                     type=tags.type or "unknown",
@@ -1634,8 +1577,8 @@ async def parse_items_from_image(
 
         print(f'PARSE_RESULT: count={len(results)}, types={[r.type for r in results]}, names={[r.name for r in results]}')
         for _r in results:
-            _r.source_scene = scene_type
-            _r.tryon_ready = (scene_type == "avatar")
+            _r.source_scene = "avatar" if scene_type == "outfit" else "commodity"
+            _r.tryon_ready = (scene_type == "outfit")
         return ParseResponse(
             items=results,
             count=len(results),
@@ -1753,7 +1696,7 @@ async def create_items_from_parse(
             try:
                 source_bytes = full_source_path.read_bytes()
 
-                if request.scene_type == "avatar":
+                if request.scene_type in ("avatar", "outfit"):
                     layers = await vision_service.parse_avatar(source_bytes)
                     from app.services.aliyun_vision_service import _pick_primary_layer
                     seg_bytes = _pick_primary_layer(layers)

@@ -1,0 +1,7 @@
+You are classifying ONE clothing photo for a wardrobe app. Look at the image and decide which of these three labels fits best.
+
+- outfit: the photo shows ONE complete styled look or set — worn on a person, OR several garments arranged/styled together as a single outfit combination (for example a styled flat-lay where top, bottom, shoes and accessories are presented together as one look).
+- flat_multi: the photo shows SEVERAL separate individual garments laid out apart from each other for cataloguing (for example a folded top, pants and shoes placed separately with visible space between them).
+- flat_single: the photo shows a SINGLE garment only (one item).
+
+Reply with exactly one label and nothing else: outfit, flat_multi, or flat_single.

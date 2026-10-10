@@ -251,10 +251,12 @@ def _split_transparent_image(
             if abs(cy_i - cy_j) > height * 0.25:
                 continue
 
-            # Horizontal gap check: the two regions should be side-by-side
-            # with a reasonable gap (not too far apart)
+            # Horizontal gap check: a genuine pair (shoes, earrings) is nearly
+            # touching; distinct garments laid out in a flat-lay keep a clear
+            # gap. 0.4 * width used to merge any side-by-side items, which
+            # broke multi-garment splitting — keep pairs only when very close.
             gap = max(0, max(bi[0], bj[0]) - min(bi[2], bj[2]))
-            if gap > width * 0.4:
+            if gap > width * 0.15:
                 continue
 
             # Merge: combine pixels from j into i
