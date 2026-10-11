@@ -203,5 +203,6 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 - AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）
 - `ootd` 页面（每日穿搭：真实天气+7天预报+穿搭记录）入口在首页"今日穿搭"卡片；`history` 穿搭日历另有首页金刚区与个人页两个入口
 - 小程序 SCSS 全量使用 `@import`（Dart Sass 3.0 将移除；当前 sass 锁 1.86，构建仅有警告、无风险）：迁 `@use` 属技术债，涉及全部 scss 文件且需排版回归，待后续专项处理
+- 小程序多页存在 `<ScrollView>` 直接设置 padding 的旧写法（chat/diy/suggest/profile-settings 共 6 处；微信 WebView 渲染模式对 scroll-view padding 仅部分支持，devtools 会告警）：新代码规范 = padding 放内层容器（如 home 的 capsules-list）；存量迁移属技术债，改动需逐页视觉回归
 - 小程序 `suggest/index.tsx` 超过 1200 行、`api/items.py` 超过 1900 行，属技术债，改动时注意局部化
 - 仓库 git remote 此前指向模板仓库 Anyesh/wardrowbe，已于 2026-10 断开；推送前需自行 `git remote add origin <你的仓库>`
