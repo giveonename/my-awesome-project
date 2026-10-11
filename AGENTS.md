@@ -202,5 +202,6 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 - 会员支付未实现（UI 已就绪，显示"即将开放"）
 - AI 推荐时偶尔返回文字编号而非数字（已实现容错跳过）
 - `ootd` 页面（每日穿搭：真实天气+7天预报+穿搭记录）入口在首页"今日穿搭"卡片；`history` 穿搭日历另有首页金刚区与个人页两个入口
+- 小程序 SCSS 全量使用 `@import`（Dart Sass 3.0 将移除；当前 sass 锁 1.86，构建仅有警告、无风险）：迁 `@use` 属技术债，涉及全部 scss 文件且需排版回归，待后续专项处理
 - 小程序 `suggest/index.tsx` 超过 1200 行、`api/items.py` 超过 1900 行，属技术债，改动时注意局部化
 - 仓库 git remote 此前指向模板仓库 Anyesh/wardrowbe，已于 2026-10 断开；推送前需自行 `git remote add origin <你的仓库>`

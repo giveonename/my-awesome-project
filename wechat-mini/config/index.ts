@@ -20,6 +20,10 @@ export default defineConfig({
   },
   framework: 'react',
   compiler: 'webpack5',
+  // Webpack5 持久化缓存：显著加速二次编译（首次构建为冷启动；配置变更时自动失效）
+  cache: {
+    enable: true,
+  },
   mini: {
     postcss: {
       pxtransform: {
