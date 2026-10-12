@@ -110,6 +110,15 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 - 昵称（`display_name`）经 `PATCH /users/me` 修改，1-20 字、自动去首尾空格
 - 前端编辑入口在"我的"页头部（EditProfileSheet 弹窗）：头像用微信 `open-type="chooseAvatar"`、昵称用 `input type="nickname"`（2022 后微信唯一合规路径，不可静默获取）
 
+### 搭配池与后台任务（2026-10 P1，用户无感架构）
+
+- **试穿图生成搬进 arq worker**（`app/workers/tryon.py`）：`generate_outfit_tryon`（单套）与 `replenish_suggest_pool`（池子补货）；进程内 Semaphore(1) 串行 + 限流退避重试；backend 重启不再丢任务。**worker 容器需要 DASHSCOPE_* 环境变量**（compose 已配）
+- **搭配池**（`app/services/suggest_pool.py`）：池 = 已生成试穿图、72h 内、未展示过的 AI 搭配（source=on_demand）。"已展示/预算/补货中"状态存 Redis（**刻意不加表**——迁移图损坏，避免新 revision）
+- **接口**：`GET /outfits/feed`（秒取 2 套，可带 `occasion`）与 `POST /outfits/prewarm`（幂等补水：池水位 < target=4 且当日预算未用完时入队补货；每日预算帽 `suggest_daily_batch_budget` 默认 2 批）
+- **应用内通知**（`app/services/inapp_notice_service.py`，Redis 7 天 TTL）：后台任务完成 → 首页社区横幅**插播** 🔔 通知（排轮播第一位，点击跳转并标记已读）。**刻意不用 Notification 表**：那张表的出站重试 cron 会试图"投递"这些消息
+- **前端**：首页 onShow 静默 `prewarm`；搭配页池子见底 → 弹窗「先去逛逛／就在这看看」+ 20 秒轮询，就绪后 toast + 自动刷新
+- **成本控制**：只在池子低于 target 时补货，看过的不重复生成；应急关闸 = 调小 `SUGGEST_DAILY_BATCH_BUDGET`
+
 ### 天气服务链路
 
 和风天气 v7（国内）→ Open-Meteo（海外 fallback）→ Redis 缓存降级（1h TTL）。
@@ -117,7 +126,7 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 
 ### 虚拟试衣链路（2026-10 迁移至 qwen-image-3.0）
 
-选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。**批量试穿图生成（搭配6套）串行执行（Semaphore(1)）并对 Throttling 限流自动重试**——qwen-image-3.0 并发配额较严，6 个并发会全灭且约 90 秒/张。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，6 张图已入库；缺失时前端自动渐变兜底）。
+选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。批量试穿图生成已迁至 arq worker 串行执行并对 Throttling 限流自动重试（见『搭配池与后台任务』）。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，6 张图已入库；缺失时前端自动渐变兜底）。
 
 ### 淘宝联盟
 
