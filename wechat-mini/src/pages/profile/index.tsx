@@ -125,8 +125,10 @@ export default function ProfilePage() {
                     </View>
                   )}
                 </View>
-                <Text className='profile-name'>{user.display_name}</Text>
-                <Text className='profile-edit-hint'>✏️ 编辑资料</Text>
+                <View className='profile-name-row'>
+                  <Text className='profile-name'>{user.display_name}</Text>
+                  <Text className='profile-edit-pencil'>✏️</Text>
+                </View>
               </View>
               <View className='profile-stats'>
                 <View className='profile-stat'>

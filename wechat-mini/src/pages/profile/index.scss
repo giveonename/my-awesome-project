@@ -11,7 +11,7 @@
 .profile-header {
   background: $bg-profile-gradient;
   border-radius: 0 0 $radius-xl $radius-xl;
-  padding: 80rpx $spacing-lg 48rpx;
+  padding: 40rpx $spacing-lg 36rpx;
   position: relative;
   overflow: hidden;
 
@@ -52,24 +52,26 @@
   }
 }
 
-.profile-edit-hint {
-  font-size: $font-caption-size;
-  color: $color-primary;
-  background: rgba(45, 106, 79, 0.08);
-  border: 1rpx solid rgba(45, 106, 79, 0.15);
-  border-radius: $radius-pill;
-  padding: 6rpx 20rpx;
-  margin-bottom: $spacing-md;
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: $spacing-sm;
+}
+
+.profile-edit-pencil {
+  font-size: 26rpx;
+  opacity: 0.75;
 }
 
 .profile-avatar {
-  width: 130rpx;
-  height: 130rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
   overflow: hidden;
   border: 4rpx solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 8rpx 32rpx rgba(45, 106, 79, 0.2);
-  margin-bottom: $spacing-md;
+  margin-bottom: 16rpx;
 }
 
 .profile-avatar-img {
@@ -103,7 +105,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: $radius-pill;
-  padding: 16rpx 40rpx;
+  padding: 12rpx 36rpx;
   border: 1rpx solid rgba(255, 255, 255, 0.3);
 }
 
