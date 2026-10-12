@@ -103,6 +103,12 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 - 分割不可用时的兜底分支**只建 1 条记录**，避免"多件共图"的重复记录
 - 历史教训：分类器曾在 2026-06 只存在于容器内从未入库，容器重建即丢失；本文件与仓库是唯一真相，勿再只在容器里改代码
 
+### 用户头像与昵称
+
+- 头像经 `POST /users/me/avatar` 上传，**DB 存相对路径、每次响应重新签名**（`_resolve_avatar_url`），避免签名 URL 过期；旧本地头像文件会被尽力清理
+- 昵称（`display_name`）经 `PATCH /users/me` 修改，1-20 字、自动去首尾空格
+- 前端编辑入口在"我的"页头部（EditProfileSheet 弹窗）：头像用微信 `open-type="chooseAvatar"`、昵称用 `input type="nickname"`（2022 后微信唯一合规路径，不可静默获取）
+
 ### 天气服务链路
 
 和风天气 v7（国内）→ Open-Meteo（海外 fallback）→ Redis 缓存降级（1h TTL）。
