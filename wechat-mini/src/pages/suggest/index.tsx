@@ -866,6 +866,9 @@ export default function SuggestPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const requestIdRef = useRef(0)
+  // 池子等待：后台生成时的轮询与弹窗
+  const poolPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const poolWaitRef = useRef<(() => void) | null>(null)
   const [incomingItemId, setIncomingItemId] = useState('')
   const [occasion, setOccasion] = useState('casual')
   const tryOnPollRef = useRef<NodeJS.Timeout | null>(null)
@@ -921,7 +924,7 @@ export default function SuggestPage() {
     }, 10000) // Poll every 10 seconds
   }, [])
 
-  // POST /outfits/suggest-batch — 一次获取多套推荐
+  // GET /outfits/feed — 从预生成池秒取推荐（试穿图由后台提前备好，无需等待）
   const fetchOutfits = useCallback(async (reset: boolean = false) => {
     const requestId = ++requestIdRef.current
 
@@ -934,46 +937,46 @@ export default function SuggestPage() {
     }
 
     try {
-      const loc = await Promise.race([
-        getLocationAndSave(),
-        new Promise<null>(r => setTimeout(() => r(null), 5000))
-      ])
+      const params: Record<string, string> = {}
+      if (occasion) params.occasion = occasion
 
-      const body: Record<string, unknown> = {
-        occasion,
-        count: MAX_RECOMMENDATIONS,
-      }
-      if (loc) {
-        body.latitude = loc.latitude
-        body.longitude = loc.longitude
-      }
-
-      const data = await api.post<OutfitRecommendation[]>('/outfits/suggest-batch', body, {
-        timeout: 180000
-      })
+      const data = await api.get<{
+        outfits: OutfitRecommendation[]
+        pool: { ready: number; target: number; replenishing: boolean; budget_left: number }
+      }>('/outfits/feed', params, { timeout: 20000 })
 
       if (requestId !== requestIdRef.current) return
 
-      if (data && Array.isArray(data) && data.length > 0) {
-        setOutfits(data)
-        setLoading(false)
-
-        // Start polling for try-on images
-        const idsNeedingTryOn = data
-          .filter(o => !o.model_image_url)
-          .map(o => o.id)
+      const list = data?.outfits || []
+      if (list.length > 0) {
+        if (reset) {
+          setOutfits(list)
+        } else {
+          setOutfits(prev => {
+            const seen = new Set(prev.map(p => p.id))
+            return [...prev, ...list.filter(n => !seen.has(n.id))]
+          })
+        }
+        const idsNeedingTryOn = list.filter(o => !o.model_image_url).map(o => o.id)
         if (idsNeedingTryOn.length > 0) {
           startTryOnPolling(idsNeedingTryOn)
         }
-      } else {
-        if (reset) setOutfits([])
+      } else if (reset) {
+        setOutfits([])
+      }
+
+      const pool = data?.pool
+      if (pool && pool.ready < 2) {
+        // 池子见底：后台自动补货，并告知用户可先去逛逛
+        api.post('/outfits/prewarm', {}, { timeout: 10000 }).catch(() => {})
+        if (pool.replenishing || pool.budget_left > 0) {
+          poolWaitRef.current?.()
+        }
       }
     } catch (err: any) {
       if (requestId === requestIdRef.current) {
         console.error('Failed to load outfits:', err)
-        if (err?.status === 400) {
-          // Insufficient wardrobe
-        } else if (reset) {
+        if (err?.status !== 400 && reset) {
           Taro.showToast({ title: '推荐没拿到，稍后再试试', icon: 'none' })
         }
       }
@@ -984,6 +987,37 @@ export default function SuggestPage() {
       }
     }
   }, [occasion, loadingMore, startTryOnPolling])
+
+  // 池子等待实现：弹窗告知 + 20 秒轮询，就绪后自动刷新
+  poolWaitRef.current = () => {
+    if (poolPollRef.current) return
+    Taro.showModal({
+      title: '新一批搭配生成中',
+      content: '大约需要几分钟。你可以先去逛逛，好了会在首页提醒你～',
+      confirmText: '先去逛逛',
+      cancelText: '就在这看看',
+      success: (res) => {
+        if (res.confirm) Taro.switchTab({ url: '/pages/home/index' })
+      },
+    })
+    poolPollRef.current = setInterval(async () => {
+      try {
+        const probe = await api.post<{ pool: { ready: number } }>(
+          '/outfits/prewarm', {}, { timeout: 15000 }
+        )
+        if ((probe?.pool?.ready || 0) >= 2) {
+          if (poolPollRef.current) {
+            clearInterval(poolPollRef.current)
+            poolPollRef.current = null
+          }
+          Taro.showToast({ title: '新搭配已就绪！', icon: 'success' })
+          fetchOutfits(true)
+        }
+      } catch {
+        // 继续轮询
+      }
+    }, 20000)
+  }
 
   // 首屏加载 + 检查从衣物详情跳转过来的 item_id
   useDidShow(() => {

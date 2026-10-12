@@ -91,19 +91,56 @@ export default function HomePage() {
   const [itemCount, setItemCount] = useState(0)
   const [bannerIndex, setBannerIndex] = useState(0)
   const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [taskNotice, setTaskNotice] = useState<{ id: string; title: string; target?: string } | null>(null)
+
+  // 有任务通知时，插播在轮播最前（社区内容保持不变）
+  const bannerItems: any[] = useMemo(
+    () =>
+      taskNotice
+        ? [{ __notice: true, ...taskNotice }, ...MOCK_COMMUNITY_POSTS]
+        : MOCK_COMMUNITY_POSTS,
+    [taskNotice]
+  )
   const greeting = useMemo(() => getGreeting(), [])
 
   useEffect(() => {
     bannerTimerRef.current = setInterval(() => {
-      setBannerIndex(prev => (prev + 1) % MOCK_COMMUNITY_POSTS.length)
+      setBannerIndex(prev => (prev + 1) % bannerItems.length)
     }, 3500)
     return () => { if (bannerTimerRef.current) clearInterval(bannerTimerRef.current) }
-  }, [])
+  }, [bannerItems.length])
 
   useDidShow(() => {
     if (!getAccessToken()) { Taro.reLaunch({ url: '/pages/login/index' }); return }
     loadData()
+    loadTaskNotice()
+    // 后台预热搭配池（无感、幂等，失败静默）
+    api.post('/outfits/prewarm', {}, { timeout: 10000 }).catch(() => {})
   })
+
+  const loadTaskNotice = async () => {
+    try {
+      const list = await api.get<Array<{ id: string; title: string; target?: string }>>(
+        '/notifications/inbox'
+      )
+      const latest = list && list[0]
+      if (latest) {
+        setTaskNotice(latest)
+        setBannerIndex(0)
+      }
+    } catch {
+      // 静默
+    }
+  }
+
+  const handleNoticeTap = () => {
+    if (!taskNotice) return
+    api.post('/notifications/inbox/read', { notice_id: taskNotice.id }).catch(() => {})
+    setTaskNotice(null)
+    if (taskNotice.target === 'suggest') {
+      Taro.switchTab({ url: '/pages/suggest/index' })
+    }
+  }
 
   const loadData = useCallback(async () => {
     try {
@@ -131,7 +168,7 @@ export default function HomePage() {
     }
   }, [])
 
-  const currentBanner = MOCK_COMMUNITY_POSTS[bannerIndex]
+  const currentBanner = bannerItems[bannerIndex] || bannerItems[0]
 
   return (
     <View className='home-page'>
@@ -207,14 +244,26 @@ export default function HomePage() {
             </View>
           </View>
           <View className='home-community-banner-carousel'>
-            <View className='home-community-banner-post' key={bannerIndex}>
-              <Text className='home-community-banner-post-user'>{currentBanner.user}</Text>
-              <Text className='home-community-banner-post-text'>{currentBanner.text}</Text>
-              <Text className='home-community-banner-post-likes'>{currentBanner.likes}</Text>
-            </View>
+            {currentBanner?.__notice ? (
+              <View
+                className='home-community-banner-post home-community-banner-post--notice'
+                key={bannerIndex}
+                onClick={handleNoticeTap}
+              >
+                <Text className='home-community-banner-post-user home-community-banner-post-user--notice'>🔔 为你准备</Text>
+                <Text className='home-community-banner-post-text'>{currentBanner.title}</Text>
+                <Text className='home-community-banner-post-likes'>查看 ›</Text>
+              </View>
+            ) : (
+              <View className='home-community-banner-post' key={bannerIndex}>
+                <Text className='home-community-banner-post-user'>{currentBanner.user}</Text>
+                <Text className='home-community-banner-post-text'>{currentBanner.text}</Text>
+                <Text className='home-community-banner-post-likes'>{currentBanner.likes}</Text>
+              </View>
+            )}
           </View>
           <View className='home-community-banner-dots'>
-            {MOCK_COMMUNITY_POSTS.map((_, i) => (
+            {bannerItems.map((_, i) => (
               <View key={i} className={`home-community-banner-dot ${i === bannerIndex ? 'home-community-banner-dot--active' : ''}`} />
             ))}
           </View>
