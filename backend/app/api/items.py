@@ -1178,6 +1178,7 @@ class ParseResponse(BaseModel):
     items: list[ParsedItemResult]
     count: int
     image_path: str | None = None
+    scene_type: str | None = None  # actual routing decision (outfit / flat_multi / flat_single)
 
 
 class FromParseRequest(BaseModel):
@@ -1433,6 +1434,7 @@ async def parse_items_from_image(
                 items=results,
                 count=len(results),
                 image_path=image_paths.get("image_path"),
+                scene_type=scene_type or None,
             )
         except Exception as exc:
             logger.warning("Commodity segmentation failed: %s, falling through to AI", exc)
@@ -1492,6 +1494,7 @@ async def parse_items_from_image(
                     items=results,
                     count=len(results),
                     image_path=image_paths.get("image_path"),
+                    scene_type=scene_type or None,
                 )
             else:
                 logger.info("parse_avatar returned no usable layer, falling through to AI")
@@ -1583,6 +1586,7 @@ async def parse_items_from_image(
             items=results,
             count=len(results),
             image_path=image_paths.get("image_path"),
+            scene_type=scene_type or None,
         )
     except Exception as e:
         logger.error(f"AI parse failed: {e}")

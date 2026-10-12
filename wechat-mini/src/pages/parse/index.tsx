@@ -25,11 +25,20 @@ interface ParseResult {
   items: ParsedItem[]
   count: number
   image_path?: string
+  /** 后端实际路由结果：outfit / flat_multi / flat_single */
+  scene_type?: string
 }
 
 export default function ParsePage() {
-  const [activeTab, setActiveTab] = useState<'outfit' | 'flat'>('flat')
+  // 'pending' = 智能识别中，尚不知走向哪条通道（两个标签都不高亮）
+  const [activeTab, setActiveTab] = useState<'outfit' | 'flat' | 'pending'>('flat')
   const [autoMode, setAutoMode] = useState(false)
+
+  // 根据后端实际分类结果切换标签高亮（仅显示用途，不影响路由）
+  const applySceneDisplay = (scene?: string) => {
+    if (!scene) return
+    setActiveTab(scene === 'outfit' ? 'outfit' : 'flat')
+  }
 
   // Read initial tab and auto-upload from URL params
   useEffect(() => {
@@ -44,6 +53,7 @@ export default function ParsePage() {
         setAutoMode(true)
         const imgPath = decodeURIComponent(opts.img)
         setParseState('scanning')
+        setActiveTab('pending')
         ;(async () => {
           try {
             const uploadResult = await uploadFile<ParseResult>(
@@ -58,6 +68,7 @@ export default function ParsePage() {
               count: uploadResult.count || 0,
               image_path: uploadResult.image_path,
             })
+            applySceneDisplay(uploadResult.scene_type)
             setImageUrl(imgPath)
             setParseState('result')
           } catch (err) {
@@ -147,6 +158,7 @@ export default function ParsePage() {
         count: uploadResult.count || 0,
         image_path: uploadResult.image_path,
       })
+      applySceneDisplay(uploadResult.scene_type)
       setParseState('result')
     } catch (err) {
       console.error('Parse failed:', err)
@@ -185,6 +197,7 @@ export default function ParsePage() {
         if (!firstImagePath && uploadResult.image_path) {
           firstImagePath = uploadResult.image_path
         }
+        applySceneDisplay(uploadResult.scene_type)
       } catch (err) {
         console.error(`File ${i + 1} parse failed:`, err)
       }
