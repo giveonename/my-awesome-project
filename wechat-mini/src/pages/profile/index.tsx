@@ -3,6 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import { api, setAccessToken, resolveImageUrl, getBodyPhoto } from '../../utils/api'
 import { UserProfile } from '../../types'
+import EditProfileSheet from '../../components/EditProfileSheet'
 import './index.scss'
 import { icons } from '../../constants/icons'
 
@@ -27,6 +28,7 @@ export default function ProfilePage() {
   const [itemCount, setItemCount] = useState(0)
   const [outfitCount, setOutfitCount] = useState(0)
   const [hasBodyPhoto, setHasBodyPhoto] = useState(false)
+  const [editVisible, setEditVisible] = useState(false)
 
   useDidShow(() => {
     loadProfile()
@@ -113,16 +115,19 @@ export default function ProfilePage() {
             <Text className='profile-loading-text'>加载中...</Text>
           ) : user ? (
             <>
-              <View className='profile-avatar'>
-                {user.avatar_url ? (
-                  <Image className='profile-avatar-img' src={resolveImageUrl(user.avatar_url) || user.avatar_url} />
-                ) : (
-                  <View className='profile-avatar-placeholder'>
-                    <Image src={icons['user']} className='profile-avatar-emoji' style={{width: '48rpx', height: '48rpx'}} />
-                  </View>
-                )}
+              <View className='profile-user-tappable' onClick={() => setEditVisible(true)}>
+                <View className='profile-avatar'>
+                  {user.avatar_url ? (
+                    <Image className='profile-avatar-img' src={resolveImageUrl(user.avatar_url) || user.avatar_url} />
+                  ) : (
+                    <View className='profile-avatar-placeholder'>
+                      <Image src={icons['user']} className='profile-avatar-emoji' style={{width: '48rpx', height: '48rpx'}} />
+                    </View>
+                  )}
+                </View>
+                <Text className='profile-name'>{user.display_name}</Text>
+                <Text className='profile-edit-hint'>✏️ 编辑资料</Text>
               </View>
-              <Text className='profile-name'>{user.display_name}</Text>
               <View className='profile-stats'>
                 <View className='profile-stat'>
                   <Text className='profile-stat-num'>{itemCount}</Text>
@@ -223,6 +228,22 @@ export default function ProfilePage() {
       {/* Bottom padding for tabbar */}
       <View style={{ height: '260rpx' }} />
 
+      {/* Edit profile sheet (avatar + nickname) */}
+      {user && (
+        <EditProfileSheet
+          visible={editVisible}
+          displayName={user.display_name}
+          avatarUrl={user.avatar_url}
+          onClose={() => setEditVisible(false)}
+          onSaved={(data) =>
+            setUser((prev) =>
+              prev
+                ? { ...prev, display_name: data.display_name, avatar_url: data.avatar_url || undefined }
+                : prev
+            )
+          }
+        />
+      )}
     </View>
   )
 }
