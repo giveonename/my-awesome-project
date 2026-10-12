@@ -117,7 +117,7 @@ parse 页上传时发送空 `scene_type` + 入口提示 `scene_hint`（outfit/fl
 
 ### 虚拟试衣链路（2026-10 迁移至 qwen-image-3.0）
 
-选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，6 张图已入库；缺失时前端自动渐变兜底）。
+选衣物 → `resolve_tryon_inputs`（整套 outfit 直接整图当参考、不再拆分；否则取上装+下装，最多 2 件）→ 本地图片转 Base64（**不依赖 OSS**）→ `build_tryon_prompt` 按衣物元数据生成四段式提示词（保持人物/穿着服装/成片要求/禁止；长度属性交由商品图，勿写死）→ DashScope **qwen-image-3.0** 同步生成（约 80-100 秒、0.18 元/张）→ 下载结果转存本地（官方链接 24h 失效）。`/submit` 在后台 asyncio 任务执行以保持前端轮询体验，`/status` 读内存任务表。**批量试穿图生成（搭配6套）串行执行（Semaphore(1)）并对 Throttling 限流自动重试**——qwen-image-3.0 并发配额较严，6 个并发会全灭且约 90 秒/张。另有 `swap_background`（SegmentBody 抠图 + PIL 合成，模板图在 `backend/app/assets/backgrounds/`）。全身照在 `BodyProfile.full_body_photo_url`，无则回退 `DEFAULT_PERSON_URL`（阿里云示例图）。天气背景图走本地路由 `/weather/backgrounds/{name}`（素材目录 `backend/app/assets/weather-bg/`，6 张图已入库；缺失时前端自动渐变兜底）。
 
 ### 淘宝联盟
 

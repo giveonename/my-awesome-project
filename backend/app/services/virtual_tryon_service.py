@@ -235,16 +235,31 @@ async def _call_qwen_generation(person_b64: str, garment_b64s: list[str], prompt
         "parameters": {"watermark": False},
     }
     timeout = httpx.Timeout(settings.virtual_tryon_timeout, connect=15.0)
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.post(url, json=payload, headers=_get_headers())
-    try:
-        data = resp.json()
-    except Exception:
-        data = {}
-    if resp.status_code != 200:
-        msg = data.get("message") or _json.dumps(data, ensure_ascii=False)[:200]
+    last_error = ""
+    data: dict = {}
+    for attempt in range(1, 4):
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload, headers=_get_headers())
+        try:
+            data = resp.json()
+        except Exception:
+            data = {}
+        if resp.status_code == 200:
+            break
         code = data.get("code", "")
-        raise RuntimeError(f"{code}: {msg}" if code else str(msg))
+        msg = data.get("message") or _json.dumps(data, ensure_ascii=False)[:200]
+        last_error = f"{code}: {msg}" if code else str(msg)
+        is_throttled = "Throttling" in str(code) or "rate limit" in last_error.lower()
+        if is_throttled and attempt < 3:
+            logger.warning(
+                "Generation throttled by quota (attempt %d/3); backing off %ds",
+                attempt, 20 * attempt,
+            )
+            await asyncio.sleep(20 * attempt)
+            continue
+        raise RuntimeError(last_error)
+    else:
+        raise RuntimeError(last_error or "Generation failed")
     try:
         parts = data["output"]["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as e:

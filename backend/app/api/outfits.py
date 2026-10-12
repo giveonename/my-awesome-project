@@ -45,6 +45,10 @@ from app.utils.signed_urls import sign_image_url
 
 logger = logging.getLogger(__name__)
 
+# Batch try-on generation (one per suggested outfit) runs serially: qwen-image-3.0
+# rejects bursts with Throttling.RateQuota, and each call takes ~80-100s anyway.
+_TRYON_BATCH_SEMAPHORE = asyncio.Semaphore(1)
+
 VALID_OCCASIONS = {
     "casual",
     "office",
@@ -572,7 +576,15 @@ async def suggest_batch(
                         ClothingItem.tryon_ready.is_(True),
                     ),
                 )
-            ).distinct().order_by(Outfit.created_at.desc()).limit(count)
+            )
+            .distinct()
+            .order_by(Outfit.created_at.desc())
+            .limit(count)
+            .options(
+                selectinload(Outfit.items).selectinload(OutfitItem.item),
+                selectinload(Outfit.feedback),
+                selectinload(Outfit.family_ratings).selectinload(FamilyOutfitRating.user),
+            )
         )
         existing_outfits = list(result.scalars().all())
 
@@ -692,13 +704,14 @@ async def _generate_tryon_for_outfit(outfit_id: UUID, user_id: UUID):
                 "Generating try-on for outfit %s (qwen, %d garment refs)",
                 outfit_id, len(garment_refs),
             )
-            tryon_result = await virtual_tryon(
-                person_ref=person_ref,
-                garment_refs=garment_refs,
-                descs=descs,
-                is_outfit=is_outfit,
-                user_id=user_id,
-            )
+            async with _TRYON_BATCH_SEMAPHORE:
+                tryon_result = await virtual_tryon(
+                    person_ref=person_ref,
+                    garment_refs=garment_refs,
+                    descs=descs,
+                    is_outfit=is_outfit,
+                    user_id=user_id,
+                )
             if not tryon_result.success:
                 logger.error(
                     "Try-on generation failed for outfit %s: %s", outfit_id, tryon_result.error

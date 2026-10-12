@@ -107,7 +107,11 @@ class Outfit(Base):
         "OutfitItem", back_populates="outfit", cascade="all, delete-orphan"
     )
     feedback: Mapped[Optional["UserFeedback"]] = relationship(
-        "UserFeedback", back_populates="outfit", uselist=False, cascade="all, delete-orphan"
+        "UserFeedback",
+        back_populates="outfit",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",  # always eager: lazy access raises MissingGreenlet in async SQLAlchemy
     )
     family_ratings: Mapped[list["FamilyOutfitRating"]] = relationship(
         "FamilyOutfitRating", back_populates="outfit", cascade="all, delete-orphan"
