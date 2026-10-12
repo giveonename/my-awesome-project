@@ -113,6 +113,11 @@ class Settings(BaseSettings):
     original_max_size: int = 2400
     image_quality: int = 90
 
+    # Suggest-feed prewarm pool (ready-to-view outfits with try-on images)
+    suggest_pool_target: int = 4  # keep this many ready outfits in the pool
+    suggest_feed_page: int = 2  # outfits served per feed call
+    suggest_daily_batch_budget: int = 2  # replenish runs per user per day (cost cap)
+
     def validate_security(self) -> str | None:
         if self.secret_key == DEFAULT_SECRET_KEY and not self.debug:
             raise RuntimeError(

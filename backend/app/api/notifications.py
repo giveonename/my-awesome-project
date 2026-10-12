@@ -1,5 +1,6 @@
 import logging
 from datetime import time
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -342,3 +343,32 @@ async def list_notification_history(
         .limit(limit)
     )
     return list(result.scalars().all())
+
+
+# ===== In-app task inbox (Redis-backed, for background task notices) =====
+
+
+class InboxReadRequest(BaseModel):
+    notice_id: str | None = None
+
+
+@router.get("/inbox")
+async def list_inbox(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[dict]:
+    """Unread in-app task notices (e.g. try-on images ready)."""
+    from app.services.inapp_notice_service import list_notices
+
+    return await list_notices(current_user.id)
+
+
+@router.post("/inbox/read", response_model=MessageResponse)
+async def read_inbox(
+    payload: InboxReadRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> MessageResponse:
+    """Mark one notice (or all, when notice_id is omitted) as read."""
+    from app.services.inapp_notice_service import mark_read
+
+    await mark_read(current_user.id, payload.notice_id)
+    return MessageResponse(message="ok")

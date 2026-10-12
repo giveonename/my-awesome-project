@@ -1,10 +1,10 @@
-import asyncio
 import logging
 from datetime import UTC, date, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from arq import create_pool
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 from sqlalchemy import and_, or_, select, update
@@ -37,17 +37,23 @@ from app.services.studio_service import (
     OutfitWornImmutableError,
     StudioService,
 )
+from app.services.suggest_pool import (
+    budget_used_today,
+    consume_budget,
+    is_replenishing,
+    mark_replenishing,
+    ready_count,
+    take_from_pool,
+)
 from app.services.suggestion_cache import clear_suggestions
 from app.services.weather_service import WeatherData
 from app.utils.auth import get_current_user
 from app.utils.rate_limit import rate_limit_by_user
 from app.utils.signed_urls import sign_image_url
+from app.workers.settings import get_redis_settings
 
 logger = logging.getLogger(__name__)
 
-# Batch try-on generation (one per suggested outfit) runs serially: qwen-image-3.0
-# rejects bursts with Throttling.RateQuota, and each call takes ~80-100s anyway.
-_TRYON_BATCH_SEMAPHORE = asyncio.Semaphore(1)
 
 VALID_OCCASIONS = {
     "casual",
@@ -600,7 +606,7 @@ async def suggest_batch(
     # Generate outfits with retry logic - if some fail due to AI returning text instead of numbers, skip and retry
     max_attempts = count * 2  # Allow up to 2x attempts to get valid outfits
     attempts = 0
-    
+
     while len(outfits) < count and attempts < max_attempts:
         attempts += 1
         try:
@@ -621,22 +627,31 @@ async def suggest_batch(
         except Exception as e:
             logger.error(f"Unexpected error in recommendation attempt {attempts}: {e}")
             continue
-    
+
     if not outfits:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI failed to generate valid recommendations after multiple attempts",
         )
-    
+
     # Commit all outfits BEFORE creating background tasks
     await db.commit()
 
-    # Now trigger async try-on generation for each outfit
-    for outfit in outfits:
+    # Queue try-on generation in the arq worker (serialized, restart-safe)
+    try:
+        redis = await create_pool(get_redis_settings())
         try:
-            asyncio.create_task(_generate_tryon_for_outfit(outfit.id, current_user.id))
-        except Exception as e:
-            logger.error(f"Failed to trigger try-on generation: {e}")
+            for outfit in outfits:
+                await redis.enqueue_job(
+                    "generate_outfit_tryon",
+                    str(outfit.id),
+                    str(current_user.id),
+                    _queue_name="arq:tagging",
+                )
+        finally:
+            await redis.aclose()
+    except Exception as e:
+        logger.error(f"Failed to queue try-on generation: {e}")
 
     item_service = ItemService(db)
     total_items = await item_service.get_ready_item_count(current_user.id)
@@ -644,85 +659,6 @@ async def suggest_batch(
 
     wore_instead_map = await fetch_wore_instead_items_map(db, outfits, user_id=current_user.id)
     return [outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in outfits]
-
-
-async def _generate_tryon_for_outfit(outfit_id: UUID, user_id: UUID):
-    """Generate try-on image for an outfit asynchronously.
-
-    Creates its own database session to avoid lifecycle issues.
-    """
-    from app.database import async_session_maker
-    from app.models.body_profile import BodyProfile
-    from app.models.item import ClothingItem
-    from app.services.virtual_tryon_service import (
-        DEFAULT_PERSON_URL,
-        resolve_tryon_inputs,
-        virtual_tryon,
-    )
-
-    try:
-        # Create a new database session for this background task
-        async with async_session_maker() as db:
-            # Load outfit with items
-            result = await db.execute(
-                select(Outfit).where(Outfit.id == outfit_id).options(
-                    selectinload(Outfit.items).selectinload(OutfitItem.item)
-                )
-            )
-            outfit = result.scalar_one_or_none()
-            if not outfit:
-                logger.error("Outfit %s not found for try-on generation", outfit_id)
-                return
-
-            # Get person image ref: BodyProfile value or the official default
-            result = await db.execute(
-                select(BodyProfile).where(BodyProfile.user_id == user_id)
-            )
-            body_profile = result.scalar_one_or_none()
-            person_ref = (
-                body_profile.full_body_photo_url
-                if body_profile and body_profile.full_body_photo_url
-                else DEFAULT_PERSON_URL
-            )
-
-            items_payload = [
-                {
-                    "ref": oi.item.image_path,
-                    "type": oi.item.type or "",
-                    "name": oi.item.name or "",
-                    "primary_color": oi.item.primary_color or "",
-                }
-                for oi in outfit.items
-                if oi.item and oi.item.image_path
-            ]
-            garment_refs, descs, is_outfit = resolve_tryon_inputs(items_payload)
-            if not garment_refs:
-                logger.warning("No usable garment images for outfit %s", outfit_id)
-                return
-
-            logger.info(
-                "Generating try-on for outfit %s (qwen, %d garment refs)",
-                outfit_id, len(garment_refs),
-            )
-            async with _TRYON_BATCH_SEMAPHORE:
-                tryon_result = await virtual_tryon(
-                    person_ref=person_ref,
-                    garment_refs=garment_refs,
-                    descs=descs,
-                    is_outfit=is_outfit,
-                    user_id=user_id,
-                )
-            if not tryon_result.success:
-                logger.error(
-                    "Try-on generation failed for outfit %s: %s", outfit_id, tryon_result.error
-                )
-                return
-            outfit.model_image_url = tryon_result.image_url
-            await db.commit()
-            logger.info("Try-on image generated for outfit %s", outfit_id)
-
-    except Exception as e:
-        logger.error("Try-on generation failed for outfit %s: %s", outfit_id, e, exc_info=True)
 
 
 class BatchCheckRequest(BaseModel):
@@ -821,6 +757,92 @@ async def list_outfits(
         page=page,
         page_size=page_size,
         has_more=(page * page_size) < total,
+    )
+
+
+# ===== Suggest feed (prewarmed pool) =====
+
+
+class SuggestPoolStatus(BaseModel):
+    ready: int
+    target: int
+    replenishing: bool
+    budget_left: int
+
+
+class SuggestFeedResponse(BaseModel):
+    outfits: list[OutfitResponse]
+    pool: SuggestPoolStatus
+
+
+class SuggestPrewarmResponse(BaseModel):
+    enqueued: bool
+    pool: SuggestPoolStatus
+
+
+async def _suggest_pool_status(
+    db: AsyncSession, user_id: UUID, occasion: str | None = None
+) -> SuggestPoolStatus:
+    settings = get_settings()
+    ready = await ready_count(db, user_id, occasion)
+    replenishing = await is_replenishing(user_id)
+    used = await budget_used_today(user_id)
+    return SuggestPoolStatus(
+        ready=ready,
+        target=settings.suggest_pool_target,
+        replenishing=replenishing,
+        budget_left=max(settings.suggest_daily_batch_budget - used, 0),
+    )
+
+
+@router.post("/prewarm", response_model=SuggestPrewarmResponse)
+async def prewarm_suggest_pool(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    occasion: str | None = Query(None),
+) -> SuggestPrewarmResponse:
+    """Idempotently top up the suggest pool (safe to call on every app open)."""
+    settings = get_settings()
+    status = await _suggest_pool_status(db, current_user.id, occasion)
+
+    enqueued = False
+    if status.ready < settings.suggest_pool_target and status.budget_left > 0:
+        if await mark_replenishing(current_user.id):
+            await consume_budget(current_user.id)
+            try:
+                redis = await create_pool(get_redis_settings())
+                try:
+                    await redis.enqueue_job(
+                        "replenish_suggest_pool",
+                        str(current_user.id),
+                        occasion,
+                        _queue_name="arq:tagging",
+                    )
+                finally:
+                    await redis.aclose()
+                enqueued = True
+            except Exception as e:  # noqa: BLE001
+                logger.error("Failed to enqueue suggest replenish: %s", e)
+
+    return SuggestPrewarmResponse(
+        enqueued=enqueued, pool=await _suggest_pool_status(db, current_user.id, occasion)
+    )
+
+
+@router.get("/feed", response_model=SuggestFeedResponse)
+async def get_suggest_feed(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    occasion: str | None = Query(None),
+) -> SuggestFeedResponse:
+    """Serve outfits from the prewarmed pool instantly (never generates inline)."""
+    settings = get_settings()
+    outfits = await take_from_pool(db, current_user.id, settings.suggest_feed_page, occasion)
+    wore_map = await fetch_wore_instead_items_map(db, outfits, user_id=current_user.id)
+    responses = [outfit_to_response(o, wore_map) for o in outfits]
+    return SuggestFeedResponse(
+        outfits=responses,
+        pool=await _suggest_pool_status(db, current_user.id, occasion),
     )
 
 

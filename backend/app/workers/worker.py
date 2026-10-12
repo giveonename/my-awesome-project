@@ -18,6 +18,7 @@ from app.workers.notifications import (
 )
 from app.workers.settings import get_redis_settings
 from app.workers.tagging import tag_item_image
+from app.workers.tryon import generate_outfit_tryon, replenish_suggest_pool
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,8 @@ class WorkerSettings:
         process_scheduled_notification,
         check_wash_reminders,
         update_learning_profiles,
+        generate_outfit_tryon,
+        replenish_suggest_pool,
     ]
 
     cron_jobs = [
