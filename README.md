@@ -6,12 +6,12 @@
 
 **魔搭幻穿**是一个 AI 智能穿搭助手微信小程序。用户拍照上传衣物，AI 自动识别并建立"电子衣橱"，随后可以：
 
-- 🤖 **AI 搭配** — 根据天气、场景、个人偏好与学习画像，一键生成多套穿搭方案
-- 🪞 **虚拟试衣** — DashScope qwen-image-3.0 生成试穿效果图（原 OutfitAnyone 已于 2026-10 下线），支持整套着装与一键换背景
+- 🤖 **AI 搭配** — 根据天气、场景、个人偏好与学习画像生成穿搭方案；试穿图在后台**预生成进图库**，翻看时**秒出、不用等**
+- 🪞 **虚拟试衣** — DashScope qwen-image-3.0 生成试穿效果图（原 OutfitAnyone 已于 2026-10 下线），支持整套着装与一键换背景；试穿结果自动进图库、完成后推应用内通知
 - 💬 **AI 造型师** — 多轮对话式穿搭咨询，推荐结果直接生成可交互的搭配卡片
-- 🛍️ **搭配灵感** — 基于衣橱缺口或单件衣物智能生成搜索词，推荐淘宝商品
+- 🛍️ **搭配灵感** — 按性别/身高体重/风格偏好 + 衣橱缺口生成搜索词，推荐淘宝商品（含与画像矛盾结果的过滤）
 - 🧠 **持续学习** — 点赞/反馈/穿着记录反哺学习画像，推荐越用越准
-- 📊 **衣橱洞察** — 穿搭统计、清洗提醒、风格分析
+- 📊 **衣橱洞察** — 穿搭统计、清洗提醒（自动待洗 + 手动标记/批量已洗）、单次穿着成本（CPW）、风格分析
 
 ## 技术栈
 
@@ -20,7 +20,7 @@
 | 小程序 | Taro 4.2 + React 18 + TypeScript + SCSS |
 | 后端 | FastAPI + SQLAlchemy (async) + Pydantic v2 + Python ≥3.11 |
 | 数据库 | PostgreSQL 15 + Redis 7 |
-| 后台任务 | arq（AI 识别、通知推送、学习画像更新） |
+| 后台任务 | arq（AI 识别、试穿图生成/图库补货、通知推送、学习画像更新） |
 | AI 能力 | DeepSeek（文本/视觉理解）· DashScope qwen-image-3.0（虚拟试衣，原 OutfitAnyone 已于 2026-10 下线）· 阿里云视觉智能（图像分割） |
 | 天气 | 和风天气 v7（国内优先）→ Open-Meteo（fallback）→ Redis 缓存降级 |
 | 电商 | 淘宝联盟 API（未配置 Key 时自动 Mock） |
@@ -86,7 +86,7 @@ curl http://localhost:8000/api/v1/health   # {"status":"healthy"}
 ```bash
 cd wechat-mini
 npm install
-npm run build:weapp     # 产物在 dist/，微信开发者工具导入 dist 目录
+npm run build:weapp     # 产物在 dist/；微信开发者工具打开 wechat-mini/（miniprogramRoot 已指向 dist/）
 ```
 
 - `src/env.ts` 由 `get-local-ip.cjs` 在构建前自动生成（局域网 API 地址），真机预览需保证手机与后端同一局域网；生产构建需改为公网 HTTPS 域名（微信要求）。
