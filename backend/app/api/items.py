@@ -9,12 +9,15 @@ from zoneinfo import ZoneInfo
 from arq import create_pool
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
+from app.models.item import ClothingItem
 from app.models.user import User
 from app.schemas.item import (
+    DEFAULT_WASH_INTERVALS,
     ArchiveRequest,
     BulkAnalyzeRequest,
     BulkAnalyzeResponse,
@@ -533,6 +536,121 @@ async def get_color_distribution(
 ) -> list[dict]:
     item_service = ItemService(db)
     return await item_service.get_color_distribution(current_user.id)
+
+
+@router.get("/stats")
+async def get_item_stats(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """衣橱角标统计（全部/收藏/待洗）——不随分页变化，和列表同口径（不含已归档）"""
+    base = [
+        ClothingItem.user_id == current_user.id,
+        ClothingItem.is_archived.is_(False),
+    ]
+    total = (
+        await db.execute(select(func.count()).select_from(ClothingItem).where(*base))
+    ).scalar() or 0
+    favorites = (
+        await db.execute(
+            select(func.count())
+            .select_from(ClothingItem)
+            .where(*base, ClothingItem.favorite.is_(True))
+        )
+    ).scalar() or 0
+    needs_wash = (
+        await db.execute(
+            select(func.count())
+            .select_from(ClothingItem)
+            .where(*base, ClothingItem.needs_wash.is_(True))
+        )
+    ).scalar() or 0
+    return {"total": int(total), "favorites": int(favorites), "needs_wash": int(needs_wash)}
+
+
+class BulkNeedsWashRequest(BaseModel):
+    item_ids: list[UUID]
+    needs_wash: bool
+
+
+class BulkWashRequest(BaseModel):
+    item_ids: list[UUID] = []
+    all_needs_wash: bool = False
+
+
+@router.post("/bulk/needs-wash")
+async def bulk_set_needs_wash(
+    request: BulkNeedsWashRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """手动标记/取消「待洗」。
+
+    标记时会把「距上次清洗的穿着次数」补到当前周期，否则下一次穿着会被自动规则清掉；
+    取消时视同已洗（次数清零）。
+    """
+    if not request.item_ids:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "请选择衣物")
+
+    result = await db.execute(
+        select(ClothingItem).where(
+            ClothingItem.id.in_(request.item_ids),
+            ClothingItem.user_id == current_user.id,
+        )
+    )
+    items = list(result.scalars().all())
+    for item in items:
+        if request.needs_wash:
+            interval = (
+                item.wash_interval
+                if item.wash_interval is not None
+                else DEFAULT_WASH_INTERVALS.get(item.type, 3)
+            )
+            item.needs_wash = True
+            item.wears_since_wash = max(item.wears_since_wash or 0, interval)
+        else:
+            item.needs_wash = False
+            item.wears_since_wash = 0
+    await db.commit()
+    return {"updated": len(items)}
+
+
+@router.post("/bulk/wash")
+async def bulk_log_wash(
+    request: BulkWashRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> dict:
+    """批量记录清洗；all_needs_wash=true 时清洗该用户的全部待洗衣物"""
+    if request.all_needs_wash:
+        result = await db.execute(
+            select(ClothingItem).where(
+                ClothingItem.user_id == current_user.id,
+                ClothingItem.needs_wash.is_(True),
+            )
+        )
+    elif request.item_ids:
+        result = await db.execute(
+            select(ClothingItem).where(
+                ClothingItem.id.in_(request.item_ids),
+                ClothingItem.user_id == current_user.id,
+            )
+        )
+    else:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "请选择衣物或指定清洗全部待洗")
+
+    items = list(result.scalars().all())
+    try:
+        user_tz = ZoneInfo(current_user.timezone or "UTC")
+    except Exception:  # noqa: BLE001
+        user_tz = ZoneInfo("UTC")
+    today = datetime.now(UTC).astimezone(user_tz).date()
+
+    service = ItemService(db)
+    for item in items:
+        await service.log_wash(item=item, washed_at=today)
+    await db.commit()
+    return {"washed": len(items)}
 
 
 @router.get("/{item_id}", response_model=ItemResponse)

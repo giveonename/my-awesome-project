@@ -69,6 +69,7 @@ class PreferenceService:
             elif field in (
                 "color_favorites",
                 "color_avoid",
+                "style_identity",
                 "excluded_item_ids",
                 "excluded_combinations",
             ):

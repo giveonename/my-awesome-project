@@ -11,6 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.body_profile import BodyProfile
 from app.models.item import ClothingItem
 from app.models.user import User
 from app.models.preference import UserPreference
@@ -53,6 +54,7 @@ class ProductRecommendResponse(BaseModel):
     page: int
     has_more: bool
     keyword_used: str = ""
+    reason: str = ""
 
 
 class CompleteOutfitRequest(BaseModel):
@@ -137,6 +139,11 @@ STYLE_LABELS: dict[str, str] = {
     "mature": "知性",
     "preppy": "学院",
     "bohemian": "波西米亚",
+    # 前端「风格偏好」的标签 key 里还有这几个，缺了会被静默忽略
+    "office": "通勤",
+    "artistic": "文艺",
+    "streetwear": "潮流",
+    "bold": "大胆",
 }
 
 COLOR_LABELS: dict[str, str] = {
@@ -214,6 +221,149 @@ async def _get_user_profile(db: AsyncSession, user_id) -> tuple:
     )
     learning = learning_result.scalar_one_or_none()
     return pref, learning
+
+
+# 体型词表是女装语境（模板遗留），只对女性用户生效；男性用户用身高/体重推导
+_BODY_TYPE_HINTS = {
+    "hourglass": "修身",
+    "pear": "A字",
+    "apple": "高腰",
+    "rectangle": "直筒",
+    "inverted-triangle": "落肩",
+}
+
+# 结果质量闸门：与画像矛盾的品类/人群直接剔除
+_ALWAYS_BLOCK = (
+    "童装", "儿童", "宝宝", "婴儿", "幼儿", "中大童", "亲子装",
+    "中老年", "老年装", "老人", "妈妈装",
+)
+_FEMALE_MARKERS = (
+    "女装", "女士", "女款", "女式", "女生", "连衣裙", "半身裙",
+    "文胸", "内衣", "丝袜", "高跟鞋", "孕妇装",
+)
+_MALE_MARKERS = ("男装", "男士", "男款", "男式", "男生", "爸爸装")
+_NEUTRAL_MARKERS = ("中性", "情侣", "男女", "同款", "通用")
+
+# 版型翻译：身高 → 长度偏好，BMI → 松紧偏好
+_FIT_HINT_CAP = 2
+
+
+def _fit_hints(
+    height_cm: float | None, weight_kg: float | None, body_type: str | None, gender: str | None
+) -> list[str]:
+    """身高/体重/体型 → 商品搜索的版型限定词（最多 2 个）。"""
+    hints: list[str] = []
+    if height_cm:
+        if height_cm >= 178:
+            hints.append("加长")
+        elif height_cm <= 165:
+            hints.append("九分")
+    if height_cm and weight_kg:
+        bmi = weight_kg / ((height_cm / 100) ** 2)
+        if bmi < 18.5:
+            hints.append("修身")
+        elif bmi >= 24:
+            hints.append("宽松")
+    if (gender or "").lower().startswith("f") and body_type:
+        hint = _BODY_TYPE_HINTS.get(body_type)
+        if hint:
+            hints.append(hint)
+    return hints[:_FIT_HINT_CAP]
+
+
+async def _load_fit_context(db: AsyncSession, user_id) -> tuple[list[str], str | None]:
+    """从身材数据推导版型限定词；返回 (hints, gender)。"""
+    profile = (
+        await db.execute(select(BodyProfile).where(BodyProfile.user_id == user_id))
+    ).scalar_one_or_none()
+    pref = (
+        await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
+    ).scalar_one_or_none()
+    gender = pref.gender if pref else None
+
+    hints: list[str] = []
+    if profile:
+        hints = _fit_hints(
+            profile.height_cm, profile.weight_kg, profile.body_type, gender
+        )
+    return hints, gender
+
+
+async def _personalize_keyword(
+    db: AsyncSession, user_id, keyword: str, reason: str
+) -> tuple[str, str, str | None]:
+    """把性别前缀 + 版型限定词接进搜索词，并把适配说明写进推荐理由。"""
+    hints, gender = await _load_fit_context(db, user_id)
+    parts: list[str] = []
+    keyword = keyword or ""
+    if gender:
+        g = gender.lower()
+        has_gender_word = any(
+            k in keyword for k in ("男", "女", "中性", "情侣", "男女")
+        )
+        if not has_gender_word:
+            parts.append("男士" if g.startswith("m") else "女士")
+    parts.extend(hints)
+    if parts:
+        joined = " ".join(parts)
+        keyword = f"{keyword} {joined}".strip()
+        note = f"关键词适配「{joined}」"
+        reason = f"{reason} · {note}" if reason else note
+    return keyword, reason, gender
+
+
+def _profile_product_ok(title: str, category: str, gender: str | None) -> bool:
+    """标题/类目是否与用户画像矛盾。"""
+    text = f"{title} {category}".lower()
+    if any(k in text for k in _ALWAYS_BLOCK):
+        return False
+    if not gender:
+        return True
+    has_neutral = any(k in text for k in _NEUTRAL_MARKERS)
+    if gender.lower().startswith("m"):
+        if has_neutral or any(k in text for k in _MALE_MARKERS):
+            return True
+        return not any(k in text for k in _FEMALE_MARKERS)
+    if gender.lower().startswith("f"):
+        if has_neutral or any(k in text for k in _FEMALE_MARKERS):
+            return True
+        return not any(k in text for k in _MALE_MARKERS)
+    return True
+
+
+def _apply_profile_gate(products: list, gender: str | None) -> list:
+    """剔除与画像矛盾的商品。
+
+    严格过滤后数量过少时，先用"没有性别标记"的中性商品补位，
+    最后才退到"只剔童装/中老年"的软过滤——避免把明确矛盾的商品又放回来。
+    """
+    if not gender or not products:
+        return products
+
+    def text_of(p) -> str:
+        return f"{p.title or ''} {getattr(p, 'category_name', '') or ''}".lower()
+
+    kept = [p for p in products if _profile_product_ok(p.title or "", getattr(p, "category_name", "") or "", gender)]
+    if len(kept) >= 4 or len(products) <= 4:
+        return kept
+
+    g = gender.lower()
+    opposite = _FEMALE_MARKERS if g.startswith("m") else _MALE_MARKERS
+    unknown = [
+        p
+        for p in products
+        if p not in kept
+        and not any(k in text_of(p) for k in opposite)
+        and not any(k in text_of(p) for k in _ALWAYS_BLOCK)
+    ]
+    combined = kept + unknown
+    if len(combined) >= 3:
+        logger.info("Profile gate: kept %d strict + %d neutral", len(kept), len(unknown))
+        return combined
+
+    soft = [p for p in products if not any(k in text_of(p) for k in _ALWAYS_BLOCK)]
+    logger.info("Profile gate relaxed: %d strict -> %d soft", len(kept), len(soft))
+    return soft or products
 
 
 def _get_user_style(pref, learning) -> str:
@@ -958,8 +1108,8 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
     if strategy:
         return strategy["keyword"], strategy["reason"], strategy["category"]
 
-    # Fallback: Xiaohongshu-trending keywords for women — varied, safe, high-conversion
-    _SAFE_KEYWORDS = [
+    # Fallback: trending keywords — 按性别选词表（旧版只有女装词表，男性用户会搜出一堆女装）
+    _SAFE_KEYWORDS_FEMALE = [
         ("韩系 针织衫 显瘦 百搭", "温柔韩系上衣", ""),
         ("法式 碎花裙 氛围感 显瘦", "法式连衣裙", ""),
         ("阔腿裤 高腰 显腿长 百搭", "显瘦百搭下装", ""),
@@ -976,7 +1126,26 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
         ("鲨鱼裤 外穿 显瘦 收腹", "百搭鲨鱼裤", ""),
         ("帆布包 文艺 百搭 通勤", "文艺帆布包", ""),
     ]
-    kw, reason, cat = random.choice(_SAFE_KEYWORDS)
+    _SAFE_KEYWORDS_MALE = [
+        ("男士 休闲外套 春秋 百搭", "男士休闲外套", ""),
+        ("男士 直筒牛仔裤 复古 百搭", "男士牛仔裤", ""),
+        ("男士 针织衫 简约 内搭", "男士针织衫", ""),
+        ("男士 衬衫 免烫 通勤", "男士通勤衬衫", ""),
+        ("男士 卫衣 宽松 潮流", "男士卫衣", ""),
+        ("男士 运动鞋 轻便 百搭", "男士运动鞋", ""),
+        ("男士 工装裤 直筒 宽松", "男士工装裤", ""),
+        ("男士 夹克 休闲 百搭", "男士夹克", ""),
+        ("男士 西装外套 商务 修身", "男士西装外套", ""),
+        ("男士 双肩包 通勤 大容量", "男士双肩包", ""),
+        ("男士 polo衫 商务 简约", "男士polo衫", ""),
+        ("男士 直筒休闲裤 显腿长", "男士休闲裤", ""),
+        ("男士 毛衣 圆领 基础款", "男士毛衣", ""),
+        ("男士 羽绒服 冬季 保暖", "男士羽绒服", ""),
+        ("男士 板鞋 百搭 舒适", "男士板鞋", ""),
+    ]
+    is_male = (gender or "").lower().startswith("m")
+    pool = _SAFE_KEYWORDS_MALE if is_male else _SAFE_KEYWORDS_FEMALE
+    kw, reason, cat = random.choice(pool)
     return kw, reason, cat
 
 
@@ -1022,6 +1191,7 @@ async def recommend_products(
     gap = None
     keyword_used = keyword
     target_cat = gap_category or ''
+    reason = ""
 
     # If explicit keyword provided, use it directly (backward compatible)
     if keyword:
@@ -1036,6 +1206,7 @@ async def recommend_products(
                     count=0,
                     keyword=keyword,
                 )
+        reason = f"搜索「{keyword}」"
     else:
         # Use smart keyword generation
         parsed_item_id = None
@@ -1072,6 +1243,12 @@ async def recommend_products(
                     keyword=keyword,
                 )
 
+    # 画像个性化：身材/体型推导的版型限定词接进搜索词与推荐理由
+    keyword, reason, user_gender = await _personalize_keyword(
+        db, current_user.id, keyword, reason
+    )
+    keyword_used = keyword
+
     products = await search_products(keyword=keyword, page=page, page_size=page_size * 2)
 
     # Dedup: remove products too similar to what user already owns
@@ -1106,6 +1283,9 @@ async def recommend_products(
         products = filtered[:page_size]
     else:
         products = products[:page_size]
+
+    # 质量闸门：剔除与画像矛盾的商品（性别/童装/中老年等）
+    products = _apply_profile_gate(products, user_gender)
 
     # Per-product related_items
     # If recommending based on a specific item, always show that item as related
@@ -1166,6 +1346,7 @@ async def recommend_products(
         page=page,
         has_more=len(products) >= page_size,
         keyword_used=keyword_used,
+        reason=reason,
     )
 
 
@@ -1250,6 +1431,7 @@ async def complete_outfit(
         })
 
     # 6. Search for products in each missing category
+    _, user_gender = await _load_fit_context(db, current_user.id)
     groups = []
     all_keywords = []
     for cat in missing_cats:
@@ -1275,14 +1457,22 @@ async def complete_outfit(
                 formality = "casual"
                 break
 
-        _CAT_KEYWORDS = {
+        _CAT_KEYWORDS_FEMALE = {
             "shoes": {"formal": "高跟鞋", "elegant": "玛丽珍鞋", "casual": "运动鞋", "default": "单鞋"},
             "accessories": {"formal": "手提包", "elegant": "斜挎包", "casual": "帆布包", "default": "女包"},
             "outerwear": {"formal": "西装外套", "elegant": "针织开衫", "casual": "夹克", "default": "薄外套"},
             "top": {"formal": "衬衫", "elegant": "针织衫", "casual": "T恤", "default": "上衣"},
             "bottom": {"formal": "西裤", "elegant": "阔腿裤", "casual": "牛仔裤", "default": "裤子"},
         }
-        specific_kw = _CAT_KEYWORDS.get(cat, {}).get(formality, cat_info.get("keywords", ["服装"])[0])
+        _CAT_KEYWORDS_MALE = {
+            "shoes": {"formal": "皮鞋", "elegant": "乐福鞋", "casual": "运动鞋", "default": "男鞋"},
+            "accessories": {"formal": "公文包", "elegant": "单肩包", "casual": "双肩包", "default": "男包"},
+            "outerwear": {"formal": "西装外套", "elegant": "风衣", "casual": "夹克", "default": "男士外套"},
+            "top": {"formal": "衬衫", "elegant": "针织衫", "casual": "T恤", "default": "男士上衣"},
+            "bottom": {"formal": "西裤", "elegant": "直筒裤", "casual": "牛仔裤", "default": "休闲裤"},
+        }
+        _cat_kw = _CAT_KEYWORDS_MALE if (user_gender or "").lower().startswith("m") else _CAT_KEYWORDS_FEMALE
+        specific_kw = _cat_kw.get(cat, {}).get(formality, cat_info.get("keywords", ["服装"])[0])
 
         parts = [p for p in [dominant_style, color_part, specific_kw] if p]
         keyword = " ".join(parts)
@@ -1301,6 +1491,9 @@ async def complete_outfit(
         if len(filtered) < 2:
             filtered = products[:6]
         products = filtered[:6]
+
+        # 质量闸门：剔除与画像矛盾的商品
+        products = _apply_profile_gate(products, user_gender)
 
         # Build related items (the selected items)
         related = []

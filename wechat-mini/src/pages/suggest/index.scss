@@ -141,9 +141,16 @@
 
 .suggest-col {
   flex: 1;
+  // 关键：weapp <image> 组件默认固有宽度 640rpx，会让 min-width:auto 的列拒绝收缩
+  // （两列被撑成一宽一窄、第二张卡被挤出屏幕）；置 0 后两列严格各占一半
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
+}
+
+.suggest-solo {
+  padding: 0 $spacing-xs;
 }
 
 // ===================== Skeleton Cards =====================
@@ -453,20 +460,6 @@
 
 // ===== Wardrobe Toggle =====
 
-.suggest-wardrobe-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 4rpx $spacing-lg 12rpx;
-  padding: 10rpx 0;
-}
-
-.suggest-wardrobe-toggle-text {
-  font-size: 24rpx;
-  color: $color-primary;
-  font-weight: 500;
-}
-
 // ===== Wardrobe Panel =====
 
 .suggest-wardrobe-panel {
@@ -575,20 +568,6 @@
   padding: 6rpx 16rpx;
   background: #FFFFFF;
   border-radius: $radius-pill;
-}
-
-.suggest-keyword-banner {
-  display: flex;
-  align-items: center;
-  padding: $spacing-sm $spacing-md;
-  margin: 0 $spacing-xs $spacing-xs;
-  background: $color-gray-50;
-  border-radius: $radius-md;
-}
-
-.suggest-keyword-text {
-  font-size: $font-body-small-size;
-  color: $color-gray-600;
 }
 
 // ===== Product Grid =====
@@ -1319,4 +1298,30 @@
 .mine-no-more-text {
   @include text-tag;
   color: $text-tertiary;
+}
+
+// ===== 推荐理由（为什么推给你） =====
+
+.suggest-reason-line {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  margin: 0 $spacing-xs $spacing-xs;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+}
+
+.suggest-reason-text {
+  font-size: $font-body-small-size;
+  color: $color-gray-600;
+  @include ellipsis(2);
+}
+
+// 「从我的衣物出发」入口：与缺口 chips 同排
+.suggest-gap-chip--entry {
+  border-style: dashed;
+  border-color: $color-primary-100;
+  color: $color-primary;
+
+  .suggest-gap-chip-label { color: $color-primary; }
 }

@@ -3,7 +3,13 @@
 @import '../../styles/animations.scss';
 
 .wardrobe-page {
-  min-height: 100vh;
+  // 固定为视口高度的纵向 flex：顶部区块自然高度 + 内部滚动区占满剩余空间。
+  // 原写法（顶层 min-height:100vh + 滚动区 calc(100vh - 200rpx)）会让整页比
+  // 屏幕高约 284rpx、页面自身可滚动，返回本页时顶部区块常被 WebView 留白不重绘。
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: $bg-page-default;
 }
 
@@ -57,37 +63,11 @@
   color: $text-secondary;
 }
 
-.wardrobe-toolbar-new-badge {
-  background: $tag-badge-red;
-  border-radius: $radius-sm;
-  padding: 2rpx 8rpx;
-}
-
-.wardrobe-toolbar-new-text {
-  font-size: 16rpx;
-  color: #fff;
-  font-weight: 600;
-}
-
-.wardrobe-toolbar-sort {
-  padding: 8rpx 16rpx;
-  border-radius: $radius-pill;
-  background: #F8F7FF;
-
-  &:active {
-    background: #EDE8FF;
-  }
-}
-
-.wardrobe-toolbar-sort-text {
-  @include text-caption;
-  color: $color-primary;
-}
-
 // ===================== Scroll =====================
 
 .wardrobe-scroll {
-  height: calc(100vh - 200rpx);
+  flex: 1;
+  min-height: 0;
 }
 
 // ===================== Group =====================
@@ -317,8 +297,13 @@
 .sort-popup {
   @include popup-base;
   width: 100%;
-  padding: $spacing-lg $spacing-lg 48rpx;
-  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  // 自定义 Tab 栏（z-index 9999、100rpx + 安全区）由框架渲染在页面之上，
+  // 无法被弹窗盖住 —— 底部必须给它留出高度，否则最后一项被挡住
+  padding: $spacing-lg $spacing-lg 140rpx;
+  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+  // 小屏兜底：内容超高时弹窗内部可滚动
+  max-height: calc(100vh - 200rpx);
+  overflow-y: auto;
 }
 
 .sort-popup-handle {
@@ -819,6 +804,21 @@
   flex-direction: column;
   align-items: center;
   gap: 4rpx;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-sm;
+  transition: background 150ms ease;
+
+  &:active { background: $color-gray-100; }
+
+  /* 当前筛选：数字与文案一起高亮 */
+  &--active {
+    background: $color-primary-50;
+
+    .wardrobe-stat-label {
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
 }
 
 .wardrobe-stat-value {
@@ -846,4 +846,22 @@
 @keyframes wardrobeContentFade {
   from { opacity: 0; transform: translateY(8rpx); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+// ===== 待洗筛选下的一键清洗 =====
+
+.wardrobe-wash-all {
+  margin: $spacing-sm $spacing-md 0;
+  padding: 14rpx 0;
+  border-radius: $radius-pill;
+  background: $color-primary-50;
+  @include flex-center;
+
+  &:active { opacity: 0.85; }
+}
+
+.wardrobe-wash-all-text {
+  font-size: 24rpx;
+  color: $color-primary;
+  font-weight: 600;
 }

@@ -20,7 +20,9 @@ _TTL = 7 * 24 * 3600
 _MAX = 20
 
 
-async def push_notice(user_id, kind: str, title: str, target: str = "") -> None:
+async def push_notice(
+    user_id, kind: str, title: str, target: str = "", extra: dict | None = None
+) -> None:
     """Append an unread notice for the user (newest first)."""
     try:
         redis = await get_redis()
@@ -31,6 +33,8 @@ async def push_notice(user_id, kind: str, title: str, target: str = "") -> None:
             "target": target,
             "ts": int(time.time()),
         }
+        if extra:
+            notice.update(extra)
         key = _KEY.format(user_id=user_id)
         await redis.lpush(key, json.dumps(notice, ensure_ascii=False))
         await redis.ltrim(key, 0, _MAX - 1)

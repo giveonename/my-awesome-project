@@ -15,16 +15,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
-from app.models.body_profile import BodyProfile
 from app.models.outfit import Outfit, OutfitItem
 from app.models.user import User
 from app.services.inapp_notice_service import push_notice
-from app.services.suggest_pool import clear_replenishing, ready_count
+from app.services.suggest_pool import (
+    clear_replenishing,
+    image_fingerprint,
+    ready_count,
+    resolve_person_ref,
+    stamp_person,
+)
 from app.services.virtual_tryon_service import (
-    DEFAULT_PERSON_URL,
     resolve_tryon_inputs,
     virtual_tryon,
 )
+from app.utils.signed_urls import bare_image_path
 from app.workers.db import get_db_session
 
 logger = logging.getLogger(__name__)
@@ -46,14 +51,6 @@ def _items_payload(outfit: Outfit) -> list[dict]:
     ]
 
 
-async def _person_ref(db, user_id) -> str:
-    result = await db.execute(select(BodyProfile).where(BodyProfile.user_id == user_id))
-    profile = result.scalar_one_or_none()
-    if profile and profile.full_body_photo_url:
-        return profile.full_body_photo_url
-    return DEFAULT_PERSON_URL
-
-
 async def generate_outfit_tryon(ctx: dict, outfit_id: str, user_id: str) -> dict:
     """Generate a single outfit's try-on image (serialized)."""
     db = get_db_session(ctx)
@@ -72,7 +69,8 @@ async def generate_outfit_tryon(ctx: dict, outfit_id: str, user_id: str) -> dict
         refs, descs, is_outfit = resolve_tryon_inputs(_items_payload(outfit))
         if not refs:
             return {"status": "error", "error": "no usable garment refs"}
-        person_ref = await _person_ref(db, outfit.user_id)
+        person_ref = await resolve_person_ref(db, outfit.user_id)
+        person_fp = await asyncio.to_thread(image_fingerprint, person_ref)
 
         async with _GENERATION_SEMAPHORE:
             tryon = await virtual_tryon(
@@ -86,8 +84,9 @@ async def generate_outfit_tryon(ctx: dict, outfit_id: str, user_id: str) -> dict
             logger.error("Try-on failed for outfit %s: %s", outfit_id, tryon.error)
             return {"status": "error", "error": tryon.error}
 
-        outfit.model_image_url = tryon.image_url
+        outfit.model_image_url = bare_image_path(tryon.image_url)
         await db.commit()
+        await stamp_person(outfit.user_id, [str(outfit.id)], person_fp)
         logger.info("Try-on image generated for outfit %s", outfit_id)
         return {"status": "success"}
     except Exception as e:  # noqa: BLE001
@@ -156,8 +155,10 @@ async def replenish_suggest_pool(ctx: dict, user_id: str, occasion: str | None =
 
         await db.commit()
 
-        person_ref = await _person_ref(db, uid)
+        person_ref = await resolve_person_ref(db, uid)
+        person_fp = await asyncio.to_thread(image_fingerprint, person_ref)
         generated = 0
+        generated_ids: list[str] = []
         for outfit, refs, descs, is_outfit in prepared:
             try:
                 async with _GENERATION_SEMAPHORE:
@@ -169,13 +170,16 @@ async def replenish_suggest_pool(ctx: dict, user_id: str, occasion: str | None =
                         user_id=uid,
                     )
                 if tryon.success:
-                    outfit.model_image_url = tryon.image_url
+                    outfit.model_image_url = bare_image_path(tryon.image_url)
                     await db.commit()
+                    generated_ids.append(str(outfit.id))
                     generated += 1
                 else:
                     logger.warning("Pool try-on failed for outfit %s: %s", outfit.id, tryon.error)
             except Exception as e:  # noqa: BLE001
                 logger.error("Pool try-on error for outfit %s: %s", outfit.id, e)
+
+        await stamp_person(uid, generated_ids, person_fp)
 
         if generated > 0:
             await push_notice(

@@ -242,20 +242,20 @@ export default function OutfitDetailPage() {
 
       {/* Action Buttons */}
       <View className='od-actions'>
-        {/* Edit and Delete for manual outfits */}
-        {outfit.source === 'manual' && (
-          <View className='od-action-row'>
+        {/* 编辑只对 DIY 搭配有意义；分享/删除对所有搭配开放（AI 搭配也要能删出图库） */}
+        <View className='od-action-row'>
+          {outfit.source === 'manual' && (
             <View className='od-action-btn od-action-btn--secondary' onClick={handleEdit}>
               <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['edit']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>编辑</Text></View>
             </View>
-            <View className='od-action-btn od-action-btn--secondary' onClick={handleShare}>
-              <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['share']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>分享</Text></View>
-            </View>
-            <View className='od-action-btn od-action-btn--danger' onClick={handleDelete}>
-              <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['trash']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>删除</Text></View>
-            </View>
+          )}
+          <View className='od-action-btn od-action-btn--secondary' onClick={handleShare}>
+            <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['share']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>分享</Text></View>
           </View>
-        )}
+          <View className='od-action-btn od-action-btn--danger' onClick={handleDelete}>
+            <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['trash']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>删除</Text></View>
+          </View>
+        </View>
         <View className={`od-action-btn od-action-btn--primary ${wearing ? 'od-action-btn--disabled' : ''}`} onClick={handleWear}>
           <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['thumbs-up']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='od-action-btn-text'>{wearing ? '记录中...' : '今天穿这套'}</Text></View>
         </View>

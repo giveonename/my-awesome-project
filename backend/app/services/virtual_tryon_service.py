@@ -26,6 +26,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 from app.config import get_settings
+from app.utils.signed_urls import bare_image_path
 
 logger = logging.getLogger(__name__)
 
@@ -191,11 +192,7 @@ def _load_image_bytes(ref: str) -> bytes | None:
             logger.warning("Failed to download image ref %s: %s", ref[:80], e)
         return None
 
-    path = ref
-    if path.startswith("/api/v1/images/"):
-        path = path[len("/api/v1/images/"):]
-    path = path.split("?")[0]
-    full = storage / path
+    full = storage / bare_image_path(ref)
     if full.exists():
         return full.read_bytes()
     logger.warning("Image file not found: %s", full)

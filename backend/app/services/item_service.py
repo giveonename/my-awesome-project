@@ -102,7 +102,11 @@ class ItemService:
             "type": ClothingItem.type,
         }
         sort_col = sort_columns.get(filters.sort_by or "", ClothingItem.created_at)
-        if filters.sort_order == "asc":
+        if filters.sort_by == "purchase_price":
+            # 穿着成本 CPW = 购买价 / 穿着次数：小者更划算，固定升序
+            cpw = ClothingItem.purchase_price / func.greatest(ClothingItem.wear_count, 1)
+            query = query.order_by(cpw.asc().nulls_last())
+        elif filters.sort_order == "asc":
             query = query.order_by(sort_col.asc().nulls_last())
         else:
             query = query.order_by(sort_col.desc().nulls_last())

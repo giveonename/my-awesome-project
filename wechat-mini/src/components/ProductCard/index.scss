@@ -16,7 +16,7 @@
 .pc-img-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  height: 300rpx; /* 固定高度统一卡片比例（aspect-ratio 在部分 webview 不生效） */
   overflow: hidden;
   background: $color-gray-50;
 }
@@ -28,12 +28,10 @@
 
 // Related wardrobe items overlay (bottom-left)
 .pc-related {
-  position: absolute;
-  bottom: 8rpx;
-  left: 8rpx;
   display: flex;
-  align-items: flex-end;
-  gap: 4rpx;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 6rpx;
 }
 
 .pc-related-item {

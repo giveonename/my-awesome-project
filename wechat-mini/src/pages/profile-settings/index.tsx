@@ -103,10 +103,11 @@ const OCCASION_OPTIONS = [
   { key: 'sport', label: '运动' },
 ]
 
+// key 必须与后端校验（^(low|normal|high)$）一致，否则整个保存会被 422 拒绝
 const TEMP_SENSITIVITY = [
-  { key: 'cold', label: '怕冷' },
+  { key: 'low', label: '怕冷' },
   { key: 'normal', label: '正常' },
-  { key: 'hot', label: '怕热' },
+  { key: 'high', label: '怕热' },
 ]
 
 const VARIETY_LEVELS = [
@@ -170,10 +171,11 @@ export default function ProfileSettingsPage() {
 
   const loadOnboarding = async () => {
     try {
-      const user = await api.get<any>('/users/me')
-      if (user.gender) setGender(user.gender)
-      if (user.age_range) setAgeRange(user.age_range)
-      if (user.profession_scene) setProfession(user.profession_scene)
+      // 基本信息存在偏好表里（原来是读 /users/me，那边没有这些字段，导致回显永远空白）
+      const prefs = await api.get<any>('/users/me/preferences')
+      if (prefs.gender) setGender(prefs.gender)
+      if (prefs.age_range) setAgeRange(prefs.age_range)
+      if (prefs.profession_scene) setProfession(prefs.profession_scene)
     } catch {}
   }
 
@@ -215,10 +217,14 @@ export default function ProfileSettingsPage() {
   const saveBasic = async () => {
     setSaving(true)
     try {
-      await api.post('/chat/onboarding', {
-        step: 1,
-        data: { gender, age_range: ageRange, profession_scene: profession },
-      })
+      // 只提交填了的项，和「读」走同一个接口，保证保存后重新进入能看到
+      const payload: Record<string, string> = {}
+      if (gender) payload.gender = gender
+      if (ageRange) payload.age_range = ageRange
+      if (profession) payload.profession_scene = profession
+      if (Object.keys(payload).length > 0) {
+        await api.patch('/users/me/preferences', payload)
+      }
       if (skinTone) {
         const profile = await getBodyProfile()
         await updateBodyProfile({ ...(profile || {}), skin_tone: skinTone } as any)

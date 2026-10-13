@@ -57,6 +57,7 @@ export default function WardrobePage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ total: 0, favorites: 0, needsWash: 0 })
+  const [statFilter, setStatFilter] = useState<'all' | 'favorite' | 'wash'>('all')
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set())
@@ -65,6 +66,9 @@ export default function WardrobePage() {
   const [sortMode, setSortMode] = useState<'default' | 'wear_count' | 'purchase_price' | 'created_at'>('default')
   const [closetTab, setClosetTab] = useState<'wardrobe' | 'tryon'>('wardrobe')
   const [contentKey, setContentKey] = useState(0)
+  // 从详情页返回时，WeChat WebView 偶发不重绘顶部区块（白块，手动下滑才恢复）：
+  // 变更这个 key 让顶部区块重新挂载，强制重绘
+  const [chromeKey, setChromeKey] = useState(0)
   const [tryOnVisible, setTryOnVisible] = useState(false)
   const [tryOnItemIds, setTryOnItemIds] = useState<string[]>([])
   const [tryOnItemNames, setTryOnItemNames] = useState<string[]>([])
@@ -78,12 +82,13 @@ export default function WardrobePage() {
 
   useDidShow(() => {
     loadItems(true)
+    setChromeKey(prev => prev + 1)
   })
 
   useEffect(() => {
     loadItems(true)
     setContentKey(prev => prev + 1)
-  }, [closetTab, sortMode])
+  }, [closetTab, sortMode, statFilter])
 
   const handleTryOnSingle = useCallback((itemId: string, itemName: string) => {
     setTryOnItemIds([itemId])
@@ -142,6 +147,13 @@ export default function WardrobePage() {
     }
   }, [items, selectedItems.size])
 
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await api.get<{ total: number; favorites: number; needs_wash: number }>('/items/stats')
+      setStats({ total: data.total || 0, favorites: data.favorites || 0, needsWash: data.needs_wash || 0 })
+    } catch (err) { console.error('Load stats failed:', err) }
+  }, [])
+
   const loadItems = async (reset: boolean = true) => {
     if (reset) {
       setLoading(true)
@@ -167,6 +179,12 @@ export default function WardrobePage() {
         params.tryon_ready = 'true'
       }
 
+      // 顶部统计筛选：收藏 / 待洗（仅电子衣橱）
+      if (closetTab === 'wardrobe') {
+        if (statFilter === 'favorite') params.favorite = 'true'
+        if (statFilter === 'wash') params.needs_wash = 'true'
+      }
+
       // Sorting
       if (sortMode !== 'default') {
         params.sort_by = sortMode
@@ -179,9 +197,8 @@ export default function WardrobePage() {
       if (reset) {
         setItems(fetchedItems)
         // Calculate stats from all items
-        const favCount = fetchedItems.filter(i => (i as any).favorite).length
-        const washCount = fetchedItems.filter(i => (i as any).needs_wash).length
-        setStats({ total: data.total || 0, favorites: favCount, needsWash: washCount })
+        setTotal(data.total || 0)
+        loadStats()
       } else {
         setItems(prev => {
           const existingIds = new Set(prev.map(i => i.id))
@@ -227,6 +244,39 @@ export default function WardrobePage() {
       setDeleting(false)
     }
   }, [selectedItems, loadItems])
+
+  // 批量标记已洗（管理模式）
+  const handleBatchWash = useCallback(async () => {
+    if (selectedItems.size === 0) return
+    try {
+      const res = await api.post<{ washed: number }>('/items/bulk/wash', {
+        item_ids: Array.from(selectedItems),
+      })
+      Taro.showToast({ title: `已标记 ${res?.washed ?? selectedItems.size} 件已洗`, icon: 'success', duration: 1200 })
+      setSelectedItems(new Set())
+      loadItems(true)
+      loadStats()
+    } catch (e) {
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }, [selectedItems, loadItems, loadStats])
+
+  // 待洗筛选下：一键把全部待洗衣物标记已洗
+  const handleWashAll = useCallback(async () => {
+    const { confirm } = await Taro.showModal({
+      title: '全部标记已洗',
+      content: '把所有待洗衣物都记为已洗？',
+    })
+    if (!confirm) return
+    try {
+      const res = await api.post<{ washed: number }>('/items/bulk/wash', { all_needs_wash: true })
+      Taro.showToast({ title: `已标记 ${res?.washed ?? 0} 件已洗`, icon: 'success', duration: 1200 })
+      loadItems(true)
+      loadStats()
+    } catch (e) {
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    }
+  }, [loadItems, loadStats])
 
   const handleAddItem = async () => {
     const sceneType = closetTab === 'tryon' ? 'outfit' : 'flat'
@@ -284,9 +334,20 @@ export default function WardrobePage() {
         break
       case 'wash':
         try {
-          await api.post(`/items/${itemId}/log-wash`, { washed_at: new Date().toISOString().slice(0, 10) })
+          // 接口路径是 /items/{id}/wash（原写成 /log-wash 会 404 → 提示操作失败）
+          await api.post(`/items/${itemId}/wash`, {})
           Taro.showToast({ title: '已记录清洗', icon: 'success', duration: 1000 })
           loadItems(true)
+          loadStats()
+        } catch (e) { Taro.showToast({ title: '操作失败', icon: 'none' }) }
+        break
+      case 'needs_wash':
+        try {
+          const cur = (currentItem as any)?.needs_wash
+          await api.post('/items/bulk/needs-wash', { item_ids: [itemId], needs_wash: !cur })
+          Taro.showToast({ title: cur ? '已取消待洗' : '已标记待洗', icon: 'success', duration: 1000 })
+          loadItems(true)
+          loadStats()
         } catch (e) { Taro.showToast({ title: '操作失败', icon: 'none' }) }
         break
       case 'delete':
@@ -423,6 +484,7 @@ export default function WardrobePage() {
 
   return (
     <View className='wardrobe-page'>
+      <View key={`wardrobe-chrome-${chromeKey}`}>
       {/* Title + Filter */}
       <View className='wardrobe-top-bar'>
         <Text className='wardrobe-title'>我的衣橱</Text>
@@ -453,20 +515,34 @@ export default function WardrobePage() {
       {/* ===== Stats Bar ===== */}
       {!loading && closetTab === 'wardrobe' && (
         <View className='wardrobe-stats'>
-          <View className='wardrobe-stat'>
+          <View
+            className={`wardrobe-stat ${statFilter === 'all' ? 'wardrobe-stat--active' : ''}`}
+            onClick={() => setStatFilter('all')}
+          >
             <Text className='wardrobe-stat-value'>{stats.total}</Text>
             <Text className='wardrobe-stat-label'>全部</Text>
           </View>
           <View className='wardrobe-stat-divider' />
-          <View className='wardrobe-stat'>
+          <View
+            className={`wardrobe-stat ${statFilter === 'favorite' ? 'wardrobe-stat--active' : ''}`}
+            onClick={() => setStatFilter('favorite')}
+          >
             <Text className='wardrobe-stat-value'>{stats.favorites}</Text>
             <Text className='wardrobe-stat-label'>收藏</Text>
           </View>
           <View className='wardrobe-stat-divider' />
-          <View className='wardrobe-stat'>
+          <View
+            className={`wardrobe-stat ${statFilter === 'wash' ? 'wardrobe-stat--active' : ''}`}
+            onClick={() => setStatFilter('wash')}
+          >
             <Text className='wardrobe-stat-value'>{stats.needsWash}</Text>
             <Text className='wardrobe-stat-label'>待洗</Text>
           </View>
+          {statFilter === 'wash' && stats.needsWash > 0 && (
+            <View className='wardrobe-wash-all' onClick={handleWashAll}>
+              <Text className='wardrobe-wash-all-text'>{`全部标记已洗（${stats.needsWash} 件）`}</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -475,18 +551,13 @@ export default function WardrobePage() {
         <View className='wardrobe-toolbar-left'>
           <View style={{display: 'flex', alignItems: 'center'}} onClick={() => Taro.navigateTo({ url: '/pages/analytics/index' })}><Image src={icons['clock']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-stats'>衣橱统计</Text></View>
           <View style={{display: 'flex', alignItems: 'center'}} onClick={() => Taro.showToast({ title: '即将开放', icon: 'none' })}><Image src={icons['settings']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-settings'>衣橱设置</Text></View>
-          <View className='wardrobe-toolbar-new-badge'>
-            <Text className='wardrobe-toolbar-new-text'>NEW</Text>
-          </View>
         </View>
         <View style='display:flex;align-items:center;gap:16rpx'>
           <View className='wardrobe-manage-btn' onClick={toggleEditMode}>
             <Text className='wardrobe-manage-btn-text'>{editMode ? '完成' : '管理'}</Text>
           </View>
-          <View className='wardrobe-toolbar-sort' onClick={() => setShowSortPopup(true)}>
-            <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['refresh-cw']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='wardrobe-toolbar-sort-text'>排序展示</Text></View>
-          </View>
         </View>
+      </View>
       </View>
 
       {/* Content */}
@@ -573,6 +644,10 @@ export default function WardrobePage() {
             <View className='ctx-menu-item' onClick={() => handleContextMenuAction('wash')}>
               <Image src={icons['droplets']} className='ctx-menu-icon' style={{width: '32rpx', height: '32rpx'}} />
               <Text className='ctx-menu-text'>记录清洗</Text>
+            </View>
+            <View className='ctx-menu-item' onClick={() => handleContextMenuAction('needs_wash')}>
+              <Image src={icons['droplets']} className='ctx-menu-icon' style={{width: '32rpx', height: '32rpx'}} />
+              <Text className='ctx-menu-text'>{(items.find(i => i.id === contextMenu.itemId) as any)?.needs_wash ? '取消待洗' : '标记待洗'}</Text>
             </View>
             <View className='ctx-menu-divider' />
             <View className='ctx-menu-item ctx-menu-item--danger' onClick={() => handleContextMenuAction('delete')}>
@@ -662,6 +737,13 @@ export default function WardrobePage() {
                   <Text className="wardrobe-action-bar-btn-text">试穿</Text>
                 </View>
               )}
+              <View
+                className={`wardrobe-action-bar-btn ${selectedItems.size === 0 ? 'wardrobe-action-bar-btn--disabled' : ''}`}
+                onClick={selectedItems.size > 0 ? handleBatchWash : undefined}
+              >
+                <Text className="wardrobe-action-bar-btn-icon"><Image src={icons['droplets']} style={{width: '36rpx', height: '36rpx'}} /></Text>
+                <Text className="wardrobe-action-bar-btn-text">标记已洗</Text>
+              </View>
               <View
                 className={`wardrobe-action-bar-btn wardrobe-action-bar-btn--danger ${selectedItems.size === 0 ? 'wardrobe-action-bar-btn--disabled' : ''}`}
                 onClick={selectedItems.size > 0 ? handleBatchDelete : undefined}

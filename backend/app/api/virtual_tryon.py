@@ -1,5 +1,6 @@
 """Virtual Try-On API endpoints (DashScope qwen-image-3.0)."""
 
+import asyncio
 import logging
 import time
 from typing import Annotated
@@ -23,6 +24,89 @@ from app.utils.auth import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/virtual-tryon", tags=["Virtual Try-On"])
+
+
+async def _keep_tryon_result(
+    user_id: UUID, task_id: str, item_ids: list[UUID], person_ref: str
+) -> None:
+    """Persist a finished interactive try-on as a pool outfit and announce it.
+
+    Deliberately NOT written into the "already shown" ledger: as the newest unseen
+    entry it sorts to the FRONT of the pool rotation, so the user meets the fresh
+    result in the very next feed. The notice carries the occasion so the suggest
+    page can line its filter up before refreshing.
+    """
+    from sqlalchemy.orm import selectinload
+
+    from app.database import async_session_maker
+    from app.models.item import ClothingItem
+    from app.models.outfit import Outfit, OutfitItem, OutfitSource
+    from app.models.user import User
+    from app.services.inapp_notice_service import push_notice
+    from app.services.suggest_pool import image_fingerprint, stamp_person
+    from app.utils.signed_urls import bare_image_path
+
+    deadline = time.time() + 60 * 60
+    task = None
+    while time.time() < deadline:
+        await asyncio.sleep(5)
+        task = await virtual_tryon_service.check_task_once(task_id)
+        if not task or task.status == "FAILED":
+            return
+        if task.status == "SUCCEEDED" and task.image_url:
+            break
+    if not task or not task.image_url:
+        return
+
+    try:
+        fingerprint = await asyncio.to_thread(image_fingerprint, person_ref)
+        async with async_session_maker() as db:
+            user = (
+                await db.execute(
+                    select(User)
+                    .where(User.id == user_id)
+                    .options(selectinload(User.preferences))
+                )
+            ).scalar_one_or_none()
+            occasion = (
+                user.preferences.default_occasion
+                if user and user.preferences and user.preferences.default_occasion
+                else "casual"
+            )
+            names = [
+                (row.name or row.type or "")
+                for row in (
+                    await db.execute(select(ClothingItem).where(ClothingItem.id.in_(item_ids)))
+                )
+                .scalars()
+                .all()
+            ]
+
+            outfit = Outfit(
+                user_id=user_id,
+                occasion=occasion,
+                source=OutfitSource.on_demand,
+                model_image_url=bare_image_path(task.image_url),
+            )
+            db.add(outfit)
+            await db.flush()
+            for position, item_id in enumerate(item_ids):
+                db.add(OutfitItem(outfit_id=outfit.id, item_id=item_id, position=position))
+            await db.commit()
+            outfit_id = str(outfit.id)
+
+        await stamp_person(user_id, [outfit_id], fingerprint)
+        title = "试穿图已生成" + (f"：{' + '.join(n for n in names[:3] if n)}" if names else "")
+        await push_notice(
+            user_id,
+            kind="tryon_ready",
+            title=title,
+            target="suggest",
+            extra={"occasion": occasion},
+        )
+        logger.info("Interactive try-on kept as pool outfit %s", outfit_id)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to keep interactive try-on result: %s", e)
 
 
 # ===== Request/Response Schemas =====
@@ -221,11 +305,18 @@ async def submit_tryon(
     if task.status == "FAILED":
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, task.error or "提交失败")
 
+    # 结果落到图库里：即使弹窗等超时/用户退出，成品也会出现在「搭配」页
+    asyncio.create_task(
+        _keep_tryon_result(
+            current_user.id, task.task_id, list(request.garment_item_ids), person_ref
+        )
+    )
+
     return TryOnSubmitResponse(
         task_id=task.task_id,
         status=task.status,
         model_used=task.model_used,
-        message="任务已提交，正在生成中（约 1-2 分钟）",
+        message="任务已提交，正在生成中（通常 1-3 分钟，繁忙时更久）",
     )
 
 
@@ -301,13 +392,17 @@ async def upload_body_photo(
         from app.utils.signed_urls import sign_image_url
         public_url = sign_image_url(paths["image_path"])
 
+    # Persist the bare storage path; responses re-sign fresh (see signed_urls).
+    from app.utils.signed_urls import bare_image_path
+    stored_url = bare_image_path(public_url)
+
     # Upsert body profile
     result = await db.execute(select(BodyProfile).where(BodyProfile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
     if profile:
-        profile.full_body_photo_url = public_url
+        profile.full_body_photo_url = stored_url
     else:
-        profile = BodyProfile(user_id=current_user.id, full_body_photo_url=public_url)
+        profile = BodyProfile(user_id=current_user.id, full_body_photo_url=stored_url)
         db.add(profile)
 
     await db.commit()
@@ -325,12 +420,14 @@ async def get_body_photo(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BodyPhotoResponse | None:
     """Get the user current body photo URL."""
+    from app.utils.signed_urls import sign_image_url
+
     result = await db.execute(
         select(BodyProfile.full_body_photo_url).where(BodyProfile.user_id == current_user.id)
     )
     url = result.scalar_one_or_none()
     if url:
-        return BodyPhotoResponse(photo_url=url, message="Body photo exists")
+        return BodyPhotoResponse(photo_url=sign_image_url(url), message="Body photo exists")
     return None
 
 

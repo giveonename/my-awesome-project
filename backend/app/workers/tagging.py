@@ -3,10 +3,11 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models.item import ClothingItem, ItemStatus
 from app.services.ai_service import AIService, ClothingTags
+from app.services.inapp_notice_service import push_notice
 from app.workers.db import get_db_session
 
 logger = logging.getLogger(__name__)
@@ -248,6 +249,26 @@ async def tag_item_image(ctx: dict, item_id: str, image_path: str) -> dict[str, 
                     logger.info(
                         f"Created {len(additional_item_ids)} additional items from multi-item detection"
                     )
+
+            # 这批衣物全部识别完（没有别的还在识别中的）→ 推一条应用内通知，
+            # 覆盖"上传后离开页面"的场景
+            remaining = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(ClothingItem)
+                    .where(
+                        ClothingItem.user_id == user_id,
+                        ClothingItem.status == ItemStatus.processing,
+                    )
+                )
+            ).scalar()
+            if not remaining:
+                await push_notice(
+                    user_id,
+                    kind="items_ready",
+                    title="衣物识别完成，去衣橱看看吧",
+                    target="wardrobe",
+                )
 
             return {
                 "status": "success",

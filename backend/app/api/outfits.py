@@ -18,6 +18,7 @@ from app.models.outfit import (
     FamilyOutfitRating,
     Outfit,
     OutfitItem,
+    OutfitSource,
     OutfitStatus,
     UserFeedback,
 )
@@ -40,6 +41,8 @@ from app.services.studio_service import (
 from app.services.suggest_pool import (
     budget_used_today,
     consume_budget,
+    current_person_fingerprint,
+    forget_outfit,
     is_replenishing,
     mark_replenishing,
     ready_count,
@@ -49,7 +52,7 @@ from app.services.suggestion_cache import clear_suggestions
 from app.services.weather_service import WeatherData
 from app.utils.auth import get_current_user
 from app.utils.rate_limit import rate_limit_by_user
-from app.utils.signed_urls import sign_image_url
+from app.utils.signed_urls import bare_image_path, sign_image_url
 from app.workers.settings import get_redis_settings
 
 logger = logging.getLogger(__name__)
@@ -425,10 +428,7 @@ def outfit_to_response(
         family_rating_count=family_rating_count,
         is_starter_suggestion=is_starter_suggestion,
         model_image_url=(
-            outfit.model_image_url
-            if outfit.model_image_url and outfit.model_image_url.startswith("http")
-            else sign_image_url(outfit.model_image_url) if outfit.model_image_url
-            else None
+            sign_image_url(outfit.model_image_url) if outfit.model_image_url else None
         ),
         created_at=outfit.created_at,
         updated_at=outfit.updated_at,
@@ -693,7 +693,7 @@ async def batch_check_tryon(
     return [
         BatchCheckResponse(
             id=o.id,
-            model_image_url=o.model_image_url,
+            model_image_url=sign_image_url(o.model_image_url) if o.model_image_url else None,
         )
         for o in outfits
     ]
@@ -784,7 +784,8 @@ async def _suggest_pool_status(
     db: AsyncSession, user_id: UUID, occasion: str | None = None
 ) -> SuggestPoolStatus:
     settings = get_settings()
-    ready = await ready_count(db, user_id, occasion)
+    fingerprint = await current_person_fingerprint(db, user_id)
+    ready = await ready_count(db, user_id, occasion, fingerprint)
     replenishing = await is_replenishing(user_id)
     used = await budget_used_today(user_id)
     return SuggestPoolStatus(
@@ -991,8 +992,48 @@ async def delete_outfit(
             detail={"message": "Outfit not found", "error_code": "OUTFIT_NOT_FOUND"},
         )
 
+    # 已记录穿着（穿搭日历）的搭配：拒绝而不是静默连带删除历史
+    if outfit.feedback and outfit.feedback.worn_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": "已记录穿着的搭配不能删除",
+                "error_code": "OUTFIT_WORN_IMMUTABLE",
+            },
+        )
+
+    stored_url = outfit.model_image_url
+    is_generated = outfit.source == OutfitSource.on_demand
+
     await db.delete(outfit)
     await db.commit()
+
+    # 图库轮换台账里的残留一并清掉
+    await forget_outfit(current_user.id, str(outfit_id))
+
+    # AI 生成图连同原图/中图/缩略图一起删（避免孤儿文件）；
+    # 用户上传的图不动——可能与其它记录共用同一文件
+    if is_generated and stored_url and not stored_url.startswith("http"):
+        _remove_stored_image_files(bare_image_path(stored_url))
+
+
+def _remove_stored_image_files(bare_path: str) -> None:
+    """Best-effort removal of a stored image plus its _thumb/_medium variants."""
+    from app.services.image_service import ImageService
+
+    base, dot, ext = bare_path.rpartition(".")
+    candidates = [bare_path]
+    if dot:
+        candidates += [f"{base}_thumb.{ext}", f"{base}_medium.{ext}"]
+
+    service = ImageService()
+    for rel in candidates:
+        try:
+            path = service.get_image_path(rel)
+            if path.exists():
+                path.unlink()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to remove image file %s: %s", rel, e)
 
 
 @router.post("/{outfit_id}/feedback", response_model=FeedbackResponse)

@@ -18,7 +18,9 @@ interface VirtualTryOnModalProps {
 }
 
 const POLL_INTERVAL = 3000 // 3 seconds
-const MAX_POLLS = 80 // 4 minutes max (qwen-image-3.0 ~80-100s)
+// qwen 繁忙时单次生成可达数分钟（含限流退避重试，实测出现过 10 分钟），
+// 窗口放宽到 15 分钟，避免"前端报失败、后台其实成功"
+const MAX_POLLS = 300
 
 export default function VirtualTryOnModal({
   visible,
@@ -87,7 +89,7 @@ export default function VirtualTryOnModal({
         pollCount++
         if (pollCount > MAX_POLLS) {
           cleanup()
-          setErrorMsg('生成时间有点长，稍后再试试吧')
+          setErrorMsg('生成超过 15 分钟，先不等了；完成后会出现在「搭配」页')
           setState('error')
           return
         }
@@ -424,6 +426,7 @@ export default function VirtualTryOnModal({
                     ? '正在渲染试衣效果（约需 1-2 分钟）...'
                     : '快好了，再等一小会儿...'}
             </Text>
+            <Text className='vtm-loading-leave'>不用干等：可以先去逛逛，生成好了会在首页提醒你</Text>
             <View className='vtm-loading-dots'>
               <View className='vtm-loading-dot' />
               <View className='vtm-loading-dot' />

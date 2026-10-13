@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from arq import cron
+from arq import cron, func
 from sqlalchemy import update
 
 from app.config import get_settings
@@ -65,8 +65,11 @@ class WorkerSettings:
         process_scheduled_notification,
         check_wash_reminders,
         update_learning_profiles,
-        generate_outfit_tryon,
-        replenish_suggest_pool,
+        # These two chain several slow qwen generations (each with throttling
+        # retries) and wait on the process-wide generation semaphore, so they
+        # need far more than the global 600s job timeout.
+        func(generate_outfit_tryon, timeout=3600),
+        func(replenish_suggest_pool, timeout=7200),
     ]
 
     cron_jobs = [

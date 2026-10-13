@@ -37,6 +37,9 @@ interface WardrobeStats {
   total_wears: number
   outfits_this_month: number
   acceptance_rate: number | null
+  priced_items?: number
+  total_spend?: number | null
+  average_cpw?: number | null
 }
 
 interface ActivityDay {
@@ -336,6 +339,31 @@ export default function AnalyticsPage() {
           ))}
         </View>
       )}
+
+      {/* ===== Wardrobe Value (cost-per-wear) ===== */}
+      <View className='ac-card'>
+        <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['gem']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='ac-card-title'>衣橱价值（单次穿着成本）</Text></View>
+        {(wardrobe.priced_items || 0) > 0 ? (
+          <View className='ac-value-grid'>
+            <View className='ac-value-cell'>
+              <Text className='ac-value-number'>
+                ¥{(wardrobe.total_spend || 0).toFixed(0)}
+              </Text>
+              <Text className='ac-value-label'>已记录投入 · {wardrobe.priced_items} 件</Text>
+            </View>
+            <View className='ac-value-cell'>
+              <Text className='ac-value-number'>
+                {wardrobe.average_cpw != null ? `¥${wardrobe.average_cpw.toFixed(1)}` : '—'}
+              </Text>
+              <Text className='ac-value-label'>平均单次穿着成本</Text>
+            </View>
+          </View>
+        ) : (
+          <Text className='ac-value-hint'>
+            在衣物详情 →「编辑」里填上购买价格，就能看到整柜投入与单次穿着成本
+          </Text>
+        )}
+      </View>
 
       {/* ===== Type Distribution — Stacked Bar ===== */}
       {type_distribution.length > 0 && (

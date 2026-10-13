@@ -22,6 +22,12 @@ interface OutfitCardEnhancedProps {
   likeCount?: number
   isLiked?: boolean
   index?: number
+  /**
+   * 'solo' puts the try-on image on top at full card width (portrait 3:4) —
+   * used when the feed only returns a couple of outfits and the default
+   * landscape split leaves the image too small.
+   */
+  variant?: 'default' | 'solo' | 'solo-wide'
   onLike?: (id: string) => void
   onTryOn?: (itemIds: string[], itemNames: string[]) => void
 }
@@ -34,6 +40,7 @@ export default function OutfitCardEnhanced({
   likeCount = 0,
   isLiked = false,
   index = 0,
+  variant = 'default',
   onLike,
   onTryOn,
 }: OutfitCardEnhancedProps) {
@@ -74,13 +81,15 @@ export default function OutfitCardEnhanced({
 
   return (
     <View
-      className={`oce ${imgLoaded ? 'oce--loaded' : ''}`}
+      className={`oce ${variant !== 'default' ? `oce--${variant}` : ''} ${imgLoaded ? 'oce--loaded' : ''}`}
       style={{ animationDelay: `${index * 60}ms` }}
       onClick={handleCardTap}
     >
       <View className='oce-body'>
         {/* Left: Item list */}
-        <View className='oce-left'>
+        <View
+          className={`oce-left ${variant === 'solo' && displayItems.length >= 4 ? 'oce-left--wrap' : ''}`}
+        >
           {displayItems.map((item, idx) => (
             <View
               key={item.id || idx}

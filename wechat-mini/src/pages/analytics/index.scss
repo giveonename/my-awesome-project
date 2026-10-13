@@ -422,3 +422,38 @@
   font-size: $font-tag-size;
   color: $text-tertiary;
 }
+
+.ac-value-grid {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.ac-value-cell {
+  flex: 1;
+  background: $color-gray-50;
+  border-radius: $radius-md;
+  padding: $spacing-sm;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.ac-value-number {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.ac-value-label {
+  font-size: 22rpx;
+  color: $text-tertiary;
+}
+
+.ac-value-hint {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: 24rpx;
+  color: $text-tertiary;
+  line-height: 1.5;
+}

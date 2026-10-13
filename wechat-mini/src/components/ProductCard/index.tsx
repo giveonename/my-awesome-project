@@ -65,7 +65,12 @@ export default function ProductCard({
           src={picUrl}
           mode='aspectFill'
         />
-        {/* Related wardrobe items overlay */}
+      </View>
+
+      {/* Info */}
+      <View className='pc-info'>
+        <Text className='pc-title'>{title}</Text>
+        {/* 可搭配的衣柜衣物（从图片上移到信息区，避免压在商品图上） */}
         {displayRelated.length > 0 && (
           <View className='pc-related'>
             {displayRelated.map((item, idx) => (
@@ -78,19 +83,14 @@ export default function ProductCard({
                   />
                 ) : (
                   <View className='pc-related-placeholder'>
-                    <Text className='pc-related-emoji'>\uD83D\uDC55</Text>
+                    <Text className='pc-related-emoji'>👕</Text>
                   </View>
                 )}
               </View>
             ))}
-            <Text className='pc-related-label'>\u53EF\u642D\u914D</Text>
+            <Text className='pc-related-label'>可搭配</Text>
           </View>
         )}
-      </View>
-
-      {/* Info */}
-      <View className='pc-info'>
-        <Text className='pc-title'>{title}</Text>
         {reason && (
           <Text className='pc-reason'>{reason}</Text>
         )}

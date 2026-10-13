@@ -120,13 +120,21 @@ export default function HomePage() {
 
   const loadTaskNotice = async () => {
     try {
-      const list = await api.get<Array<{ id: string; title: string; target?: string }>>(
-        '/notifications/inbox'
-      )
+      const list = await api.get<
+        Array<{ id: string; title: string; target?: string; kind?: string; occasion?: string }>
+      >('/notifications/inbox')
       const latest = list && list[0]
       if (latest) {
         setTaskNotice(latest)
         setBannerIndex(0)
+        if (latest.kind === 'tryon_ready') {
+          // 试穿完成：告诉搭配页"下次进入要强制刷新并复位场景"，
+          // 这样用户点通知（或自己进搭配页）第一波就能看到刚生成的试穿图
+          Taro.setStorageSync(
+            'suggest_force_refresh',
+            JSON.stringify({ occasion: latest.occasion || 'casual' })
+          )
+        }
       }
     } catch {
       // 静默
@@ -139,6 +147,8 @@ export default function HomePage() {
     setTaskNotice(null)
     if (taskNotice.target === 'suggest') {
       Taro.switchTab({ url: '/pages/suggest/index' })
+    } else if (taskNotice.target === 'wardrobe') {
+      Taro.switchTab({ url: '/pages/wardrobe/index' })
     }
   }
 

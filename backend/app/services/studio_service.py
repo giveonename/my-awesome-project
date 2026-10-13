@@ -19,6 +19,7 @@ from app.models.user import User
 from app.schemas.item import DEFAULT_WASH_INTERVALS
 from app.services.learning_service import LearningService
 from app.utils.clothing import canonical_item_order
+from app.utils.signed_urls import bare_image_path
 
 
 class ItemOwnershipError(Exception):
@@ -384,7 +385,8 @@ class StudioService:
             outfit.occasion = occasion
 
         if outfit_photo_url is not None:
-            outfit.model_image_url = outfit_photo_url
+            # Store the bare storage path; responses re-sign fresh (see signed_urls).
+            outfit.model_image_url = bare_image_path(outfit_photo_url)
 
         if items is not None:
             if outfit.feedback is not None and outfit.feedback.worn_at is not None:

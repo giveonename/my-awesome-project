@@ -24,10 +24,16 @@ def _build_preference_response(preferences) -> PreferenceResponse:
         "bold": 50,
     }
     return PreferenceResponse(
+        gender=preferences.gender,
+        age_range=preferences.age_range,
+        profession_scene=preferences.profession_scene,
         color_favorites=preferences.color_favorites
         if preferences.color_favorites is not None
         else [],
         color_avoid=preferences.color_avoid if preferences.color_avoid is not None else [],
+        style_identity=preferences.style_identity
+        if preferences.style_identity is not None
+        else [],
         style_profile=preferences.style_profile
         if preferences.style_profile is not None
         else default_style,

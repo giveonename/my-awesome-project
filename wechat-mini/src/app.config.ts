@@ -58,7 +58,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#FFFFFF',
-    navigationBarTitleText: 'Wardrowbe',
+    navigationBarTitleText: '魔搭幻穿',
     navigationBarTextStyle: 'black',
     enablePullDownRefresh: false,
   },

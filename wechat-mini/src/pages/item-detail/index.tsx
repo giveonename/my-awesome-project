@@ -39,6 +39,7 @@ interface EditFormData {
   material: string
   brand: string
   description: string
+  purchase_price: string
 }
 
 export default function ItemDetailPage() {
@@ -55,6 +56,7 @@ export default function ItemDetailPage() {
     material: '',
     brand: '',
     description: '',
+    purchase_price: '',
   })
   const [saving, setSaving] = useState(false)
   const [loggingWear, setLoggingWear] = useState(false)
@@ -64,6 +66,9 @@ export default function ItemDetailPage() {
   const [tryOnVisible, setTryOnVisible] = useState(false)
 
   const itemId = router.params.id
+
+  const purchasePrice: number | null =
+    (item as any)?.purchase_price != null ? Number((item as any).purchase_price) : null
 
   useDidShow(() => {
     if (itemId) {
@@ -89,6 +94,10 @@ export default function ItemDetailPage() {
           material: itemData.value.material || '',
           brand: itemData.value.brand || '',
           description: itemData.value.description || '',
+          purchase_price:
+            (itemData.value as any).purchase_price != null
+              ? String((itemData.value as any).purchase_price)
+              : '',
         })
       }
       if (historyData.status === 'fulfilled') setWearHistory(historyData.value || [])
@@ -104,7 +113,15 @@ export default function ItemDetailPage() {
   const handleSaveEdit = async () => {
     setSaving(true)
     try {
-      const updated = await api.patch<ClothingItem>(`/items/${itemId}`, editForm)
+      const priceText = (editForm.purchase_price || '').trim()
+      const payload: Record<string, unknown> = { ...editForm }
+      payload.purchase_price = priceText === '' ? null : Number(priceText)
+      if (priceText !== '' && (Number.isNaN(payload.purchase_price) || (payload.purchase_price as number) < 0)) {
+        Taro.showToast({ title: '价格填个数字吧', icon: 'none' })
+        setSaving(false)
+        return
+      }
+      const updated = await api.patch<ClothingItem>(`/items/${itemId}`, payload)
       setItem(updated)
       setEditing(false)
       Taro.showToast({ title: '保存好了', icon: 'success' })
@@ -438,6 +455,19 @@ export default function ItemDetailPage() {
                 <Text className='detail-stat-label'>最近穿着</Text>
               </View>
             </View>
+            {/* 单次穿着成本（CPW）：填了购买价格才有意义 */}
+            {purchasePrice != null ? (
+              <View className='detail-cpw' onClick={() => setEditing(true)}>
+                <Text className='detail-cpw-text'>
+                  购买价 ¥{purchasePrice} · 已穿 {wearStats.total_wears || 0} 次 · 单次穿着成本 ¥
+                  {(purchasePrice / Math.max(wearStats.total_wears || 0, 1)).toFixed(1)}
+                </Text>
+              </View>
+            ) : (
+              <View className='detail-cpw' onClick={() => setEditing(true)}>
+                <Text className='detail-cpw-hint'>填上购买价格，就能看到「单次穿着成本」›</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -543,6 +573,17 @@ export default function ItemDetailPage() {
             </View>
 
             <View className='detail-edit-field'>
+              <Text className='detail-edit-label'>购买价格</Text>
+              <input
+                className='detail-edit-input'
+                type='digit'
+                value={editForm.purchase_price}
+                placeholder='如：299（用于算单次穿着成本）'
+                onInput={(e: any) => setEditForm({ ...editForm, purchase_price: e.detail.value })}
+              />
+            </View>
+
+            <View className='detail-edit-field'>
               <Text className='detail-edit-label'>描述</Text>
               <textarea
                 className='detail-edit-textarea'
@@ -573,12 +614,12 @@ export default function ItemDetailPage() {
             <Text className='detail-action-text'>{analyzing ? '分析中' : 'AI分析'}</Text>
           </View>
           {item?.tryon_ready && (
-            <View className='detail-action-btn detail-action-btn--tryon' onClick={handleTryOnThis}>
+            <View className='detail-action-btn' onClick={handleTryOnThis}>
               <Image src={icons['shirt']} className='detail-action-icon' style={{width: '48rpx', height: '48rpx'}} />
               <Text className='detail-action-text'>试穿</Text>
             </View>
           )}
-          <View className='detail-action-btn detail-action-btn--recommend' onClick={() => {
+          <View className='detail-action-btn' onClick={() => {
             if (item) {
               Taro.setStorageSync('suggest_item_id', item.id)
               Taro.switchTab({ url: '/pages/suggest/index' })

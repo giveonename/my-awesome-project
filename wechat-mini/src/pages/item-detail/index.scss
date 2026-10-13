@@ -508,6 +508,8 @@ $card-shadow: 0 2px 16px rgba(45, 106, 79, 0.06);
   border: 2px solid $accent-light;
   border-radius: 12px;
   font-size: 28px;
+  // 不写 line-height 时行盒比字号还矮，字符上半截会被裁掉（单行 input 会自动居中所以看不出）
+  line-height: 42px;
   color: $text-primary;
   box-sizing: border-box;
 
@@ -643,15 +645,19 @@ $card-shadow: 0 2px 16px rgba(45, 106, 79, 0.06);
   font-weight: 600;
 }
 
-// ===== Tryon Action Button =====
-.detail-action-btn--tryon {
-  background: linear-gradient(135deg, $color-primary-light, $color-primary) !important;
-  border-radius: $radius-pill;
-  .detail-action-icon, .detail-action-text { color: #fff !important; }
+.detail-cpw {
+  margin-top: $spacing-sm;
+  padding: 12rpx $spacing-sm;
+  background: $color-gray-50;
+  border-radius: $radius-sm;
 }
 
-.detail-action-btn--recommend {
-  background: linear-gradient(135deg, #5E9C82, #2D6A4F) !important;
-  border-radius: $radius-pill;
-  .detail-action-icon, .detail-action-text { color: #fff !important; }
+.detail-cpw-text {
+  font-size: 22rpx;
+  color: $text-secondary;
+}
+
+.detail-cpw-hint {
+  font-size: 22rpx;
+  color: $color-primary;
 }

@@ -20,11 +20,19 @@ class StyleProfile(BaseModel):
 
 
 class PreferenceBase(BaseModel):
+    # Identity / onboarding basics（个人档案「基本信息」页读写这些）
+    gender: str | None = Field(default=None, max_length=20)
+    age_range: str | None = Field(default=None, max_length=10)
+    profession_scene: str | None = Field(default=None, max_length=30)
+
     # Color preferences
     color_favorites: list[str] = Field(default_factory=list, description="Favorite colors")
     color_avoid: list[str] = Field(default_factory=list, description="Colors to avoid")
 
     # Style preferences
+    style_identity: list[str] = Field(
+        default_factory=list, description="Chosen style tags, e.g. ['casual','minimalist']"
+    )
     style_profile: StyleProfile = Field(default_factory=StyleProfile)
 
     # Occasion settings
@@ -78,8 +86,12 @@ class PreferenceCreate(PreferenceBase):
 
 
 class PreferenceUpdate(BaseModel):
+    gender: str | None = Field(default=None, max_length=20)
+    age_range: str | None = Field(default=None, max_length=10)
+    profession_scene: str | None = Field(default=None, max_length=30)
     color_favorites: list[str] | None = None
     color_avoid: list[str] | None = None
+    style_identity: list[str] | None = None
     style_profile: StyleProfile | None = None
     default_occasion: str | None = None
     temperature_unit: str | None = Field(default=None, pattern="^(celsius|fahrenheit)$")

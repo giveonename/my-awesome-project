@@ -85,6 +85,10 @@ class WardrobeStats(BaseModel):
     acceptance_rate: float | None
     average_rating: float | None
     total_wears: int
+    # 衣橱价值（cost-per-wear）：只统计填了购买价格的衣物
+    priced_items: int = 0
+    total_spend: float | None = None
+    average_cpw: float | None = None
 
 
 class AnalyticsResponse(BaseModel):
@@ -120,6 +124,16 @@ async def get_analytics(
         func.sum(case((ClothingItem.status == ItemStatus.archived, 1), else_=0)).label("archived"),
         func.sum(case((ClothingItem.status == ItemStatus.error, 1), else_=0)).label("error"),
         func.sum(ClothingItem.wear_count).label("total_wears"),
+        func.sum(case((ClothingItem.purchase_price.isnot(None), 1), else_=0)).label("priced"),
+        func.sum(
+            case((ClothingItem.purchase_price.isnot(None), ClothingItem.purchase_price), else_=0)
+        ).label("spend"),
+        func.sum(
+            case(
+                (ClothingItem.purchase_price.isnot(None), ClothingItem.wear_count),
+                else_=0,
+            )
+        ).label("priced_wears"),
     ).where(ClothingItem.user_id == current_user.id)
 
     items_result = await db.execute(items_query)
@@ -174,6 +188,13 @@ async def get_analytics(
         acceptance_rate=round(acceptance_rate, 1) if acceptance_rate else None,
         average_rating=average_rating,
         total_wears=total_wears,
+        priced_items=int(items_row.priced or 0),
+        total_spend=round(float(items_row.spend), 2) if items_row.spend else None,
+        average_cpw=(
+            round(float(items_row.spend) / int(items_row.priced_wears), 2)
+            if items_row.spend and items_row.priced_wears
+            else None
+        ),
     )
 
     # === Color Distribution ===

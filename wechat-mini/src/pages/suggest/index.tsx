@@ -52,8 +52,6 @@ const SCENE_TAGS = [
   { keyword: '宴会', label: '宴会造型' },
 ]
 
-const MAX_RECOMMENDATIONS = 6
-
 // ===== 我的搭配 Tab 组件 =====
 
 function MineOutfitsTab() {
@@ -75,6 +73,13 @@ function MineOutfitsTab() {
     setHasMore(true)
     loadMine(1)
   })
+
+  // 关键：子组件的 useDidShow 只在"组件已挂载"之后的页面显示事件里触发。
+  // 用户通常是先打开页面、再切到本标签，此时组件刚挂载 → 这次显示事件收不到 →
+  // loading 卡在初始值（白屏）。挂载时自己加载一次即可。
+  useEffect(() => {
+    loadMine(1)
+  }, [])
 
   useReachBottom(() => {
     if (hasMore && !loading && !loadingMore) {
@@ -413,7 +418,7 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
   const [activeCategory, setActiveCategory] = useState('all')
   const [activeItemId, setActiveItemId] = useState('')
   const [activeItemName, setActiveItemName] = useState('')
-  const [keywordUsed, setKeywordUsed] = useState('')
+  const [reasonText, setReasonText] = useState('')
 
   // 补全搭配模式
   const [outfitMode, setOutfitMode] = useState(false)
@@ -455,7 +460,7 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
       else setProducts(prev => [...prev, ...newProducts])
       setPage(currentPage)
       setHasMore(data.has_more || false)
-      setKeywordUsed(data.keyword_used || '')
+      if (reset) setReasonText(data.reason || '')
     } catch (err) {
       console.error('Load products failed:', err)
       if (reset) Taro.showToast({ title: '加载失败，请重试', icon: 'none' })
@@ -497,7 +502,6 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
     try {
       const data = await completeOutfit(selectedItemIds)
       setOutfitGroups(data.groups || [])
-      setKeywordUsed(data.keyword_used || '')
     } catch (err) {
       console.error('Complete outfit failed:', err)
       Taro.showToast({ title: '补全搭配失败，请重试', icon: 'none' })
@@ -583,6 +587,15 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
   const filteredWardrobe = activeCategory === 'all'
     ? wardrobeItems
     : wardrobeItems.filter((it: any) => (CAT_MAP[activeCategory] || []).includes(it.type))
+
+  // 卡片短理由：说清"为什么给你看这件"
+  const cardReason = activeGap
+    ? `补缺 · ${gaps.find((g: any) => g.category === activeGap)?.label || ''}`
+    : activeItemId
+      ? `搭「${activeItemName || '衣物'}」`
+      : activeScene
+        ? '场景推荐'
+        : '为你挑'
 
   const getRelatedItems = () => {
     return []
@@ -729,11 +742,14 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
         </View>
       )}
 
-      {wardrobeItems.length >= 5 && gaps.length > 0 && !outfitMode && (
+      {/* 你的衣橱还缺这些 + 从我的衣物出发（合并为一行，去掉游离的"已上传 N 件"开关） */}
+      {!outfitMode && (gaps.length > 0 || wardrobeItems.length > 0) && (
         <View className='suggest-gaps'>
           <View className='suggest-gaps-header'>
             <Text className='suggest-gaps-icon'>{'\uD83D\uDCA1'}</Text>
-            <Text className='suggest-gaps-title'>{'\u4F60\u7684\u8863\u6A71\u8FD8\u7F3A\u8FD9\u4E9B'}</Text>
+            <Text className='suggest-gaps-title'>
+              {gaps.length > 0 ? '\u4F60\u7684\u8863\u6A71\u8FD8\u7F3A\u8FD9\u4E9B' : '\u4ECE\u8FD9\u91CC\u5F00\u59CB\u627E\u7075\u611F'}
+            </Text>
           </View>
           <ScrollView scrollX className='suggest-gaps-scroll' enhanced showScrollbar={false}>
             <View className='suggest-gaps-list'>
@@ -743,14 +759,17 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
                   <Text className='suggest-gap-chip-label'>{gap.label}</Text>
                 </View>
               ))}
+              {wardrobeItems.length > 0 && (
+                <View
+                  className={`suggest-gap-chip suggest-gap-chip--entry ${showItemPicker ? 'suggest-gap-chip--active' : ''}`}
+                  onClick={() => setShowItemPicker(!showItemPicker)}
+                >
+                  <Image src={icons['shirt']} className='suggest-gap-chip-icon' style={{width: '32rpx', height: '32rpx'}} />
+                  <Text className='suggest-gap-chip-label'>{`\u4ECE\u6211\u7684\u8863\u7269\u51FA\u53D1 ${showItemPicker ? '\u25B2' : '\u25BC'}`}</Text>
+                </View>
+              )}
             </View>
           </ScrollView>
-        </View>
-      )}
-
-      {!outfitMode && (
-        <View className='suggest-wardrobe-toggle' onClick={() => setShowItemPicker(!showItemPicker)}>
-          <Text className='suggest-wardrobe-toggle-text'>{`\u5DF2\u4E0A\u4F20 ${wardrobeItems.length} \u4EF6\u8863\u670D ${showItemPicker ? '\u25B2' : '\u25BC'}`}</Text>
         </View>
       )}
 
@@ -800,9 +819,9 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
           }}>{'\u00D7'}</Text>
         </View>
       )}
-      {keywordUsed && !activeItemId && !searchInput.trim() && (
-        <View className='suggest-keyword-banner'>
-          <Text className='suggest-keyword-text'>{'\uD83D\uDCA1 '}{keywordUsed}</Text>
+      {reasonText && !activeItemId && !searchInput.trim() && (
+        <View className='suggest-reason-line'>
+          <Text className='suggest-reason-text'>{'\u2728 '}{reasonText}</Text>
         </View>
       )}
       {!outfitMode && (loading ? (
@@ -814,12 +833,12 @@ function InspirationTab({ initialItemId, onItemIdConsumed }: { initialItemId?: s
         <View className='suggest-product-grid'>
           <View className='suggest-product-col'>
             {products.filter((_: any, i: number) => i % 2 === 0).map((product: any, idx: number) => (
-              <ProductCard key={idx} title={product.title} picUrl={product.pic_url} price={product.price} originalPrice={product.original_price} volume={product.volume} shopTitle={product.shop_title} itemUrl={product.item_url} relatedItems={product.related_items || getRelatedItems()} index={idx} />
+              <ProductCard key={idx} title={product.title} picUrl={product.pic_url} price={product.price} originalPrice={product.original_price} volume={product.volume} shopTitle={product.shop_title} itemUrl={product.item_url} relatedItems={product.related_items || getRelatedItems()} reason={cardReason} index={idx} />
             ))}
           </View>
           <View className='suggest-product-col'>
             {products.filter((_: any, i: number) => i % 2 === 1).map((product: any, idx: number) => (
-              <ProductCard key={idx} title={product.title} picUrl={product.pic_url} price={product.price} originalPrice={product.original_price} volume={product.volume} shopTitle={product.shop_title} itemUrl={product.item_url} relatedItems={product.related_items || getRelatedItems()} index={idx} />
+              <ProductCard key={idx} title={product.title} picUrl={product.pic_url} price={product.price} originalPrice={product.original_price} volume={product.volume} shopTitle={product.shop_title} itemUrl={product.item_url} relatedItems={product.related_items || getRelatedItems()} reason={cardReason} index={idx} />
             ))}
           </View>
         </View>
@@ -863,7 +882,6 @@ export default function SuggestPage() {
   const [activeTab, setActiveTab] = useState<SuggestTabKey>('ai')
   const [outfits, setOutfits] = useState<OutfitRecommendation[]>([])
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const requestIdRef = useRef(0)
   // 池子等待：后台生成时的轮询与弹窗
@@ -924,21 +942,17 @@ export default function SuggestPage() {
     }, 10000) // Poll every 10 seconds
   }, [])
 
-  // GET /outfits/feed — 从预生成池秒取推荐（试穿图由后台提前备好，无需等待）
-  const fetchOutfits = useCallback(async (reset: boolean = false) => {
+  // GET /outfits/feed — 从预生成图库秒取 2 套推荐；换下一组只发生在点「换一批推荐」时
+  const fetchOutfits = useCallback(async (occasionOverride?: string) => {
     const requestId = ++requestIdRef.current
 
-    if (reset) {
-      setLoading(true)
-      setOutfits([])
-    } else {
-      if (loadingMore) return
-      setLoadingMore(true)
-    }
+    setLoading(true)
+    setOutfits([])
 
     try {
       const params: Record<string, string> = {}
-      if (occasion) params.occasion = occasion
+      const queryOccasion = occasionOverride ?? occasion
+      if (queryOccasion) params.occasion = queryOccasion
 
       const data = await api.get<{
         outfits: OutfitRecommendation[]
@@ -948,26 +962,15 @@ export default function SuggestPage() {
       if (requestId !== requestIdRef.current) return
 
       const list = data?.outfits || []
-      if (list.length > 0) {
-        if (reset) {
-          setOutfits(list)
-        } else {
-          setOutfits(prev => {
-            const seen = new Set(prev.map(p => p.id))
-            return [...prev, ...list.filter(n => !seen.has(n.id))]
-          })
-        }
-        const idsNeedingTryOn = list.filter(o => !o.model_image_url).map(o => o.id)
-        if (idsNeedingTryOn.length > 0) {
-          startTryOnPolling(idsNeedingTryOn)
-        }
-      } else if (reset) {
-        setOutfits([])
+      setOutfits(list)
+      const idsNeedingTryOn = list.filter(o => !o.model_image_url).map(o => o.id)
+      if (idsNeedingTryOn.length > 0) {
+        startTryOnPolling(idsNeedingTryOn)
       }
 
       const pool = data?.pool
       if (pool && pool.ready < 2) {
-        // 池子见底：后台自动补货，并告知用户可先去逛逛
+        // 图库见底（新用户/换了模特）：后台自动补货，并告知用户可先去逛逛
         api.post('/outfits/prewarm', {}, { timeout: 10000 }).catch(() => {})
         if (pool.replenishing || pool.budget_left > 0) {
           poolWaitRef.current?.()
@@ -976,17 +979,16 @@ export default function SuggestPage() {
     } catch (err: any) {
       if (requestId === requestIdRef.current) {
         console.error('Failed to load outfits:', err)
-        if (err?.status !== 400 && reset) {
+        if (err?.status !== 400) {
           Taro.showToast({ title: '推荐没拿到，稍后再试试', icon: 'none' })
         }
       }
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false)
-        setLoadingMore(false)
       }
     }
-  }, [occasion, loadingMore, startTryOnPolling])
+  }, [occasion, startTryOnPolling])
 
   // 池子等待实现：弹窗告知 + 20 秒轮询，就绪后自动刷新
   poolWaitRef.current = () => {
@@ -1011,7 +1013,7 @@ export default function SuggestPage() {
             poolPollRef.current = null
           }
           Taro.showToast({ title: '新搭配已就绪！', icon: 'success' })
-          fetchOutfits(true)
+          fetchOutfits()
         }
       } catch {
         // 继续轮询
@@ -1022,29 +1024,34 @@ export default function SuggestPage() {
   // 首屏加载 + 检查从衣物详情跳转过来的 item_id
   useDidShow(() => {
     const storedItemId = Taro.getStorageSync('suggest_item_id')
+    const forceRefreshRaw = Taro.getStorageSync('suggest_force_refresh')
     if (storedItemId) {
       Taro.removeStorageSync('suggest_item_id')
       setIncomingItemId(storedItemId)
       setActiveTab('product')
+    } else if (forceRefreshRaw) {
+      // 刚有试穿完成（首页通知标记）：复位场景并重新取图，让新结果出现在第一波
+      Taro.removeStorageSync('suggest_force_refresh')
+      let occasionToUse = 'casual'
+      try {
+        occasionToUse = JSON.parse(forceRefreshRaw)?.occasion || 'casual'
+      } catch {
+        // 旧格式/异常值，用默认场景
+      }
+      setOccasion(occasionToUse)
+      setActiveTab('ai')
+      fetchOutfits(occasionToUse)
     } else if (activeTab === 'ai' && outfits.length === 0) {
-      fetchOutfits(true)
-    }
-  })
-
-  // 触底加载更多
-  useReachBottom(() => {
-    if (activeTab === 'ai' && !loading && !loadingMore && outfits.length < MAX_RECOMMENDATIONS) {
-      fetchOutfits(false)
+      fetchOutfits()
     }
   })
 
   // 下拉刷新
   usePullDownRefresh(() => {
     if (activeTab === 'ai') {
-      fetchOutfits(true).then(() => Taro.stopPullDownRefresh())
-    } else if (activeTab === 'product') {
-      loadProducts(true).then(() => Taro.stopPullDownRefresh())
+      fetchOutfits().then(() => Taro.stopPullDownRefresh())
     } else {
+      // 灵感页的刷新逻辑在子组件里（这里原先误引用了不存在的 loadProducts，会直接报错）
       Taro.stopPullDownRefresh()
     }
   })
@@ -1074,8 +1081,27 @@ export default function SuggestPage() {
   }, [])
 
   const handleRefreshAll = useCallback(() => {
-    fetchOutfits(true)
+    fetchOutfits()
   }, [fetchOutfits])
+
+  const renderOutfitCard = useCallback(
+    (outfit: OutfitRecommendation, index: number, variant: 'default' | 'solo' | 'solo-wide') => (
+      <OutfitCardEnhanced
+        key={outfit.id}
+        id={outfit.id}
+        items={outfit.items}
+        modelImageUrl={outfit.model_image_url}
+        occasion={outfit.occasion}
+        likeCount={outfit.like_count}
+        isLiked={likedIds.has(outfit.id) || outfit.is_liked_by_me}
+        index={index}
+        variant={variant}
+        onLike={handleLike}
+        onTryOn={handleTryOn}
+      />
+    ),
+    [likedIds, handleLike, handleTryOn]
+  )
 
   return (
     <View className='suggest-page'>
@@ -1117,7 +1143,7 @@ export default function SuggestPage() {
                 className={`occasion-tag ${occasion === o.key ? 'occasion-tag--active' : ''}`}
                 onClick={() => {
                   setOccasion(o.key)
-                  fetchOutfits(true)
+                  fetchOutfits()
                 }}
               >
                 <Text className='occasion-tag-icon'>{o.icon}</Text>
@@ -1149,65 +1175,33 @@ export default function SuggestPage() {
             </View>
           )}
 
-          {/* 瀑布流列表 */}
+          {/* 每批固定 2 套竖版大图卡片（只剩 1 套时全宽）；换下一组只会发生在点「换一批推荐」时 */}
           {!loading && outfits.length > 0 && (
             <>
-              <View className='suggest-waterfall'>
-                <View className='suggest-col'>
-                  {outfits.filter((_, i) => i % 2 === 0).map((outfit, idx) => (
-                    <OutfitCardEnhanced
-                      key={outfit.id}
-                      id={outfit.id}
-                      items={outfit.items}
-                      modelImageUrl={outfit.model_image_url}
-                      occasion={outfit.occasion}
-                      likeCount={outfit.like_count}
-                      isLiked={likedIds.has(outfit.id) || outfit.is_liked_by_me}
-                      index={idx}
-                      onLike={handleLike}
-                      onTryOn={handleTryOn}
-                    />
-                  ))}
+              {outfits.length === 1 ? (
+                <View className='suggest-solo'>{renderOutfitCard(outfits[0], 0, 'solo-wide')}</View>
+              ) : (
+                <View className='suggest-waterfall'>
+                  <View className='suggest-col'>
+                    {outfits
+                      .map((outfit, gi) => ({ outfit, gi }))
+                      .filter(({ gi }) => gi % 2 === 0)
+                      .map(({ outfit, gi }) => renderOutfitCard(outfit, gi, 'solo'))}
+                  </View>
+                  <View className='suggest-col'>
+                    {outfits
+                      .map((outfit, gi) => ({ outfit, gi }))
+                      .filter(({ gi }) => gi % 2 === 1)
+                      .map(({ outfit, gi }) => renderOutfitCard(outfit, gi, 'solo'))}
+                  </View>
                 </View>
-                <View className='suggest-col'>
-                  {outfits.filter((_, i) => i % 2 === 1).map((outfit, idx) => (
-                    <OutfitCardEnhanced
-                      key={outfit.id}
-                      id={outfit.id}
-                      items={outfit.items}
-                      modelImageUrl={outfit.model_image_url}
-                      occasion={outfit.occasion}
-                      likeCount={outfit.like_count}
-                      isLiked={likedIds.has(outfit.id) || outfit.is_liked_by_me}
-                      index={idx}
-                      onLike={handleLike}
-                      onTryOn={handleTryOn}
-                    />
-                  ))}
-                </View>
-              </View>
+              )}
 
               {/* 刷新按钮 */}
               <View className='suggest-refresh-btn' onClick={handleRefreshAll}>
                 <View style={{display: 'flex', alignItems: 'center'}}><Image src={icons['refresh-cw']} style={{width: '36rpx', height: '36rpx', marginRight: '8rpx'}} /><Text className='suggest-refresh-text'>换一批推荐</Text></View>
               </View>
             </>
-          )}
-
-          {/* 加载更多 */}
-          {loadingMore && (
-            <View className='suggest-load-more'>
-              <View className='suggest-load-more-dot' />
-              <View className='suggest-load-more-dot' />
-              <View className='suggest-load-more-dot' />
-            </View>
-          )}
-
-          {/* 到底了 */}
-          {!loading && outfits.length >= MAX_RECOMMENDATIONS && (
-            <View className='suggest-end'>
-              <Text className='suggest-end-text'>已经到底了，换一批试试？</Text>
-            </View>
           )}
 
           {/* 空状态 */}
