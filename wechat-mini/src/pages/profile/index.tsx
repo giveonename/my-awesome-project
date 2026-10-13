@@ -150,7 +150,9 @@ export default function ProfilePage() {
       {/* Membership Banner */}
       <View className='membership-banner'>
         <View className='membership-banner-left'>
-          <Image src={icons['gem']} className='membership-banner-diamond' style={{width: '48rpx', height: '48rpx'}} />
+          <View className='membership-banner-badge'>
+            <Image src={icons['gem']} className='membership-banner-diamond' style={{width: '40rpx', height: '40rpx'}} />
+          </View>
           <View className='membership-banner-info'>
             <Text className='membership-banner-title'>魔搭幻穿邀请您成为会员</Text>
             <Text className='membership-banner-sub'>更多会员权益等你开启</Text>

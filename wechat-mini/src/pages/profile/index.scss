@@ -129,12 +129,13 @@
 // ===================== Membership Banner =====================
 
 .membership-banner {
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+  // 会员横幅（2026-10 随主题改造：墨绿渐变底 + 克制的米金点缀）
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
   border-radius: $radius-lg;
   margin: $spacing-md $spacing-lg 0;
   padding: $spacing-md $spacing-lg;
   @include flex-between;
-  box-shadow: 0 8rpx 24rpx rgba(26, 26, 46, 0.3);
+  box-shadow: 0 8rpx 24rpx rgba(27, 77, 62, 0.25);
   position: relative;
   overflow: hidden;
 
@@ -146,7 +147,7 @@
     width: 160rpx;
     height: 160rpx;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(192, 132, 252, 0.3), transparent 70%);
+    background: radial-gradient(circle, rgba(194, 168, 120, 0.35), transparent 70%);
   }
 }
 
@@ -158,9 +159,19 @@
   z-index: 1;
 }
 
+/* 图标是墨绿内联图（单一色值），放在奶油圆底上才看得清 */
+.membership-banner-badge {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: $bg-page-default;
+  @include flex-center;
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
+}
+
 .membership-banner-diamond {
   font-size: 48rpx;
-  filter: drop-shadow(0 2rpx 8rpx rgba(192, 132, 252, 0.4));
 }
 
 .membership-banner-info {
@@ -169,18 +180,18 @@
 
 .membership-banner-title {
   font-size: $font-body-small-size;
-  color: #fff;
+  color: #FAF7F2;
   font-weight: 600;
 }
 
 .membership-banner-sub {
   font-size: $font-caption-size;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(250, 247, 242, 0.72);
   margin-top: 4rpx;
 }
 
 .membership-banner-btn {
-  border: 2rpx solid rgba(192, 132, 252, 0.5);
+  background: $color-accent-gold;
   border-radius: $radius-pill;
   padding: 10rpx 28rpx;
   position: relative;
@@ -188,15 +199,15 @@
   transition: all 150ms ease;
 
   &:active {
-    background: rgba(192, 132, 252, 0.15);
+    opacity: 0.85;
     transform: scale(0.96);
   }
 }
 
 .membership-banner-btn-text {
   font-size: $font-caption-size;
-  color: $color-primary-light;
-  font-weight: 500;
+  color: $color-primary-dark;
+  font-weight: 600;
 }
 
 // ===================== Quick Icons =====================
