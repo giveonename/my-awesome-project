@@ -62,11 +62,11 @@ class Outfit(Base):
 
     # Status
     status: Mapped[OutfitStatus] = mapped_column(
-        Enum(OutfitStatus, name="outfit_status", create_type=False),
+        Enum(OutfitStatus, name="outfit_status"),
         default=OutfitStatus.pending,
     )
     source: Mapped[OutfitSource] = mapped_column(
-        Enum(OutfitSource, name="outfit_source", create_type=False),
+        Enum(OutfitSource, name="outfit_source"),
         default=OutfitSource.scheduled,
     )
 
