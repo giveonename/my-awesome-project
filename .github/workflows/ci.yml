@@ -82,9 +82,16 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key-for-ci
           STORAGE_PATH: /tmp/wardrobe
+          PYTHONUTF8: "1"
         run: |
           cd backend
-          pytest -v --tb=short
+          set +e
+          pytest -v --tb=short -ra 2>&1 | tee pytest-output.log
+          rc=${PIPESTATUS[0]}
+          grep -E "^FAILED|^ERROR" pytest-output.log | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          exit $rc
 
   weapp-build:
     name: WeChat Mini Program Build
