@@ -161,7 +161,10 @@ async def _eligible_ids(
 
 
 async def ready_count(
-    db: AsyncSession, user_id: UUID | str, occasion: str | None = None, fingerprint: str | None = None
+    db: AsyncSession,
+    user_id: UUID | str,
+    occasion: str | None = None,
+    fingerprint: str | None = None,
 ) -> int:
     if fingerprint is None:
         fingerprint = await current_person_fingerprint(db, user_id)
@@ -244,9 +247,7 @@ async def mark_replenishing(user_id: UUID | str, ttl_seconds: int = 2700) -> boo
     """Set the running flag; returns False when a replenish is already running."""
     try:
         redis = await get_redis()
-        result = await redis.set(
-            _RUNNING_KEY.format(user_id=user_id), "1", ex=ttl_seconds, nx=True
-        )
+        result = await redis.set(_RUNNING_KEY.format(user_id=user_id), "1", ex=ttl_seconds, nx=True)
         return bool(result)
     except Exception:  # noqa: BLE001
         return False

@@ -5,8 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ===== Help Request =====
+
 
 class HelpRequestCreate(BaseModel):
     """Request body for POST /community/help-requests."""
@@ -65,6 +65,7 @@ class HelpRequestListResponse(BaseModel):
 
 
 # ===== Help Reply =====
+
 
 class HelpReplyCreate(BaseModel):
     """Request body for POST /community/help-requests/{id}/replies."""

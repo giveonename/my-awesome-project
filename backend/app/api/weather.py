@@ -144,7 +144,6 @@ async def get_weather_forecast(
     )
 
 
-
 @router.get("/backgrounds/{filename}")
 async def get_weather_background(filename: str) -> FileResponse:
     """Serve local weather background images (public, replaces OSS assets).

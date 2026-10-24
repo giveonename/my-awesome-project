@@ -443,12 +443,13 @@ class AIService:
 
     def _parse_tags_list_from_response(self, response_text: str) -> list[ClothingTags]:
         """Parse a JSON array response into a list of ClothingTags.
-        
+
         Handles multiple formats:
         - JSON array: [{"type":...}, {"type":...}]
         - Single object (backward compat): {"type":...}
         - Markdown-wrapped JSON
         """
+
         def extract_json_array(text: str) -> list[dict] | None:
             # Try direct parse
             try:
@@ -538,14 +539,31 @@ class AIService:
     def _parse_single_item(self, data: dict, raw_response: str = "") -> ClothingTags:
         """Parse a single item dict into ClothingTags (shared by single and multi parsers)."""
         COLOR_ALIASES: dict[str, str] = {
-            "grey": "gray", "light grey": "gray", "light gray": "gray",
-            "dark grey": "gray", "dark gray": "gray", "off-white": "cream",
-            "ivory": "cream", "wine": "burgundy", "maroon": "burgundy",
-            "forest green": "green", "dark blue": "navy", "royal blue": "blue",
-            "sky blue": "light-blue", "baby blue": "light-blue", "camel": "tan",
-            "khaki": "tan", "rust": "orange", "coral": "pink", "rose": "pink",
-            "mauve": "purple", "lavender": "purple", "mustard": "yellow",
-            "gold": "yellow", "silver": "gray", "charcoal": "gray",
+            "grey": "gray",
+            "light grey": "gray",
+            "light gray": "gray",
+            "dark grey": "gray",
+            "dark gray": "gray",
+            "off-white": "cream",
+            "ivory": "cream",
+            "wine": "burgundy",
+            "maroon": "burgundy",
+            "forest green": "green",
+            "dark blue": "navy",
+            "royal blue": "blue",
+            "sky blue": "light-blue",
+            "baby blue": "light-blue",
+            "camel": "tan",
+            "khaki": "tan",
+            "rust": "orange",
+            "coral": "pink",
+            "rose": "pink",
+            "mauve": "purple",
+            "lavender": "purple",
+            "mustard": "yellow",
+            "gold": "yellow",
+            "silver": "gray",
+            "charcoal": "gray",
         }
 
         def validate_value(value: str | None, valid_set: set) -> str | None:
@@ -711,10 +729,10 @@ class AIService:
 
     async def analyze_image_multi(self, image_path: str | Path) -> list[ClothingTags]:
         """Analyze an image for multiple clothing items.
-        
+
         The prompt now instructs the model to output a JSON array.
         This method parses all items and filters out low-confidence / non-clothing results.
-        
+
         Falls back to single-item parsing if array parsing fails.
         """
         image_base64 = self._preprocess_image(image_path)
@@ -731,8 +749,6 @@ class AIService:
                 ],
             },
         ]
-
-        last_error = None
 
         # Single API call — the prompt now returns an array with inline descriptions
         content, err, logprobs_content = await self._call_with_fallback(
@@ -753,7 +769,9 @@ class AIService:
         valid_tags: list[ClothingTags] = []
         for tag in all_tags:
             if tag.type == "unknown" and tag.confidence < MIN_CONFIDENCE:
-                logger.info(f"Filtering out low-confidence item: type={tag.type}, confidence={tag.confidence}")
+                logger.info(
+                    f"Filtering out low-confidence item: type={tag.type}, confidence={tag.confidence}"
+                )
                 continue
             valid_tags.append(tag)
 
@@ -767,7 +785,9 @@ class AIService:
         for tag in valid_tags:
             if not tag.description or len(tag.description.strip()) < 10:
                 try:
-                    item_info = f"{tag.name or tag.type}, {tag.primary_color or ''}, {tag.material or ''}"
+                    item_info = (
+                        f"{tag.name or tag.type}, {tag.primary_color or ''}, {tag.material or ''}"
+                    )
                     desc_prompt = DESCRIPTION_PROMPT.replace("{item_info}", item_info)
                     desc_content, _, _ = await self._call_with_fallback(
                         [{"role": "user", "content": desc_prompt}],
@@ -965,7 +985,7 @@ class AIService:
         return_metadata: bool = False,
     ) -> str | TextGenerationResult:
         """Send a multi-turn conversation to the AI and return the response.
-        
+
         Args:
             messages: List of message dicts with 'role' and 'content' keys.
                       The first message should be the system prompt.

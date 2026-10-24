@@ -37,6 +37,7 @@ DEFAULT_PERSON_URL = "https://help-static-aliyun-doc.aliyuncs.com/file-manage-fi
 @dataclass
 class TryOnResult:
     """Result of a virtual try-on request."""
+
     success: bool
     image_url: str | None = None
     task_id: str | None = None
@@ -48,6 +49,7 @@ class TryOnResult:
 @dataclass
 class TryOnTask:
     """In-memory task tracker for polling."""
+
     task_id: str
     status: str = "PENDING"
     image_url: str | None = None
@@ -61,11 +63,26 @@ _tasks: dict[str, TryOnTask] = {}
 
 # Item type classification for garment_url mapping
 _TOP_TYPES: set[str] = {
-    "shirt", "t-shirt", "sweater", "hoodie", "blazer", "jacket", "coat", "top",
-    "dress", "vest", "cardigan", "polo", "blouse", "tank-top",
+    "shirt",
+    "t-shirt",
+    "sweater",
+    "hoodie",
+    "blazer",
+    "jacket",
+    "coat",
+    "top",
+    "dress",
+    "vest",
+    "cardigan",
+    "polo",
+    "blouse",
+    "tank-top",
 }
 _BOTTOM_TYPES: set[str] = {
-    "pants", "jeans", "shorts", "skirt",
+    "pants",
+    "jeans",
+    "shorts",
+    "skirt",
 }
 _OUTFIT_TYPES: set[str] = {"outfit", "full_body", "jumpsuit"}
 
@@ -250,7 +267,8 @@ async def _call_qwen_generation(person_b64: str, garment_b64s: list[str], prompt
         if is_throttled and attempt < 3:
             logger.warning(
                 "Generation throttled by quota (attempt %d/3); backing off %ds",
-                attempt, 20 * attempt,
+                attempt,
+                20 * attempt,
             )
             await asyncio.sleep(20 * attempt)
             continue
@@ -331,9 +349,7 @@ def _spawn_task(
 
     async def _runner() -> None:
         try:
-            image_url = await _run_generation(
-                person_ref, garment_refs, descs, is_outfit, user_id
-            )
+            image_url = await _run_generation(person_ref, garment_refs, descs, is_outfit, user_id)
             task.image_url = image_url
             task.status = "SUCCEEDED"
             logger.info("Try-on completed: task_id=%s", task_id)
@@ -359,7 +375,9 @@ async def submit_tryon_task(
         return TryOnTask(task_id="", status="FAILED", error="DashScope API key not configured")
     logger.info(
         "Submitting try-on: model=%s, garments=%d, outfit=%s",
-        settings.dashscope_tryon_model, len(garment_refs), is_outfit,
+        settings.dashscope_tryon_model,
+        len(garment_refs),
+        is_outfit,
     )
     return _spawn_task(person_ref, garment_refs, descs or [], is_outfit, user_id)
 
@@ -382,9 +400,7 @@ async def virtual_tryon(
     if not settings.dashscope_api_key:
         return TryOnResult(success=False, error="DashScope API key not configured")
     try:
-        image_url = await _run_generation(
-            person_ref, garment_refs, descs or [], is_outfit, user_id
-        )
+        image_url = await _run_generation(person_ref, garment_refs, descs or [], is_outfit, user_id)
     except Exception as e:
         logger.error("Virtual try-on failed: %s", e, exc_info=True)
         return TryOnResult(
@@ -417,7 +433,6 @@ def cleanup_old_tasks(max_age: int = 3600) -> int:
     return len(to_remove)
 
 
-
 # ============================================================
 # Background Swap Service
 # ============================================================
@@ -447,12 +462,14 @@ def list_backgrounds() -> list[dict]:
             "urban_outdoor": "都市户外",
             "velvet_curtain": "丝绒帘",
         }
-        result.append({
-            "id": bg_id,
-            "name": label_map.get(bg_id, bg_id),
-            "filename": filename,
-            "available": exists,
-        })
+        result.append(
+            {
+                "id": bg_id,
+                "name": label_map.get(bg_id, bg_id),
+                "filename": filename,
+                "available": exists,
+            }
+        )
     return result
 
 
@@ -479,7 +496,9 @@ async def composite_with_background(
     import io
 
     if background_id not in BACKGROUNDS:
-        raise ValueError(f"Unknown background: {background_id}. Available: {list(BACKGROUNDS.keys())}")
+        raise ValueError(
+            f"Unknown background: {background_id}. Available: {list(BACKGROUNDS.keys())}"
+        )
 
     bg_path = BACKGROUNDS_DIR / BACKGROUNDS[background_id]
     if not bg_path.exists():
@@ -535,9 +554,13 @@ def _srgb_to_lab(rgb_u8: np.ndarray) -> np.ndarray:
     # sRGB linearize
     arr_lin = np.where(arr <= 0.04045, arr / 12.92, ((arr + 0.055) / 1.055) ** 2.4)
     # RGB -> XYZ (D65)
-    M = np.array([[0.4124564, 0.3575761, 0.1804375],
-                  [0.2126729, 0.7151522, 0.0721750],
-                  [0.0193339, 0.1191920, 0.9503041]])
+    M = np.array(
+        [
+            [0.4124564, 0.3575761, 0.1804375],
+            [0.2126729, 0.7151522, 0.0721750],
+            [0.0193339, 0.1191920, 0.9503041],
+        ]
+    )
     xyz = arr_lin @ M.T
     # XYZ -> LAB
     ref = np.array([0.95047, 1.0, 1.08883])
@@ -562,16 +585,22 @@ def _lab_to_srgb(lab: np.ndarray) -> np.ndarray:
     f_out[:, :, 0] = lab[:, :, 1] / 500 + f_out[:, :, 1]
     f_out[:, :, 2] = f_out[:, :, 1] - lab[:, :, 2] / 200
 
-    cond = f_out ** 3 > epsilon
-    xyz_out = np.where(cond, ref * f_out ** 3, (116 * f_out - 16) * ref / kappa)
+    cond = f_out**3 > epsilon
+    xyz_out = np.where(cond, ref * f_out**3, (116 * f_out - 16) * ref / kappa)
 
-    M_inv = np.array([[ 3.2404542, -1.5371385, -0.4985314],
-                      [-0.9692660,  1.8760108,  0.0415560],
-                      [ 0.0556434, -0.2040259,  1.0572252]])
+    M_inv = np.array(
+        [
+            [3.2404542, -1.5371385, -0.4985314],
+            [-0.9692660, 1.8760108, 0.0415560],
+            [0.0556434, -0.2040259, 1.0572252],
+        ]
+    )
     rgb_lin = xyz_out @ M_inv.T
-    rgb_out = np.where(rgb_lin <= 0.0031308,
-                       12.92 * rgb_lin,
-                       1.055 * np.power(np.clip(rgb_lin, 0, None), 1 / 2.4) - 0.055)
+    rgb_out = np.where(
+        rgb_lin <= 0.0031308,
+        12.92 * rgb_lin,
+        1.055 * np.power(np.clip(rgb_lin, 0, None), 1 / 2.4) - 0.055,
+    )
     return np.clip(rgb_out * 255, 0, 255).astype(np.uint8)
 
 
@@ -623,10 +652,10 @@ def _color_transfer_to_background(
 
     # Blend with original using alpha mask
     result_rgb = person_rgb * (1 - alpha) + rgb_out * alpha
-    result_arr = np.concatenate([
-        np.clip(result_rgb, 0, 255).astype(np.uint8),
-        person_arr[:, :, 3:4].astype(np.uint8)
-    ], axis=-1)
+    result_arr = np.concatenate(
+        [np.clip(result_rgb, 0, 255).astype(np.uint8), person_arr[:, :, 3:4].astype(np.uint8)],
+        axis=-1,
+    )
     return Image.fromarray(result_arr, "RGBA")
 
 
@@ -675,10 +704,9 @@ def _white_balance_shift(
     corrected[:, :, 2] *= b_factor
     corrected = np.clip(corrected, 0, 255)
 
-    result_arr = np.concatenate([
-        corrected.astype(np.uint8),
-        person_arr[:, :, 3:4].astype(np.uint8)
-    ], axis=-1)
+    result_arr = np.concatenate(
+        [corrected.astype(np.uint8), person_arr[:, :, 3:4].astype(np.uint8)], axis=-1
+    )
     return Image.fromarray(result_arr, "RGBA")
 
 
@@ -728,7 +756,6 @@ def _add_drop_shadow(
     return canvas
 
 
-
 async def swap_background(
     image_url: str,
     background_id: str,
@@ -762,4 +789,3 @@ async def swap_background(
     result_bytes = await composite_with_background(person_bytes, background_id)
 
     return result_bytes
-

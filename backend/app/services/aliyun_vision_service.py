@@ -30,13 +30,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # API image limits (from Aliyun docs)
 # ---------------------------------------------------------------------------
-SEGMENT_CLOTH_MAX_DIMENSION = 3000   # px, longest side
+SEGMENT_CLOTH_MAX_DIMENSION = 3000  # px, longest side
 SEGMENT_CLOTH_MAX_BYTES = 3 * 1024 * 1024  # 3 MB
 SEGMENT_COMMODITY_MAX_DIMENSION = 2000  # px, longest side
 SEGMENT_COMMODITY_MAX_BYTES = 3 * 1024 * 1024  # 3 MB
 
-SEGMENT_BODY_MAX_DIMENSION = 1500   # px, SegmentBody has stricter limits
+SEGMENT_BODY_MAX_DIMENSION = 1500  # px, SegmentBody has stricter limits
 SEGMENT_BODY_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+
 
 def _resize_for_api(
     image_bytes: bytes,
@@ -58,7 +59,10 @@ def _resize_for_api(
     orig_size_kb = len(image_bytes) / 1024
     logger.info(
         "Original image: %dx%d, mode=%s, %.0f KB",
-        img.width, img.height, img.mode, orig_size_kb,
+        img.width,
+        img.height,
+        img.mode,
+        orig_size_kb,
     )
 
     needs_resize = max(img.width, img.height) > max_dimension
@@ -74,7 +78,7 @@ def _resize_for_api(
         img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         logger.info("Resized to %dx%d", new_w, new_h)
 
-    original_is_png = image_bytes[:4] == b'\x89PNG'
+    original_is_png = image_bytes[:4] == b"\x89PNG"
     output_format = "PNG" if original_is_png else "JPEG"
 
     if output_format == "PNG":
@@ -118,6 +122,7 @@ def _resize_for_api(
 # ---------------------------------------------------------------------------
 # PIL connected-component splitting
 # ---------------------------------------------------------------------------
+
 
 def _split_transparent_image(
     transparent_png_bytes: bytes,
@@ -188,11 +193,13 @@ def _split_transparent_image(
             if area < min_area:
                 continue
 
-            region_meta.append({
-                "pixels": pixels,
-                "bbox": (min_x, min_y, max_x, max_y),
-                "area": area,
-            })
+            region_meta.append(
+                {
+                    "pixels": pixels,
+                    "bbox": (min_x, min_y, max_x, max_y),
+                    "area": area,
+                }
+            )
 
     logger.info("Found %d raw regions before pair-merging", len(region_meta))
 
@@ -262,7 +269,11 @@ def _split_transparent_image(
             # Merge: combine pixels from j into i
             logger.info(
                 "Merging paired regions %d and %d (area=%d/%d, gap=%dpx)",
-                i, j, ri["area"], rj["area"], gap,
+                i,
+                j,
+                ri["area"],
+                rj["area"],
+                gap,
             )
             ri["pixels"].extend(rj["pixels"])
             ri["bbox"] = (
@@ -295,9 +306,7 @@ def _split_transparent_image(
         region_mask = Image.new("1", (width, height), 0)
         for px, py in pixels:
             region_mask.putpixel((px, py), 255)
-        region_mask_cropped = region_mask.crop(
-            (crop_left, crop_top, crop_right, crop_bottom)
-        )
+        region_mask_cropped = region_mask.crop((crop_left, crop_top, crop_right, crop_bottom))
 
         # Combine: take original RGB + region-only alpha
         # Ensure RGBA mode for consistent channel extraction
@@ -311,7 +320,11 @@ def _split_transparent_image(
         regions.append(buf.getvalue())
         logger.info(
             "Found region: area=%d, bbox=(%d,%d,%d,%d), size=%dKB",
-            area, crop_left, crop_top, crop_right, crop_bottom,
+            area,
+            crop_left,
+            crop_top,
+            crop_right,
+            crop_bottom,
             len(buf.getvalue()) // 1024,
         )
 
@@ -334,6 +347,7 @@ class AliyunVisionService:
             return self._imageseg_client
         from alibabacloud_imageseg20191230.client import Client as ImagesegClient
         from alibabacloud_tea_openapi.models import Config
+
         config = Config(
             access_key_id=self.settings.aliyun_access_key_id,
             access_key_secret=self.settings.aliyun_access_key_secret,
@@ -349,7 +363,9 @@ class AliyunVisionService:
     async def segment_commodity(self, image_bytes: bytes) -> bytes:
         """Remove background from a flat-lay clothing image. Returns PNG bytes."""
         prepared = _resize_for_api(
-            image_bytes, SEGMENT_COMMODITY_MAX_DIMENSION, SEGMENT_COMMODITY_MAX_BYTES,
+            image_bytes,
+            SEGMENT_COMMODITY_MAX_DIMENSION,
+            SEGMENT_COMMODITY_MAX_BYTES,
         )
         result = await asyncio.to_thread(self._segment_commodity_sync, prepared)
         if not result or len(result) == 0:
@@ -360,7 +376,9 @@ class AliyunVisionService:
     async def segment_person(self, image_bytes: bytes) -> bytes:
         """Remove background from a person photo, keeping full body. Returns RGBA PNG bytes."""
         prepared = _resize_for_api(
-            image_bytes, SEGMENT_BODY_MAX_DIMENSION, SEGMENT_BODY_MAX_BYTES,
+            image_bytes,
+            SEGMENT_BODY_MAX_DIMENSION,
+            SEGMENT_BODY_MAX_BYTES,
         )
         result = await asyncio.to_thread(self._segment_body_sync, prepared)
         if not result or len(result) == 0:
@@ -370,9 +388,11 @@ class AliyunVisionService:
 
     def _segment_body_sync(self, image_bytes: bytes) -> bytes | None:
         """Synchronous SegmentBody API call."""
+        from io import BytesIO
+
         from alibabacloud_imageseg20191230 import models as imageseg_models
         from alibabacloud_tea_util.models import RuntimeOptions
-        from io import BytesIO
+
         client = self._get_imageseg_client()
         runtime = RuntimeOptions()
         runtime.read_timeout = 30000
@@ -388,11 +408,14 @@ class AliyunVisionService:
         if not image_url:
             raise RuntimeError("SegmentBody returned no image_url")
         import httpx as _httpx
+
         img_resp = _httpx.get(image_url, timeout=30)
         return img_resp.content
 
     async def segment_commodity_items(
-        self, image_bytes: bytes, min_area: int = 5000,
+        self,
+        image_bytes: bytes,
+        min_area: int = 5000,
     ) -> dict[str, bytes]:
         """Segment a flat-lay multi-item photo into individual garment PNGs.
 
@@ -417,10 +440,11 @@ class AliyunVisionService:
 
         Returns dict mapping category names to PNG bytes (including full_body).
         """
-        import time
 
         prepared = _resize_for_api(
-            image_bytes, SEGMENT_BODY_MAX_DIMENSION, SEGMENT_BODY_MAX_BYTES,
+            image_bytes,
+            SEGMENT_BODY_MAX_DIMENSION,
+            SEGMENT_BODY_MAX_BYTES,
         )
         result = await asyncio.to_thread(self._segment_cloth_sync, prepared)
         if not result:
@@ -429,7 +453,8 @@ class AliyunVisionService:
         return result
 
     async def segment_avatar_items(
-        self, image_bytes: bytes,
+        self,
+        image_bytes: bytes,
         categories: list[str | None] | None = None,
     ) -> dict[str, bytes]:
         """Segment a person/outfit photo into individual garment PNGs.
@@ -440,8 +465,11 @@ class AliyunVisionService:
         Returns dict with keys like "full_body", "tops", "pants", etc.
         """
         import time
+
         prepared = _resize_for_api(
-            image_bytes, SEGMENT_BODY_MAX_DIMENSION, SEGMENT_BODY_MAX_BYTES,
+            image_bytes,
+            SEGMENT_BODY_MAX_DIMENSION,
+            SEGMENT_BODY_MAX_BYTES,
         )
 
         result: dict[str, bytes] = {}
@@ -449,7 +477,7 @@ class AliyunVisionService:
             categories = [None, "tops", "coat", "pants", "skirt"]
 
         total_t0 = time.perf_counter()
-        for idx, cat in enumerate(categories, start=1):
+        for _idx, cat in enumerate(categories, start=1):
             key = cat or "full_body"
             t0 = time.perf_counter()
             try:
@@ -471,7 +499,9 @@ class AliyunVisionService:
                     non_zero = sum(1 for p in alpha.getdata() if p > 10)
                     total_pixels = check_img.width * check_img.height
                     if non_zero < total_pixels * 0.01:
-                        logger.info("Category '%s': <1%% non-transparent, skipping (%.2fs)", key, elapsed)
+                        logger.info(
+                            "Category '%s': <1%% non-transparent, skipping (%.2fs)", key, elapsed
+                        )
                         continue
                 except Exception:
                     pass
@@ -482,7 +512,9 @@ class AliyunVisionService:
 
         logger.info(
             "segment_avatar_items produced %d layers in %.2fs: %s",
-            len(result), time.perf_counter() - total_t0, list(result.keys()),
+            len(result),
+            time.perf_counter() - total_t0,
+            list(result.keys()),
         )
         return result
 
@@ -493,6 +525,7 @@ class AliyunVisionService:
     def _segment_commodity_sync(self, image_bytes: bytes) -> bytes | None:
         from alibabacloud_imageseg20191230 import models as imageseg_models
         from alibabacloud_tea_util.models import RuntimeOptions
+
         client = self._get_imageseg_client()
         runtime = RuntimeOptions()
         runtime.read_timeout = 30000
@@ -512,7 +545,9 @@ class AliyunVisionService:
         return None
 
     def _segment_cloth_single_sync(
-        self, prepared: bytes | BytesIO, cloth_class: str | None = None,
+        self,
+        prepared: bytes | BytesIO,
+        cloth_class: str | None = None,
     ) -> bytes | None:
         """Synchronous SegmentCloth call for a single category.
 
@@ -525,6 +560,7 @@ class AliyunVisionService:
         """
         from alibabacloud_imageseg20191230 import models as imageseg_models
         from alibabacloud_tea_util.models import RuntimeOptions
+
         client = self._get_imageseg_client()
         runtime = RuntimeOptions()
         runtime.read_timeout = 30000
@@ -549,6 +585,7 @@ class AliyunVisionService:
         """Call SegmentCloth without cloth_class (returns full foreground + class_url layers)."""
         from alibabacloud_imageseg20191230 import models as imageseg_models
         from alibabacloud_tea_util.models import RuntimeOptions
+
         client = self._get_imageseg_client()
         runtime = RuntimeOptions()
         runtime.read_timeout = 30000
@@ -569,7 +606,9 @@ class AliyunVisionService:
                 try:
                     with urllib.request.urlopen(image_url, timeout=30) as resp:
                         layers["full_body"] = resp.read()
-                    logger.info("Downloaded SegmentCloth full_body, %d bytes", len(layers["full_body"]))
+                    logger.info(
+                        "Downloaded SegmentCloth full_body, %d bytes", len(layers["full_body"])
+                    )
                 except Exception as dl_exc:
                     logger.warning("Failed to download SegmentCloth image_url: %s", dl_exc)
             class_url = getattr(element, "class_url", None)
@@ -579,29 +618,40 @@ class AliyunVisionService:
                         try:
                             with urllib.request.urlopen(url, timeout=30) as resp:
                                 layers[cat] = resp.read()
-                            logger.info("Downloaded SegmentCloth layer '%s', %d bytes", cat, len(layers[cat]))
+                            logger.info(
+                                "Downloaded SegmentCloth layer '%s', %d bytes",
+                                cat,
+                                len(layers[cat]),
+                            )
                         except Exception as dl_exc:
-                            logger.warning("Failed to download SegmentCloth layer '%s': %s", cat, dl_exc)
+                            logger.warning(
+                                "Failed to download SegmentCloth layer '%s': %s", cat, dl_exc
+                            )
         if layers:
             logger.info("SegmentCloth produced %d layers: %s", len(layers), list(layers.keys()))
         return layers if layers else None
+
 
 async def remove_background(image_bytes: bytes) -> bytes:
     service = AliyunVisionService()
     return await service.segment_commodity(image_bytes)
 
+
 async def segment_commodity(image_bytes: bytes) -> bytes:
     service = AliyunVisionService()
     return await service.segment_commodity(image_bytes)
+
 
 async def parse_avatar(image_bytes: bytes) -> dict[str, bytes]:
     service = AliyunVisionService()
     return await service.parse_avatar(image_bytes)
 
+
 async def segment_body(image_bytes: bytes) -> bytes:
     service = AliyunVisionService()
     result = await service.parse_avatar(image_bytes)
     return _pick_primary_layer(result)
+
 
 def _pick_primary_layer(layers: dict[str, bytes]) -> bytes:
     for key in ("tops", "top", "upper_body", "upper", "upperBody"):
@@ -611,22 +661,14 @@ def _pick_primary_layer(layers: dict[str, bytes]) -> bytes:
         return next(iter(layers.values()))
     return b""
 
+
 async def download_image(url: str) -> bytes:
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
         response = await client.get(url)
         response.raise_for_status()
         return response.content
 
+
 def image_bytes_to_base64(image_bytes: bytes, mime: str = "image/png") -> str:
     b64 = base64.b64encode(image_bytes).decode("utf-8")
     return f"data:{mime};base64,{b64}"
-
-
-
-
-
-
-
-
-
-

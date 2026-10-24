@@ -3,6 +3,7 @@
 文档: https://dev.qweather.com/docs/api/
 新版 API v7 使用 HTTPS，请求头带 key。
 """
+
 import logging
 from datetime import UTC, datetime
 
@@ -18,37 +19,74 @@ logger = logging.getLogger(__name__)
 # 注意：和风天气 icon 代码和天气代码不同，icon 是三位数
 QWEATHER_CODES = {
     # 晴
-    "100": "sunny", "150": "sunny",
+    "100": "sunny",
+    "150": "sunny",
     # 多云
-    "101": "partly cloudy", "102": "partly cloudy", "103": "partly cloudy",
-    "151": "partly cloudy", "152": "partly cloudy", "153": "partly cloudy",
+    "101": "partly cloudy",
+    "102": "partly cloudy",
+    "103": "partly cloudy",
+    "151": "partly cloudy",
+    "152": "partly cloudy",
+    "153": "partly cloudy",
     # 阴
-    "104": "cloudy", "154": "cloudy",
+    "104": "cloudy",
+    "154": "cloudy",
     # 晴转多云等过渡天气
-    "300": "light rain", "301": "light rain",
-    "302": "rain", "303": "heavy rain", "304": "heavy rain",
-    "305": "light rain", "306": "rain", "307": "heavy rain",
-    "308": "heavy rain", "309": "light drizzle",
-    "310": "light rain", "311": "rain", "312": "heavy rain",
-    "313": "heavy rain", "314": "light rain", "315": "rain",
-    "316": "heavy rain", "317": "heavy rain", "318": "heavy rain",
+    "300": "light rain",
+    "301": "light rain",
+    "302": "rain",
+    "303": "heavy rain",
+    "304": "heavy rain",
+    "305": "light rain",
+    "306": "rain",
+    "307": "heavy rain",
+    "308": "heavy rain",
+    "309": "light drizzle",
+    "310": "light rain",
+    "311": "rain",
+    "312": "heavy rain",
+    "313": "heavy rain",
+    "314": "light rain",
+    "315": "rain",
+    "316": "heavy rain",
+    "317": "heavy rain",
+    "318": "heavy rain",
     "399": "rain",
-    "350": "light rain", "351": "light rain",
+    "350": "light rain",
+    "351": "light rain",
     # 雪
-    "400": "light snow", "401": "snow", "402": "heavy snow",
-    "403": "heavy snow", "404": "snow", "405": "snow",
-    "406": "light snow", "407": "light snow", "408": "snow",
-    "409": "heavy snow", "410": "heavy snow",
-    "456": "light snow", "457": "light snow", "499": "snow",
+    "400": "light snow",
+    "401": "snow",
+    "402": "heavy snow",
+    "403": "heavy snow",
+    "404": "snow",
+    "405": "snow",
+    "406": "light snow",
+    "407": "light snow",
+    "408": "snow",
+    "409": "heavy snow",
+    "410": "heavy snow",
+    "456": "light snow",
+    "457": "light snow",
+    "499": "snow",
     # 雾/霾
-    "500": "foggy", "501": "foggy", "502": "foggy",
-    "503": "foggy", "504": "foggy", "507": "foggy",
-    "508": "foggy", "509": "foggy", "510": "foggy",
-    "511": "foggy", "512": "foggy", "513": "foggy",
-    "514": "foggy", "515": "foggy",
+    "500": "foggy",
+    "501": "foggy",
+    "502": "foggy",
+    "503": "foggy",
+    "504": "foggy",
+    "507": "foggy",
+    "508": "foggy",
+    "509": "foggy",
+    "510": "foggy",
+    "511": "foggy",
+    "512": "foggy",
+    "513": "foggy",
+    "514": "foggy",
+    "515": "foggy",
     # 极端天气
     "900": "sunny",  # hot
-    "901": "snow",   # cold
+    "901": "snow",  # cold
     "999": "unknown",
 }
 
@@ -126,8 +164,7 @@ class QWeatherService:
 
                 if now_data.get("code") != "200":
                     raise WeatherServiceError(
-                        f"QWeather API error: code={now_data.get('code')}, "
-                        f"location={location}"
+                        f"QWeather API error: code={now_data.get('code')}, location={location}"
                     )
 
                 now = now_data.get("now", {})
@@ -147,7 +184,11 @@ class QWeatherService:
                     if daily:
                         # 今天的数据
                         today = daily[0]
-                        precip_chance = int(today.get("precip", "0").split("%")[0]) if "%" in str(today.get("precip", "0")) else 0
+                        precip_chance = (
+                            int(today.get("precip", "0").split("%")[0])
+                            if "%" in str(today.get("precip", "0"))
+                            else 0
+                        )
 
                 # 和风天气 icon 字段是天气代码，text 字段是中文天气描述
                 weather_icon = now.get("icon", "999")
@@ -211,7 +252,9 @@ class QWeatherService:
                 logger.warning("QWeather reverse_geocode failed: %s", e)
         return ""
 
-    async def get_daily_forecast(self, latitude: float, longitude: float, days: int = 3) -> list[dict]:
+    async def get_daily_forecast(
+        self, latitude: float, longitude: float, days: int = 3
+    ) -> list[dict]:
         """
         获取未来几天天气预报。
         返回格式: [{"date": "2025-05-26", "temp_min": 18, "temp_max": 28, "condition": "sunny", "precipitation_chance": 20}, ...]
@@ -242,14 +285,16 @@ class QWeatherService:
                     if day_condition == "unknown" and text_day:
                         day_condition = text_day
 
-                    forecasts.append({
-                        "date": day.get("fxDate", ""),
-                        "temp_min": float(day.get("tempMin", 0)),
-                        "temp_max": float(day.get("tempMax", 0)),
-                        "condition": day_condition,
-                        "condition_code": int(icon_day) if icon_day.isdigit() else 999,
-                        "precipitation_chance": precip_pct,
-                    })
+                    forecasts.append(
+                        {
+                            "date": day.get("fxDate", ""),
+                            "temp_min": float(day.get("tempMin", 0)),
+                            "temp_max": float(day.get("tempMax", 0)),
+                            "condition": day_condition,
+                            "condition_code": int(icon_day) if icon_day.isdigit() else 999,
+                            "precipitation_chance": precip_pct,
+                        }
+                    )
 
                 return forecasts
 

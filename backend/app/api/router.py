@@ -6,8 +6,6 @@ from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.community import router as community_router
-from app.api.virtual_tryon import router as virtual_tryon_router
-from app.api.products import router as products_router
 from app.api.families import router as families_router
 from app.api.health import router as health_router
 from app.api.images import router as images_router
@@ -17,7 +15,9 @@ from app.api.notifications import router as notifications_router
 from app.api.outfits import router as outfits_router
 from app.api.pairings import router as pairings_router
 from app.api.preferences import router as preferences_router
+from app.api.products import router as products_router
 from app.api.users import router as users_router
+from app.api.virtual_tryon import router as virtual_tryon_router
 from app.api.weather import router as weather_router
 
 api_router = APIRouter()

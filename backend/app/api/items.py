@@ -1,8 +1,8 @@
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Annotated
 from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -42,6 +42,9 @@ from app.services.item_service import ItemService
 from app.utils.auth import get_current_user
 from app.workers.settings import get_redis_settings
 
+if TYPE_CHECKING:
+    from app.services.ai_service import AIService
+
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -71,14 +74,37 @@ CATEGORY_TO_NAME_ZH: dict[str, str] = {
 }
 
 TYPE_LABEL_ZH: dict[str, str] = {
-    "top": "上衣", "tshirt": "T恤", "shirt": "衬衫", "blouse": "女衬衫",
-    "sweater": "毛衣", "jacket": "夹克", "coat": "外套", "vest": "马甲",
-    "hoodie": "卫衣", "outerwear": "外套", "pants": "裤子", "jeans": "牛仔裤",
-    "shorts": "短裤", "bottom": "下装", "skirt": "裙子", "dress": "连衣裙",
-    "shoes": "鞋子", "sneakers": "运动鞋", "boots": "靴子", "sandals": "凉鞋",
-    "hat": "帽子", "cap": "鸭舌帽", "scarf": "围巾", "bag": "包包",
-    "belt": "腰带", "watch": "手表", "sunglasses": "墨镜", "accessory": "配饰",
-    "underwear": "内衣", "socks": "袜子", "unknown": "衣物",
+    "top": "上衣",
+    "tshirt": "T恤",
+    "shirt": "衬衫",
+    "blouse": "女衬衫",
+    "sweater": "毛衣",
+    "jacket": "夹克",
+    "coat": "外套",
+    "vest": "马甲",
+    "hoodie": "卫衣",
+    "outerwear": "外套",
+    "pants": "裤子",
+    "jeans": "牛仔裤",
+    "shorts": "短裤",
+    "bottom": "下装",
+    "skirt": "裙子",
+    "dress": "连衣裙",
+    "shoes": "鞋子",
+    "sneakers": "运动鞋",
+    "boots": "靴子",
+    "sandals": "凉鞋",
+    "hat": "帽子",
+    "cap": "鸭舌帽",
+    "scarf": "围巾",
+    "bag": "包包",
+    "belt": "腰带",
+    "watch": "手表",
+    "sunglasses": "墨镜",
+    "accessory": "配饰",
+    "underwear": "内衣",
+    "socks": "袜子",
+    "unknown": "衣物",
 }
 
 
@@ -102,8 +128,6 @@ async def list_items(
     sort_order: str = "desc",
 ) -> ItemListResponse:
     color_list = colors.split(",") if colors else None
-
-
 
     filters = ItemFilter(
         type=type,
@@ -1274,6 +1298,7 @@ async def set_primary_image(
     await db.refresh(item)
     return ItemResponse.model_validate(item)
 
+
 # ===== Parse: synchronous AI analysis =====
 
 
@@ -1301,6 +1326,7 @@ class ParseResponse(BaseModel):
 
 class FromParseRequest(BaseModel):
     """Request to create items from a previous parse result."""
+
     items: list[ParsedItemResult]
     image_path: str | None = None
     primary_color: str | None = None
@@ -1322,7 +1348,7 @@ async def _enrich_segmented_items(
     base_storage: str,
 ) -> list[ParsedItemResult]:
     """Enrich segmented items with AI-recognized tags (type, name, color, etc.).
-    
+
     Special case: when there's only 1 segment (e.g. stacked items that couldn't be split),
     use analyze_image_multi to detect ALL items in the image and create multiple results.
     """
@@ -1351,7 +1377,7 @@ async def _enrich_segmented_items(
                 return enriched
         except Exception as e:
             logger.warning("Multi-item detection failed for single segment: %s", e)
-    
+
     # Standard: enrich each segment individually
     for item in items:
         seg_path = item.segmented_image_path
@@ -1430,9 +1456,11 @@ async def parse_items_from_image(
     # ---------------------------------------------------------------
     # Auto-classify using MiMo vision model
     if not scene_type:
-        from app.services.ai_service import AIService as _AISvc
-        from app.models.preference import UserPreference
         from sqlalchemy import select as _select
+
+        from app.models.preference import UserPreference
+        from app.services.ai_service import AIService as _AISvc
+
         _pref_result = await db.execute(
             _select(UserPreference).where(UserPreference.user_id == current_user.id)
         )
@@ -1460,13 +1488,15 @@ async def parse_items_from_image(
             full_image_path = f"{settings.storage_path}/{image_paths['image_path']}"
             tags_list = await ai_svc.analyze_image_multi(full_image_path)
             logger.info(
-                "AI detected %d items in commodity image", len(tags_list),
+                "AI detected %d items in commodity image",
+                len(tags_list),
             )
 
             # SegmentCommodity + PIL connected-component splitting
             split_items = await vision_service.segment_commodity_items(content)
             logger.info(
-                "segment_commodity_items produced %d regions", len(split_items),
+                "segment_commodity_items produced %d regions",
+                len(split_items),
             )
 
             # Store all segments in parallel
@@ -1478,17 +1508,19 @@ async def parse_items_from_image(
                     image_data=seg_bytes,
                     original_filename=f"commodity_{seg_key}.png",
                 )
-                for seg_key, seg_bytes in zip(segment_keys, segment_bytes_list)
+                for seg_key, seg_bytes in zip(segment_keys, segment_bytes_list, strict=False)
             ]
             stored_paths_list = await asyncio.gather(*store_tasks, return_exceptions=True)
 
             # Match stored segments to AI tags by index
             for idx, (seg_key, stored_paths) in enumerate(
-                zip(segment_keys, stored_paths_list)
+                zip(segment_keys, stored_paths_list, strict=False)
             ):
                 if isinstance(stored_paths, Exception):
                     logger.warning(
-                        "Failed to store segment '%s': %s", seg_key, stored_paths,
+                        "Failed to store segment '%s': %s",
+                        seg_key,
+                        stored_paths,
                     )
                     continue
 
@@ -1498,7 +1530,8 @@ async def parse_items_from_image(
                     category="commodity",
                     segmented_image_path=stored_paths.get("image_path"),
                     thumbnail_url=sign_image_url(stored_paths.get("thumbnail_path"))
-                    if stored_paths.get("thumbnail_path") else None,
+                    if stored_paths.get("thumbnail_path")
+                    else None,
                     confidence=0.85,
                 )
 
@@ -1526,8 +1559,7 @@ async def parse_items_from_image(
             # Fallback: if splitting yielded nothing, use AI tags directly
             if not results and tags_list:
                 logger.info(
-                    "segment_commodity_items returned 0 regions, "
-                    "using AI tags as fallback",
+                    "segment_commodity_items returned 0 regions, using AI tags as fallback",
                 )
                 for tags in tags_list:
                     result_item = ParsedItemResult(
@@ -1545,8 +1577,8 @@ async def parse_items_from_image(
                     results.append(result_item)
 
             print(
-                f'PARSE_RESULT: commodity count={len(results)}, '
-                f'types={[r.type for r in results]}, names={[r.name for r in results]}'
+                f"PARSE_RESULT: commodity count={len(results)}, "
+                f"types={[r.type for r in results]}, names={[r.name for r in results]}"
             )
             return ParseResponse(
                 items=results,
@@ -1561,6 +1593,7 @@ async def parse_items_from_image(
         # Outfit: SegmentCloth full_body -> ONE outfit item (no splitting)
         try:
             import time as _time
+
             avatar_t0 = _time.perf_counter()
 
             vision_service = AliyunVisionService()
@@ -1586,27 +1619,31 @@ async def parse_items_from_image(
                     image_data=seg_bytes,
                     original_filename="avatar_full_body.png",
                 )
-                results.append(ParsedItemResult(
-                    name="穿搭照",
-                    type="outfit",
-                    category="full_body",
-                    segmented_image_path=fb_paths.get("image_path"),
-                    thumbnail_url=sign_image_url(fb_paths.get("thumbnail_path"))
-                    if fb_paths.get("thumbnail_path") else None,
-                    confidence=0.9,
-                    source_scene="avatar",
-                    tryon_ready=True,
-                ))
+                results.append(
+                    ParsedItemResult(
+                        name="穿搭照",
+                        type="outfit",
+                        category="full_body",
+                        segmented_image_path=fb_paths.get("image_path"),
+                        thumbnail_url=sign_image_url(fb_paths.get("thumbnail_path"))
+                        if fb_paths.get("thumbnail_path")
+                        else None,
+                        confidence=0.9,
+                        source_scene="avatar",
+                        tryon_ready=True,
+                    )
+                )
 
                 # NOTE(2026-10): outfit photos stay as ONE item — the
                 # top/bottom parsing-v1 split was removed by design.
                 logger.info(
                     "Avatar: stored %d items in %.2fs",
-                    len(results), _time.perf_counter() - avatar_t0,
+                    len(results),
+                    _time.perf_counter() - avatar_t0,
                 )
                 print(
-                    f'PARSE_RESULT: avatar count={len(results)}, '
-                    f'types={[r.type for r in results]}, names={[r.name for r in results]}'
+                    f"PARSE_RESULT: avatar count={len(results)}, "
+                    f"types={[r.type for r in results]}, names={[r.name for r in results]}"
                 )
                 return ParseResponse(
                     items=results,
@@ -1627,22 +1664,22 @@ async def parse_items_from_image(
         # Try to segment the image into individual items first
         seg_results: dict[str, bytes] = {}
         try:
-            if scene_type == 'outfit':
+            if scene_type == "outfit":
                 # Outfit: SegmentCloth full foreground
                 layers = await vision_service.parse_avatar(content)
-                if 'full_body' in layers:
-                    seg_results = {'outfit': layers['full_body']}
+                if "full_body" in layers:
+                    seg_results = {"outfit": layers["full_body"]}
                 elif layers:
-                    seg_results = {'outfit': next(iter(layers.values()))}
+                    seg_results = {"outfit": next(iter(layers.values()))}
                 if not seg_results:
                     seg_bytes = await vision_service.segment_commodity(content)
-                    seg_results = {'outfit': seg_bytes}
+                    seg_results = {"outfit": seg_bytes}
             else:
                 # Commodity: background removal + connected-component splitting
                 split_items = await vision_service.segment_commodity_items(content)
                 seg_results = split_items if split_items else {}
         except Exception as seg_exc:
-            logger.warning('Fallback segmentation failed: %s', seg_exc)
+            logger.warning("Fallback segmentation failed: %s", seg_exc)
 
         if seg_results and len(seg_results) > 0:
             # We have segmented individual items — store each and enrich with AI
@@ -1653,21 +1690,24 @@ async def parse_items_from_image(
                         image_data=seg_bytes,
                         original_filename=f"seg_{key}.png",
                     )
-                    if key == 'outfit':
-                        item_type = 'outfit'
-                        name_zh = '穿搭照'
+                    if key == "outfit":
+                        item_type = "outfit"
+                        name_zh = "穿搭照"
                     else:
-                        item_type = 'unknown'
-                        name_zh = f'衣物 {key.split(chr(95))[-1]}'
-                    results.append(ParsedItemResult(
-                        name=name_zh or f"衣物 {key.split('_')[-1]}",
-                        type=item_type,
-                        category=key,
-                        segmented_image_path=seg_paths.get("image_path"),
-                        thumbnail_url=sign_image_url(seg_paths.get("thumbnail_path"))
-                        if seg_paths.get("thumbnail_path") else None,
-                        confidence=0.8,
-                    ))
+                        item_type = "unknown"
+                        name_zh = f"衣物 {key.split(chr(95))[-1]}"
+                    results.append(
+                        ParsedItemResult(
+                            name=name_zh or f"衣物 {key.split('_')[-1]}",
+                            type=item_type,
+                            category=key,
+                            segmented_image_path=seg_paths.get("image_path"),
+                            thumbnail_url=sign_image_url(seg_paths.get("thumbnail_path"))
+                            if seg_paths.get("thumbnail_path")
+                            else None,
+                            confidence=0.8,
+                        )
+                    )
                 except Exception as e:
                     logger.warning("Failed to store fallback segment '%s': %s", key, e)
 
@@ -1686,20 +1726,24 @@ async def parse_items_from_image(
                 )
             if tags_list:
                 tags = tags_list[0]
-                results.append(ParsedItemResult(
-                    name=tags.name or tags.type or "未命名单品",
-                    type=tags.type or "unknown",
-                    primary_color=tags.primary_color,
-                    material=tags.material,
-                    style=tags.style or [],
-                    description=tags.description,
-                    confidence=tags.confidence,
-                ))
+                results.append(
+                    ParsedItemResult(
+                        name=tags.name or tags.type or "未命名单品",
+                        type=tags.type or "unknown",
+                        primary_color=tags.primary_color,
+                        material=tags.material,
+                        style=tags.style or [],
+                        description=tags.description,
+                        confidence=tags.confidence,
+                    )
+                )
 
-        print(f'PARSE_RESULT: count={len(results)}, types={[r.type for r in results]}, names={[r.name for r in results]}')
+        print(
+            f"PARSE_RESULT: count={len(results)}, types={[r.type for r in results]}, names={[r.name for r in results]}"
+        )
         for _r in results:
             _r.source_scene = "avatar" if scene_type == "outfit" else "commodity"
-            _r.tryon_ready = (scene_type == "outfit")
+            _r.tryon_ready = scene_type == "outfit"
         return ParseResponse(
             items=results,
             count=len(results),
@@ -1712,6 +1756,8 @@ async def parse_items_from_image(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI analysis failed, please try again",
         ) from None
+
+
 @router.post("/from-parse", response_model=FromParseResponse)
 async def create_items_from_parse(
     request: FromParseRequest,
@@ -1729,11 +1775,11 @@ async def create_items_from_parse(
     item_ids: list[str] = []
     errors: list[str] = []
 
-    has_presegmented = any(
-        getattr(item, "segmented_image_path", None) for item in request.items
-    )
+    has_presegmented = any(getattr(item, "segmented_image_path", None) for item in request.items)
     # Path A: Pre-segmented items
-    print(f"FROM_PARSE_DEBUG: has_presegmented={has_presegmented}, items_count={len(request.items)}, scene_type={request.scene_type}")
+    print(
+        f"FROM_PARSE_DEBUG: has_presegmented={has_presegmented}, items_count={len(request.items)}, scene_type={request.scene_type}"
+    )
     for _idx, _item in enumerate(request.items):
         _seg = getattr(_item, "segmented_image_path", None)
         print(f"FROM_PARSE_DEBUG item[{_idx}]: name={_item.name} type={_item.type} seg_path={_seg}")
@@ -1743,6 +1789,7 @@ async def create_items_from_parse(
                 seg_path = getattr(parsed, "segmented_image_path", None)
                 if seg_path:
                     import os
+
                     base, ext = os.path.splitext(seg_path)
                     item_image_paths = {
                         "image_path": seg_path,
@@ -1777,8 +1824,8 @@ async def create_items_from_parse(
                     await db.flush()
 
                 # Set source scene fields - use each item's own values
-                item.source_scene = getattr(parsed, 'source_scene', None) or "commodity"
-                item.tryon_ready = bool(getattr(parsed, 'tryon_ready', False))
+                item.source_scene = getattr(parsed, "source_scene", None) or "commodity"
+                item.tryon_ready = bool(getattr(parsed, "tryon_ready", False))
 
                 item_ids.append(str(item.id))
                 created += 1
@@ -1821,6 +1868,7 @@ async def create_items_from_parse(
                 if request.scene_type in ("avatar", "outfit"):
                     layers = await vision_service.parse_avatar(source_bytes)
                     from app.services.aliyun_vision_service import _pick_primary_layer
+
                     seg_bytes = _pick_primary_layer(layers)
                 else:
                     seg_bytes = await vision_service.segment_commodity(source_bytes)
@@ -1836,7 +1884,8 @@ async def create_items_from_parse(
                 )
             except Exception as seg_exc:
                 logger.warning(
-                    "Segmentation failed, using original image: %s", seg_exc,
+                    "Segmentation failed, using original image: %s",
+                    seg_exc,
                 )
                 base = request.image_path.rsplit(".", 1)[0]
                 ext = request.image_path.rsplit(".", 1)[-1]
@@ -1926,8 +1975,8 @@ async def upload_image(
     current_user: Annotated[User, Depends(get_current_user)],
     image: UploadFile = File(..., description="Image file to upload"),
 ) -> ImageUploadResponse:
-    from app.utils.signed_urls import sign_image_url
     from app.services.oss_service import get_oss_service
+    from app.utils.signed_urls import sign_image_url
 
     image_service = ImageService()
     content = await image.read()
@@ -1960,11 +2009,3 @@ async def upload_image(
         public_url = sign_image_url(paths["image_path"])
 
     return ImageUploadResponse(url=public_url, path=paths["image_path"])
-
-
-
-
-
-
-
-

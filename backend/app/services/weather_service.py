@@ -26,7 +26,7 @@ class WeatherData:
     is_day: bool
     uv_index: float
     timestamp: datetime
-    city: str = "" 
+    city: str = ""
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -150,6 +150,7 @@ class WeatherService:
             self._qweather_checked = True
             try:
                 from app.services.weather_cn import QWeatherService
+
                 qws = QWeatherService()
                 if qws.is_configured():
                     self._qweather = qws
@@ -349,7 +350,7 @@ class WeatherService:
 
     async def _fetch_with_fallback(self, endpoint: str, params: dict) -> dict:
         """Fetch from primary URL, fall back to secondary if it fails.
-        
+
         This helps in regions where the primary Open-Meteo URL may be blocked.
         """
         urls = [self.base_url]
@@ -401,4 +402,3 @@ class WeatherService:
 
 class WeatherServiceError(Exception):
     pass
-

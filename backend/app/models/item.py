@@ -91,7 +91,9 @@ class ClothingItem(Base):
     ai_description: Mapped[str | None] = mapped_column(Text)
 
     # Source scene: how the item was uploaded
-    source_scene: Mapped[str] = mapped_column(String(20), default="commodity")  # "commodity" | "avatar"
+    source_scene: Mapped[str] = mapped_column(
+        String(20), default="commodity"
+    )  # "commodity" | "avatar"
     tryon_ready: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # User metadata
@@ -185,4 +187,3 @@ class ItemImage(Base):
 
     # Relationships
     item: Mapped["ClothingItem"] = relationship("ClothingItem", back_populates="additional_images")
-

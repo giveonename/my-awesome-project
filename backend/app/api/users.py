@@ -197,15 +197,14 @@ async def complete_onboarding(
 
 # ===== Body Profile =====
 
+
 @router.get("/body-profile", response_model=BodyProfileResponse)
 async def get_body_profile(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> BodyProfileResponse:
     """Get the current user's body profile."""
-    result = await db.execute(
-        select(BodyProfile).where(BodyProfile.user_id == current_user.id)
-    )
+    result = await db.execute(select(BodyProfile).where(BodyProfile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
 
     if not profile:
@@ -222,9 +221,7 @@ async def upsert_body_profile(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> BodyProfileResponse:
     """Create or update the current user's body profile."""
-    result = await db.execute(
-        select(BodyProfile).where(BodyProfile.user_id == current_user.id)
-    )
+    result = await db.execute(select(BodyProfile).where(BodyProfile.user_id == current_user.id))
     profile = result.scalar_one_or_none()
 
     if not profile:

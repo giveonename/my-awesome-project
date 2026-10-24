@@ -122,8 +122,9 @@ class UserService:
         user.onboarding_completed = True
         await self.db.flush()
 
-
-    async def sync_from_wechat(self, openid: str, nickname: str | None, avatar_url: str | None) -> tuple[User, bool]:
+    async def sync_from_wechat(
+        self, openid: str, nickname: str | None, avatar_url: str | None
+    ) -> tuple[User, bool]:
         """
         Sync user from WeChat Mini Program.
         Creates user if not exists, updates if exists.

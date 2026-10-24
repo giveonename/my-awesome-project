@@ -60,6 +60,7 @@ def _reply_response(reply: HelpReply) -> HelpReplyResponse:
 
 # ===== Help Requests =====
 
+
 @router.get("/help-requests", response_model=HelpRequestListResponse)
 async def list_help_requests(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -82,8 +83,7 @@ async def list_help_requests(
 
     # Fetch page
     query = (
-        query
-        .order_by(HelpRequest.created_at.desc())
+        query.order_by(HelpRequest.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -99,7 +99,9 @@ async def list_help_requests(
     )
 
 
-@router.post("/help-requests", response_model=HelpRequestResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/help-requests", response_model=HelpRequestResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_help_request(
     data: HelpRequestCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -177,9 +179,7 @@ async def delete_help_request(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> None:
     """Delete a help request (owner only)."""
-    result = await db.execute(
-        select(HelpRequest).where(HelpRequest.id == request_id)
-    )
+    result = await db.execute(select(HelpRequest).where(HelpRequest.id == request_id))
     req = result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Help request not found")
@@ -191,6 +191,7 @@ async def delete_help_request(
 
 # ===== Replies =====
 
+
 @router.get("/help-requests/{request_id}/replies", response_model=list[HelpReplyResponse])
 async def list_replies(
     request_id: str,
@@ -199,9 +200,7 @@ async def list_replies(
 ) -> list[HelpReplyResponse]:
     """List all replies for a help request."""
     # Verify request exists
-    req_result = await db.execute(
-        select(HelpRequest.id).where(HelpRequest.id == request_id)
-    )
+    req_result = await db.execute(select(HelpRequest.id).where(HelpRequest.id == request_id))
     if not req_result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Help request not found")
 
@@ -216,7 +215,11 @@ async def list_replies(
     return [_reply_response(r) for r in replies]
 
 
-@router.post("/help-requests/{request_id}/replies", response_model=HelpReplyResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/help-requests/{request_id}/replies",
+    response_model=HelpReplyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_reply(
     request_id: str,
     data: HelpReplyCreate,
@@ -225,9 +228,7 @@ async def create_reply(
 ) -> HelpReplyResponse:
     """Create a reply to a help request."""
     # Verify request exists and is open
-    req_result = await db.execute(
-        select(HelpRequest).where(HelpRequest.id == request_id)
-    )
+    req_result = await db.execute(select(HelpRequest).where(HelpRequest.id == request_id))
     req = req_result.scalar_one_or_none()
     if not req:
         raise HTTPException(status_code=404, detail="Help request not found")
@@ -282,6 +283,7 @@ async def accept_reply(
 
 
 # ===== Community Posts (stub — returns empty until full implementation) =====
+
 
 class PostResponse(BaseModel):
     id: str

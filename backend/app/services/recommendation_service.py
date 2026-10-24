@@ -535,12 +535,12 @@ class RecommendationService:
                 if isinstance(num, (list, tuple)):
                     # Extract the first element from nested array
                     num = num[0] if num else None
-                
+
                 # Skip non-numeric items (AI sometimes returns text like "乐福鞋")
                 if isinstance(num, str) and not num.strip().isdigit():
                     logger.warning(f"AI returned text item instead of number: {num}")
                     continue
-                
+
                 num_int = int(num)
                 if num_int in number_map:
                     valid_ids.append(number_map[num_int])

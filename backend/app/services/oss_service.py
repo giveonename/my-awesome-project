@@ -9,8 +9,6 @@ Requires oss2 package (pip install oss2).
 """
 
 import logging
-import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -33,9 +31,7 @@ class OssService:
         self.public_url_base = settings.aliyun_oss_public_url
 
         if not self.bucket_name or not self.endpoint:
-            raise ValueError(
-                "OSS not configured: set ALIYUN_OSS_BUCKET and ALIYUN_OSS_ENDPOINT"
-            )
+            raise ValueError("OSS not configured: set ALIYUN_OSS_BUCKET and ALIYUN_OSS_ENDPOINT")
 
         if not settings.aliyun_access_key_id or not settings.aliyun_access_key_secret:
             raise ValueError(

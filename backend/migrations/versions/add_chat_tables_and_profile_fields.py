@@ -27,32 +27,60 @@ def upgrade() -> None:
     op.add_column("user_preferences", sa.Column("age_range", sa.String(10), nullable=True))
     op.add_column(
         "user_preferences",
-        sa.Column("style_identity", postgresql.ARRAY(sa.String()), nullable=True, server_default="{}"),
+        sa.Column(
+            "style_identity", postgresql.ARRAY(sa.String()), nullable=True, server_default="{}"
+        ),
     )
     op.add_column(
         "user_preferences",
-        sa.Column("body_concerns", postgresql.ARRAY(sa.String()), nullable=True, server_default="{}"),
+        sa.Column(
+            "body_concerns", postgresql.ARRAY(sa.String()), nullable=True, server_default="{}"
+        ),
     )
     op.add_column("user_preferences", sa.Column("profession_scene", sa.String(30), nullable=True))
 
     # Create chat_sessions table
     op.create_table(
         "chat_sessions",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("title", sa.String(100), nullable=True),
         sa.Column("context", postgresql.JSONB(), server_default="{}"),
         sa.Column("status", sa.String(20), server_default="active"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
-    op.create_index("idx_chat_sessions_user", "chat_sessions", ["user_id", sa.text("updated_at DESC")])
+    op.create_index(
+        "idx_chat_sessions_user", "chat_sessions", ["user_id", sa.text("updated_at DESC")]
+    )
 
     # Create chat_messages table
     op.create_table(
         "chat_messages",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
         sa.Column("role", sa.String(20), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("metadata", postgresql.JSONB(), server_default="{}"),

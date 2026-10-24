@@ -1,6 +1,5 @@
 import asyncio
 import os
-import subprocess
 
 # Set test environment — clear OIDC vars so auth tests run with a known state
 os.environ["DEBUG"] = "true"
@@ -23,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.auth import create_access_token
 from app.config import get_settings
-from app.database import get_db
+from app.database import Base, get_db
 from app.main import app
 from app.models import User, UserPreference
 
@@ -41,19 +40,23 @@ async def _ensure_test_db():
 
     conn = await asyncpg.connect(_ADMIN_DSN)
     try:
-        exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = 'wardrobe_test'")
-        if not exists:
-            await conn.execute("CREATE DATABASE wardrobe_test")
+        # Recreate from scratch every session — deterministic schema, immune
+        # to leftovers from earlier (migration-built) runs.
+        await conn.execute("DROP DATABASE IF EXISTS wardrobe_test WITH (FORCE)")
+        await conn.execute("CREATE DATABASE wardrobe_test")
     finally:
         await conn.close()
 
-    env = {**os.environ, "DATABASE_URL": TEST_DATABASE_URL}
-    subprocess.run(
-        ["python", "-m", "alembic", "upgrade", "head"],
-        env=env,
-        check=True,
-        capture_output=True,
-    )
+    # The migration graph is broken beyond multi-head: a duplicate revision id
+    # makes a from-scratch `alembic upgrade` of any head die inside alembic
+    # (KeyError in _delete_version). Graph repair is deferred by decision, so
+    # build the test schema directly from ORM metadata instead.
+    engine = create_async_engine(TEST_DATABASE_URL)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    finally:
+        await engine.dispose()
     _test_db_ready = True
 
 

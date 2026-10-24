@@ -30,10 +30,14 @@ class BodyProfile(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float)
 
     # Body shape
-    body_type: Mapped[str | None] = mapped_column(String(30))  # hourglass, pear, apple, rectangle, inverted-triangle
+    body_type: Mapped[str | None] = mapped_column(
+        String(30)
+    )  # hourglass, pear, apple, rectangle, inverted-triangle
     shoulder_type: Mapped[str | None] = mapped_column(String(20))  # narrow, normal, broad
     leg_type: Mapped[str | None] = mapped_column(String(20))  # straight, x-leg, o-leg
-    upper_lower_ratio: Mapped[str | None] = mapped_column(String(20))  # long-torso, balanced, long-legs
+    upper_lower_ratio: Mapped[str | None] = mapped_column(
+        String(20)
+    )  # long-torso, balanced, long-legs
 
     # Detailed measurements (cm)
     bust_cm: Mapped[float | None] = mapped_column(Float)
@@ -44,7 +48,9 @@ class BodyProfile(Base):
     skin_tone: Mapped[str | None] = mapped_column(String(20))  # fair, light, medium, tan, dark
 
     # Style goals
-    want_to_improve: Mapped[list[str] | None] = mapped_column(ARRAY(String))  # look-taller, look-slimmer, etc.
+    want_to_improve: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String)
+    )  # look-taller, look-slimmer, etc.
 
     # Full body photo for virtual try-on
     full_body_photo_url: Mapped[str | None] = mapped_column(String(500))
@@ -52,9 +58,7 @@ class BodyProfile(Base):
     # Extra data for future extension
     extra: Mapped[dict | None] = mapped_column(JSONB)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

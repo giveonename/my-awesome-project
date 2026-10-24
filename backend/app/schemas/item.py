@@ -294,5 +294,3 @@ class WashHistoryResponse(BaseModel):
     method: str | None = None
     notes: str | None = None
     created_at: datetime
-
-

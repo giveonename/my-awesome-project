@@ -359,12 +359,17 @@ class TestProcessScheduledNotification:
 
 
 class TestWorkerFunctionRegistry:
+    @staticmethod
+    def _registered_names() -> set[str]:
+        # arq.func(...) wraps jobs in Function objects exposing `.name`;
+        # bare callables (cron jobs) still carry `__name__`.
+        return {getattr(f, "name", None) or f.__name__ for f in WorkerSettings.functions}
+
     def test_process_scheduled_notification_is_registered(self):
-        func_names = [f.__name__ for f in WorkerSettings.functions]
-        assert "process_scheduled_notification" in func_names
+        assert "process_scheduled_notification" in self._registered_names()
 
     def test_all_enqueued_functions_are_registered(self):
-        func_names = {f.__name__ for f in WorkerSettings.functions}
+        func_names = self._registered_names()
         required = {
             "tag_item_image",
             "send_notification",
@@ -373,6 +378,8 @@ class TestWorkerFunctionRegistry:
             "check_scheduled_notifications",
             "check_wash_reminders",
             "update_learning_profiles",
+            "generate_outfit_tryon",
+            "replenish_suggest_pool",
         }
         missing = required - func_names
         assert not missing, f"Functions enqueued but not registered in WorkerSettings: {missing}"

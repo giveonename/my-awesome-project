@@ -89,14 +89,14 @@ class TestPromptTemplate:
         from app.services.recommendation_service import RECOMMENDATION_PROMPT
 
         prompt = RECOMMENDATION_PROMPT
-        assert "Color coordination" in prompt
-        assert "Monochrome" in prompt
-        assert "Neutral base" in prompt
-        assert "Analogous" in prompt
-        assert "Texture and fabric" in prompt
-        assert "Proportion and silhouette" in prompt
-        assert "Time of day" in prompt
-        assert "Full day" in prompt
+        assert "色彩协调" in prompt
+        assert "同色系" in prompt
+        assert "中性色" in prompt
+        assert "邻近色" in prompt
+        assert "面料质感" in prompt
+        assert "比例廓形" in prompt
+        assert "时间段" in prompt
+        assert "全天" in prompt
         assert "{time_of_day}" in prompt
 
     def test_prompt_format_accepts_time_of_day(self):
@@ -333,4 +333,4 @@ class TestPromptPreRanking:
     def test_pre_ranking_hint_present(self):
         from app.services.recommendation_service import RECOMMENDATION_PROMPT
 
-        assert "pre-ranked" in RECOMMENDATION_PROMPT
+        assert "按适合度排序" in RECOMMENDATION_PROMPT

@@ -3,8 +3,8 @@
 import asyncio
 import logging
 import time
-from typing import Annotated
 from pathlib import Path
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -63,9 +63,7 @@ async def _keep_tryon_result(
         async with async_session_maker() as db:
             user = (
                 await db.execute(
-                    select(User)
-                    .where(User.id == user_id)
-                    .options(selectinload(User.preferences))
+                    select(User).where(User.id == user_id).options(selectinload(User.preferences))
                 )
             ).scalar_one_or_none()
             occasion = (
@@ -172,21 +170,21 @@ async def _resolve_garment_items(
         )
         item = result.scalar_one_or_none()
         if not item:
-            result = await db.execute(
-                select(ClothingItem).where(ClothingItem.id == item_id)
-            )
+            result = await db.execute(select(ClothingItem).where(ClothingItem.id == item_id))
             item = result.scalar_one_or_none()
         if not item or not item.image_path:
             logger.warning("Item not found or has no image: %s", item_id_str)
             continue
 
-        items_out.append({
-            "ref": item.image_path,
-            "type": item.type or "",
-            "source_scene": item.source_scene or "commodity",
-            "name": item.name or "",
-            "primary_color": item.primary_color or "",
-        })
+        items_out.append(
+            {
+                "ref": item.image_path,
+                "type": item.type or "",
+                "source_scene": item.source_scene or "commodity",
+                "name": item.name or "",
+                "primary_color": item.primary_color or "",
+            }
+        )
 
     return items_out
 
@@ -254,7 +252,7 @@ async def create_tryon(
         )
     except Exception as e:
         logger.error("Virtual try-on failed: %s", e, exc_info=True)
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "虚拟试衣遇到了点状况")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "虚拟试衣遇到了点状况") from e
 
     if not result.success:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, result.error or "生成失败")
@@ -300,7 +298,9 @@ async def submit_tryon(
         )
     except Exception as e:
         logger.error("Virtual tryon submit exception: %s", e, exc_info=True)
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"试衣服务异常: {str(e)[:100]}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, f"试衣服务异常: {str(e)[:100]}"
+        ) from e
 
     if task.status == "FAILED":
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, task.error or "提交失败")
@@ -340,6 +340,7 @@ async def get_tryon_status(
         elapsed_seconds=time.time() - task.created_at if task.created_at else 0,
     )
 
+
 # ===== Body Photo Upload =====
 
 
@@ -355,9 +356,10 @@ async def upload_body_photo(
     image: UploadFile = File(...),
 ) -> BodyPhotoResponse:
     """Upload a full body photo for virtual try-on."""
+    import asyncio
+
     from app.services.image_service import ImageService
     from app.services.oss_service import get_oss_service
-    import asyncio
 
     image_service = ImageService()
     content_data = await image.read()
@@ -390,10 +392,12 @@ async def upload_body_photo(
 
     if not public_url:
         from app.utils.signed_urls import sign_image_url
+
         public_url = sign_image_url(paths["image_path"])
 
     # Persist the bare storage path; responses re-sign fresh (see signed_urls).
     from app.utils.signed_urls import bare_image_path
+
     stored_url = bare_image_path(public_url)
 
     # Upsert body profile
@@ -431,7 +435,6 @@ async def get_body_photo(
     return None
 
 
-
 # ===== Background Swap =====
 
 
@@ -451,14 +454,15 @@ class BackgroundListItem(BaseModel):
 async def list_available_backgrounds() -> list[BackgroundListItem]:
     """List available background templates for try-on results."""
     from app.services.virtual_tryon_service import list_backgrounds
-    return [BackgroundListItem(**bg) for bg in list_backgrounds()]
 
+    return [BackgroundListItem(**bg) for bg in list_backgrounds()]
 
 
 @router.get("/backgrounds/{background_id}/preview")
 async def get_background_preview(background_id: str):
     """Serve a background template preview image."""
     from fastapi.responses import FileResponse
+
     from app.services.virtual_tryon_service import BACKGROUNDS, BACKGROUNDS_DIR
 
     if background_id not in BACKGROUNDS:
@@ -470,6 +474,7 @@ async def get_background_preview(background_id: str):
 
     return FileResponse(str(path), media_type="image/png")
 
+
 @router.post("/swap-background")
 async def swap_tryon_background(
     request: BackgroundSwapRequest,
@@ -477,6 +482,7 @@ async def swap_tryon_background(
 ):
     """Swap the background of a try-on result image."""
     from fastapi.responses import Response
+
     from app.services.virtual_tryon_service import swap_background
 
     try:
@@ -485,11 +491,13 @@ async def swap_tryon_background(
             background_id=request.background_id,
         )
     except ValueError as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     except FileNotFoundError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e)) from e
     except Exception as e:
         logger.error("Background swap failed: %s", e, exc_info=True)
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"背景替换失败: {str(e)[:100]}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, f"背景替换失败: {str(e)[:100]}"
+        ) from e
 
     return Response(content=result_bytes, media_type="image/jpeg")

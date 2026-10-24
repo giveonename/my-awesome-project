@@ -27,7 +27,12 @@ def upgrade() -> None:
     # ===== body_profiles =====
     op.create_table(
         "body_profiles",
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
         sa.Column("height_cm", sa.Float, nullable=True),
         sa.Column("weight_kg", sa.Float, nullable=True),
         sa.Column("body_type", sa.String(30), nullable=True),
@@ -48,8 +53,18 @@ def upgrade() -> None:
     # ===== help_requests =====
     op.create_table(
         "help_requests",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("title", sa.String(200), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("occasion", sa.String(50), nullable=True),
@@ -68,9 +83,24 @@ def upgrade() -> None:
     # ===== help_replies =====
     op.create_table(
         "help_replies",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("request_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("help_requests.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id",
+            postgresql.UUID(as_uuid=True),
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "request_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("help_requests.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("content", sa.Text, nullable=False),
         sa.Column("suggested_items", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("image_urls", postgresql.JSONB(astext_type=sa.Text()), nullable=True),

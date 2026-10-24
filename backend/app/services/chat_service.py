@@ -24,7 +24,9 @@ class ChatService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_session(self, user: User, title: str | None = None, context: dict | None = None) -> ChatSession:
+    async def create_session(
+        self, user: User, title: str | None = None, context: dict | None = None
+    ) -> ChatSession:
         session = ChatSession(
             user_id=user.id,
             title=title or "新对话",
@@ -36,7 +38,9 @@ class ChatService:
         return session
 
     async def get_sessions(self, user_id: UUID, limit: int = 20) -> tuple[list[ChatSession], int]:
-        count_q = select(func.count()).select_from(ChatSession).where(ChatSession.user_id == user_id)
+        count_q = (
+            select(func.count()).select_from(ChatSession).where(ChatSession.user_id == user_id)
+        )
         total = (await self.db.execute(count_q)).scalar() or 0
 
         q = (
@@ -99,7 +103,7 @@ class ChatService:
         clean_content = self._clean_outfit_markers(ai_content)
 
         # Check for confirmation
-        confirmed_match = re.search(r'\[CONFIRMED:(\d+)\]', ai_content)
+        confirmed_match = re.search(r"\[CONFIRMED:(\d+)\]", ai_content)
 
         # Save AI message
         ai_msg = ChatMessage(
@@ -228,7 +232,7 @@ class ChatService:
 
     def _parse_outfits(self, content: str) -> list[dict]:
         """Parse <<<OUTFIT>>> blocks from AI response.
-        
+
         Handles various formats the AI might output:
         - <<<OUTFIT>>>...<<<END>>>
         - <<<OUTFIT>>>...<<<>>>
@@ -236,27 +240,27 @@ class ChatService:
         """
         outfits = []
         # More flexible pattern: match <<<OUTFIT>>> followed by any content until <<<END>>> or <<<>>>
-        pattern = r'<<<\s*OUTFIT\s*>>>(.*?)(?:<<<\s*(?:END)?\s*>>>)'
+        pattern = r"<<<\s*OUTFIT\s*>>>(.*?)(?:<<<\s*(?:END)?\s*>>>)"
         matches = re.findall(pattern, content, re.DOTALL)
         for match in matches:
             outfit = {}
-            for line in match.strip().split('\n'):
-                line = line.strip().lstrip('*').strip()
-                if line.lower().startswith('headline:'):
-                    outfit['headline'] = line.split(':', 1)[1].strip()
-                elif line.lower().startswith('items:'):
-                    item_str = line.split(':', 1)[1].strip()
-                    outfit['items'] = [x.strip().rstrip('*').strip() for x in item_str.split(',')]
-                elif line.lower().startswith('reasoning:'):
-                    outfit['reasoning'] = line.split(':', 1)[1].strip()
-            if outfit.get('items'):
+            for line in match.strip().split("\n"):
+                line = line.strip().lstrip("*").strip()
+                if line.lower().startswith("headline:"):
+                    outfit["headline"] = line.split(":", 1)[1].strip()
+                elif line.lower().startswith("items:"):
+                    item_str = line.split(":", 1)[1].strip()
+                    outfit["items"] = [x.strip().rstrip("*").strip() for x in item_str.split(",")]
+                elif line.lower().startswith("reasoning:"):
+                    outfit["reasoning"] = line.split(":", 1)[1].strip()
+            if outfit.get("items"):
                 outfits.append(outfit)
         return outfits
 
     def _clean_outfit_markers(self, content: str) -> str:
         """Remove <<<OUTFIT>>>...<<<END>>> (or <<<>>>) blocks from display content."""
         # Remove the structured blocks
-        cleaned = re.sub(r'<<<\s*OUTFIT\s*>>>.+?<<<\s*(?:END)?\s*>>>', '', content, flags=re.DOTALL)
+        cleaned = re.sub(r"<<<\s*OUTFIT\s*>>>.+?<<<\s*(?:END)?\s*>>>", "", content, flags=re.DOTALL)
         # Also remove any remaining standalone reasoning/items/headline lines that leaked
-        cleaned = re.sub(r'^(?:items|reasoning|headline):.*$', '', cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r"^(?:items|reasoning|headline):.*$", "", cleaned, flags=re.MULTILINE)
         return cleaned.strip()

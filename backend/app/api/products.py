@@ -2,21 +2,21 @@
 
 import logging
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.body_profile import BodyProfile
 from app.models.item import ClothingItem
-from app.models.user import User
-from app.models.preference import UserPreference
 from app.models.learning import UserLearningProfile
-from uuid import UUID
+from app.models.preference import UserPreference
+from app.models.user import User
 from app.services.taobao_service import search_products
 from app.utils.auth import get_current_user
 
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 
 
 # ===== Schemas =====
+
 
 class ProductResponse(BaseModel):
     title: str
@@ -83,12 +84,32 @@ class WardrobeGapListResponse(BaseModel):
 # ===== Category mapping =====
 
 CATEGORY_MAP = {
-    "top": {"types": ["shirt", "t-shirt", "sweater", "hoodie", "blazer", "jacket", "coat", "top"], "label": "上衣", "keywords": ["T恤", "衬衫", "卫衣", "毛衣"]},
-    "bottom": {"types": ["pants", "jeans", "shorts", "skirt"], "label": "下装", "keywords": ["裤子", "牛仔裤", "短裤", "裙子"]},
+    "top": {
+        "types": ["shirt", "t-shirt", "sweater", "hoodie", "blazer", "jacket", "coat", "top"],
+        "label": "上衣",
+        "keywords": ["T恤", "衬衫", "卫衣", "毛衣"],
+    },
+    "bottom": {
+        "types": ["pants", "jeans", "shorts", "skirt"],
+        "label": "下装",
+        "keywords": ["裤子", "牛仔裤", "短裤", "裙子"],
+    },
     "dress": {"types": ["dress"], "label": "连衣裙", "keywords": ["连衣裙"]},
-    "shoes": {"types": ["shoes", "sneakers", "boots"], "label": "鞋子", "keywords": ["运动鞋", "板鞋", "靴子", "小白鞋"]},
-    "outerwear": {"types": ["jacket", "coat", "blazer"], "label": "外套", "keywords": ["薄外套", "针织开衫", "夹克"]},
-    "accessories": {"types": ["accessories", "hat", "bag", "scarf", "belt"], "label": "配饰", "keywords": ["女包", "帽子", "围巾"]},
+    "shoes": {
+        "types": ["shoes", "sneakers", "boots"],
+        "label": "鞋子",
+        "keywords": ["运动鞋", "板鞋", "靴子", "小白鞋"],
+    },
+    "outerwear": {
+        "types": ["jacket", "coat", "blazer"],
+        "label": "外套",
+        "keywords": ["薄外套", "针织开衫", "夹克"],
+    },
+    "accessories": {
+        "types": ["accessories", "hat", "bag", "scarf", "belt"],
+        "label": "配饰",
+        "keywords": ["女包", "帽子", "围巾"],
+    },
 }
 
 # Category keyword -> which wardrobe categories complement it
@@ -147,12 +168,28 @@ STYLE_LABELS: dict[str, str] = {
 }
 
 COLOR_LABELS: dict[str, str] = {
-    "black": "黑色", "white": "白色", "gray": "灰色", "grey": "灰色",
-    "beige": "米色", "navy": "藏蓝", "cream": "奶油色", "khaki": "卡其色",
-    "brown": "棕色", "red": "红色", "blue": "蓝色", "green": "绿色",
-    "pink": "粉色", "orange": "橙色", "yellow": "黄色", "purple": "紫色",
-    "olive": "橄榄绿", "tan": "棕褐色", "denim-blue": "牛仔蓝",
-    "light-blue": "浅蓝", "gold": "金色", "silver": "银色",
+    "black": "黑色",
+    "white": "白色",
+    "gray": "灰色",
+    "grey": "灰色",
+    "beige": "米色",
+    "navy": "藏蓝",
+    "cream": "奶油色",
+    "khaki": "卡其色",
+    "brown": "棕色",
+    "red": "红色",
+    "blue": "蓝色",
+    "green": "绿色",
+    "pink": "粉色",
+    "orange": "橙色",
+    "yellow": "黄色",
+    "purple": "紫色",
+    "olive": "橄榄绿",
+    "tan": "棕褐色",
+    "denim-blue": "牛仔蓝",
+    "light-blue": "浅蓝",
+    "gold": "金色",
+    "silver": "银色",
 }
 
 SCENE_KEYWORDS: dict[str, str] = {
@@ -211,9 +248,7 @@ def _get_gender_key(gender: str | None) -> str:
 
 async def _get_user_profile(db: AsyncSession, user_id) -> tuple:
     """Fetch user preference and learning profile."""
-    pref_result = await db.execute(
-        select(UserPreference).where(UserPreference.user_id == user_id)
-    )
+    pref_result = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
     pref = pref_result.scalar_one_or_none()
 
     learning_result = await db.execute(
@@ -234,12 +269,31 @@ _BODY_TYPE_HINTS = {
 
 # 结果质量闸门：与画像矛盾的品类/人群直接剔除
 _ALWAYS_BLOCK = (
-    "童装", "儿童", "宝宝", "婴儿", "幼儿", "中大童", "亲子装",
-    "中老年", "老年装", "老人", "妈妈装",
+    "童装",
+    "儿童",
+    "宝宝",
+    "婴儿",
+    "幼儿",
+    "中大童",
+    "亲子装",
+    "中老年",
+    "老年装",
+    "老人",
+    "妈妈装",
 )
 _FEMALE_MARKERS = (
-    "女装", "女士", "女款", "女式", "女生", "连衣裙", "半身裙",
-    "文胸", "内衣", "丝袜", "高跟鞋", "孕妇装",
+    "女装",
+    "女士",
+    "女款",
+    "女式",
+    "女生",
+    "连衣裙",
+    "半身裙",
+    "文胸",
+    "内衣",
+    "丝袜",
+    "高跟鞋",
+    "孕妇装",
 )
 _MALE_MARKERS = ("男装", "男士", "男款", "男式", "男生", "爸爸装")
 _NEUTRAL_MARKERS = ("中性", "情侣", "男女", "同款", "通用")
@@ -283,9 +337,7 @@ async def _load_fit_context(db: AsyncSession, user_id) -> tuple[list[str], str |
 
     hints: list[str] = []
     if profile:
-        hints = _fit_hints(
-            profile.height_cm, profile.weight_kg, profile.body_type, gender
-        )
+        hints = _fit_hints(profile.height_cm, profile.weight_kg, profile.body_type, gender)
     return hints, gender
 
 
@@ -298,9 +350,7 @@ async def _personalize_keyword(
     keyword = keyword or ""
     if gender:
         g = gender.lower()
-        has_gender_word = any(
-            k in keyword for k in ("男", "女", "中性", "情侣", "男女")
-        )
+        has_gender_word = any(k in keyword for k in ("男", "女", "中性", "情侣", "男女"))
         if not has_gender_word:
             parts.append("男士" if g.startswith("m") else "女士")
     parts.extend(hints)
@@ -343,7 +393,11 @@ def _apply_profile_gate(products: list, gender: str | None) -> list:
     def text_of(p) -> str:
         return f"{p.title or ''} {getattr(p, 'category_name', '') or ''}".lower()
 
-    kept = [p for p in products if _profile_product_ok(p.title or "", getattr(p, "category_name", "") or "", gender)]
+    kept = [
+        p
+        for p in products
+        if _profile_product_ok(p.title or "", getattr(p, "category_name", "") or "", gender)
+    ]
     if len(kept) >= 4 or len(products) <= 4:
         return kept
 
@@ -386,7 +440,9 @@ def _get_user_color(pref, learning) -> str:
     avoid = set(pref.color_avoid) if pref and pref.color_avoid else set()
     # Try learned color scores
     if learning and learning.learned_color_scores:
-        scored = {c: s for c, s in learning.learned_color_scores.items() if s > 0 and c not in avoid}
+        scored = {
+            c: s for c, s in learning.learned_color_scores.items() if s > 0 and c not in avoid
+        }
         if scored:
             return max(scored, key=scored.get)
     # Fallback to explicit favorites
@@ -498,7 +554,18 @@ async def _build_smart_keyword(
                 # Infer from name/description text (for "outfit" type items)
                 infer_text = (item.name or "") + " " + (item.ai_description or "")
                 INFER_KEYWORDS = {
-                    "top": ["上衣", "衬衫", "T恤", "卫衣", "毛衣", "西装外套", "夹克", "背心", "polo", "针织"],
+                    "top": [
+                        "上衣",
+                        "衬衫",
+                        "T恤",
+                        "卫衣",
+                        "毛衣",
+                        "西装外套",
+                        "夹克",
+                        "背心",
+                        "polo",
+                        "针织",
+                    ],
                     "bottom": ["裤子", "牛仔裤", "短裤", "裙子", "半裙", "阔腿裤", "西裤", "裤"],
                     "dress": ["连衣裙", "套装裙", "长裙"],
                     "shoes": ["鞋", "靴", "拖鞋", "凉鞋", "板鞋", "运动鞋"],
@@ -536,7 +603,7 @@ async def _build_smart_keyword(
         scene_kw = SCENE_KEYWORDS.get(scene, scene)
         # Pick a gap category or default to "bottom"
         target_keyword = "服装"
-        target_cat = gap_category or ''
+        target_cat = gap_category or ""
         if gap_category:
             cat_info = CATEGORY_MAP.get(gap_category, {})
             target_keyword = cat_info.get("keywords", ["服装"])[0]
@@ -563,7 +630,7 @@ async def _build_smart_keyword(
         return keyword, reason, target_cat
 
     # --- Mode 3: Gap-based (default) ---
-    target_cat = gap_category or ''
+    target_cat = gap_category or ""
     target_keyword = "T恤"
     if gap_category:
         cat_info = CATEGORY_MAP.get(gap_category, {})
@@ -589,12 +656,13 @@ async def _build_smart_keyword(
     style_part = user_style
     parts = [p for p in [style_part, color_part, target_keyword] if p]
     keyword = " ".join(parts)
-    reason = f"\u8865\u5168\u4f60\u7684\u8863\u6a71\u7f3a\u53e3"
+    reason = "\u8865\u5168\u4f60\u7684\u8863\u6a71\u7f3a\u53e3"
     return keyword, reason, target_cat
 
 
-
-def _pick_complement_keyword(item, target_cat: str, style_hint: str = "", gender: str | None = None) -> str:
+def _pick_complement_keyword(
+    item, target_cat: str, style_hint: str = "", gender: str | None = None
+) -> str:
     """Pick a precise search keyword for the complementary category based on item features.
 
     Instead of generic "裤子", returns specific terms like "西裤", "阔腿裤" based on
@@ -608,12 +676,16 @@ def _pick_complement_keyword(item, target_cat: str, style_hint: str = "", gender
     item_formality = item_tags.get("fit", "")
 
     # Formality detection
-    is_formal = any(w in item_text for w in ["西装", "西服", "正装", "商务", "职业", "羊毛", "毛呢"]) \
-        or item_material in ["wool", "silk", "cashmere"] \
+    is_formal = (
+        any(w in item_text for w in ["西装", "西服", "正装", "商务", "职业", "羊毛", "毛呢"])
+        or item_material in ["wool", "silk", "cashmere"]
         or item_formality == "tailored"
+    )
     is_casual = any(w in item_text for w in ["休闲", "运动", "卫衣", "t恤", "牛仔", "棉"])
-    is_elegant = any(w in item_text for w in ["优雅", "气质", "法式", "精致"]) \
-        or style_hint in ["elegant", "french"]
+    is_elegant = any(w in item_text for w in ["优雅", "气质", "法式", "精致"]) or style_hint in [
+        "elegant",
+        "french",
+    ]
 
     gk = _get_gender_key(gender)
 
@@ -803,10 +875,8 @@ def _match_score(item: ClothingItem, product_category: str) -> float:
 
     # Category complementarity (core rule)
     comp_cats = CATEGORY_COMPLEMENT.get(product_category, [])
-    item_in_complement = False
     for cat_key in comp_cats:
         if item_type in CATEGORY_MAP.get(cat_key, {}).get("types", []):
-            item_in_complement = True
             score += 3.0
             break
 
@@ -838,10 +908,12 @@ async def _find_related_for_products(
 
     # Fetch all user wardrobe items
     result = await db.execute(
-        select(ClothingItem).where(
+        select(ClothingItem)
+        .where(
             ClothingItem.user_id == user_id,
             ClothingItem.is_archived.is_(False),
-        ).order_by(ClothingItem.wear_count.desc())
+        )
+        .order_by(ClothingItem.wear_count.desc())
     )
     all_items = list(result.scalars().all())
 
@@ -873,7 +945,7 @@ async def _find_related_for_products(
     result_map: dict[int, list[dict]] = {}
     used_item_ids: set = set()
 
-    for idx, (product, prod_cat) in enumerate(zip(products, product_cats)):
+    for idx, (_product, prod_cat) in enumerate(zip(products, product_cats, strict=False)):
         candidates = []
         for item in all_items:
             if item.id in used_item_ids:
@@ -887,10 +959,12 @@ async def _find_related_for_products(
         for _, item in candidates[:2]:
             used_item_ids.add(item.id)
             thumb = sign_image_url(item.image_path) if item.image_path else None
-            related.append({
-                "thumbnail_url": thumb,
-                "name": item.name or item.type or "衣物",
-            })
+            related.append(
+                {
+                    "thumbnail_url": thumb,
+                    "name": item.name or item.type or "衣物",
+                }
+            )
 
         if related:
             result_map[idx] = related
@@ -904,10 +978,12 @@ async def _find_related_for_products(
                 break
             item = remaining.pop(0)
             thumb = sign_image_url(item.image_path) if item.image_path else None
-            result_map[idx] = [{
-                "thumbnail_url": thumb,
-                "name": item.name or item.type or "衣物",
-            }]
+            result_map[idx] = [
+                {
+                    "thumbnail_url": thumb,
+                    "name": item.name or item.type or "衣物",
+                }
+            ]
 
     return result_map
 
@@ -943,13 +1019,13 @@ async def _analyze_wardrobe_gaps(
     result = await db.execute(
         select(ClothingItem).where(
             ClothingItem.user_id == user_id,
-            ClothingItem.is_archived == False,
+            ClothingItem.is_archived.is_(False),
         )
     )
     all_items = list(result.scalars().all())
 
     # Count items per category, inferring for "outfit" type
-    cat_counts: dict[str, int] = {k: 0 for k in CATEGORY_MAP}
+    cat_counts: dict[str, int] = dict.fromkeys(CATEGORY_MAP, 0)
     for item in all_items:
         real_cat = _infer_category(item.type or "", item.name or "", item.ai_description or "")
         if real_cat:
@@ -962,29 +1038,33 @@ async def _analyze_wardrobe_gaps(
         cat_count = cat_counts.get(cat_key, 0)
         # A category is a "gap" if it has 0 items relative to total wardrobe size
         if cat_count == 0 and total >= 3:
-            gaps.append(WardrobeGap(
-                category=cat_key,
-                label=cat_info["label"],
-                reason=f"\u4f60\u7684\u8863\u6a71\u8fd8\u6ca1\u6709{cat_info['label']}",
-                count=0,
-                keyword=cat_info["keywords"][0],
-            ))
+            gaps.append(
+                WardrobeGap(
+                    category=cat_key,
+                    label=cat_info["label"],
+                    reason=f"\u4f60\u7684\u8863\u6a71\u8fd8\u6ca1\u6709{cat_info['label']}",
+                    count=0,
+                    keyword=cat_info["keywords"][0],
+                )
+            )
         elif cat_count <= 1 and total >= 8:
             # Low coverage
-            gaps.append(WardrobeGap(
-                category=cat_key,
-                label=cat_info["label"],
-                reason=f"{cat_info['label']}\u53ea\u6709{cat_count}\u4ef6\uff0c\u53ef\u4ee5\u591a\u51e0\u4ef6\u66f4\u597d\u642d\u914d",
-                count=cat_count,
-                keyword=cat_info["keywords"][0],
-            ))
+            gaps.append(
+                WardrobeGap(
+                    category=cat_key,
+                    label=cat_info["label"],
+                    reason=f"{cat_info['label']}\u53ea\u6709{cat_count}\u4ef6\uff0c\u53ef\u4ee5\u591a\u51e0\u4ef6\u66f4\u597d\u642d\u914d",
+                    count=cat_count,
+                    keyword=cat_info["keywords"][0],
+                )
+            )
 
     # Sort: gaps with 0 items first, then by category priority (clothing > accessories)
     # This ensures default recommendations show varied clothing items, not just bags
     _GAP_PRIORITY = {
-        "top": 0,        # 上衣最基础
-        "bottom": 1,     # 下装第二
-        "shoes": 2,      # 鞋子第三
+        "top": 0,  # 上衣最基础
+        "bottom": 1,  # 下装第二
+        "shoes": 2,  # 鞋子第三
         "outerwear": 3,
         "dress": 4,
         "accessories": 5,
@@ -1041,10 +1121,12 @@ async def _get_recent_worn_categories(db: AsyncSession, user_id, days: int = 7) 
     """Get how many times each category was worn in the last N days."""
     from app.models.outfit import Outfit, OutfitItem
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     # Find outfits created recently
     result = await db.execute(
-        select(OutfitItem.item_id).join(Outfit).where(
+        select(OutfitItem.item_id)
+        .join(Outfit)
+        .where(
             Outfit.user_id == user_id,
             Outfit.created_at >= cutoff,
         )
@@ -1054,9 +1136,7 @@ async def _get_recent_worn_categories(db: AsyncSession, user_id, days: int = 7) 
         return {}
 
     # Get those items and count by category
-    items_result = await db.execute(
-        select(ClothingItem).where(ClothingItem.id.in_(worn_item_ids))
-    )
+    items_result = await db.execute(select(ClothingItem).where(ClothingItem.id.in_(worn_item_ids)))
     cat_counts: dict[str, int] = {}
     for item in items_result.scalars().all():
         cat = _infer_category(item.type or "", item.name or "", item.ai_description or "")
@@ -1091,8 +1171,6 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
     """
     pref, learning = await _get_user_profile(db, user_id)
     gender = pref.gender if pref else None
-    user_style = _get_user_style(pref, learning)
-    gk = _get_gender_key(gender)
 
     season = _get_current_season()
     gaps = await _analyze_wardrobe_gaps(db, user_id)
@@ -1151,6 +1229,7 @@ async def _build_contextual_keyword(db: AsyncSession, user_id) -> tuple[str, str
 
 # ===== Endpoints =====
 
+
 @router.get("/gaps", response_model=WardrobeGapListResponse)
 async def get_wardrobe_gaps(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -1159,8 +1238,9 @@ async def get_wardrobe_gaps(
     """Analyze wardrobe and return missing/low categories."""
     # Total item count
     count_result = await db.execute(
-        select(func.count(ClothingItem.id))
-        .where(ClothingItem.user_id == current_user.id, ClothingItem.is_archived == False)
+        select(func.count(ClothingItem.id)).where(
+            ClothingItem.user_id == current_user.id, ClothingItem.is_archived.is_(False)
+        )
     )
     total = count_result.scalar() or 0
 
@@ -1190,7 +1270,7 @@ async def recommend_products(
     """
     gap = None
     keyword_used = keyword
-    target_cat = gap_category or ''
+    target_cat = gap_category or ""
     reason = ""
 
     # If explicit keyword provided, use it directly (backward compatible)
@@ -1219,7 +1299,8 @@ async def recommend_products(
         if parsed_item_id or scene or gap_category:
             # Targeted modes: item-based, scene-based, or specific gap
             keyword, reason, target_cat = await _build_smart_keyword(
-                db, current_user.id,
+                db,
+                current_user.id,
                 gap_category=gap_category or None,
                 item_id=parsed_item_id,
                 scene=scene or None,
@@ -1227,7 +1308,8 @@ async def recommend_products(
         else:
             # Auto mode: context-aware recommendation
             keyword, reason, target_cat = await _build_contextual_keyword(
-                db, current_user.id,
+                db,
+                current_user.id,
             )
         keyword_used = keyword
 
@@ -1244,9 +1326,7 @@ async def recommend_products(
                 )
 
     # 画像个性化：身材/体型推导的版型限定词接进搜索词与推荐理由
-    keyword, reason, user_gender = await _personalize_keyword(
-        db, current_user.id, keyword, reason
-    )
+    keyword, reason, user_gender = await _personalize_keyword(db, current_user.id, keyword, reason)
     keyword_used = keyword
 
     products = await search_products(keyword=keyword, page=page, page_size=page_size * 2)
@@ -1302,11 +1382,14 @@ async def recommend_products(
             target_item = item_result.scalar_one_or_none()
             if target_item:
                 from app.utils.signed_urls import sign_image_url
+
                 thumb = sign_image_url(target_item.image_path) if target_item.image_path else None
-                related_entry = [{
-                    "thumbnail_url": thumb,
-                    "name": target_item.name or target_item.type or "\u8863\u7269",
-                }]
+                related_entry = [
+                    {
+                        "thumbnail_url": thumb,
+                        "name": target_item.name or target_item.type or "\u8863\u7269",
+                    }
+                ]
                 for idx in range(len(products)):
                     related_map[idx] = related_entry
         except (ValueError, AttributeError):
@@ -1323,7 +1406,11 @@ async def recommend_products(
 
     logger.info(
         "Product recommend: keyword=%s, item_id=%s, scene=%s, products=%d, related=%d",
-        keyword, item_id, scene, len(products), len(related_map),
+        keyword,
+        item_id,
+        scene,
+        len(products),
+        len(related_map),
     )
 
     return ProductRecommendResponse(
@@ -1398,7 +1485,9 @@ async def complete_outfit(
         missing_cats = all_cats - selected_cats
         # Prioritize: shoes > accessories > outerwear
         priority = ["shoes", "accessories", "outerwear", "top", "bottom"]
-        missing_cats = sorted(missing_cats, key=lambda c: priority.index(c) if c in priority else 99)
+        missing_cats = sorted(
+            missing_cats, key=lambda c: priority.index(c) if c in priority else 99
+        )
         # Limit to 2 categories to avoid too many API calls
         missing_cats = missing_cats[:2]
 
@@ -1423,12 +1512,16 @@ async def complete_outfit(
     selected_info = []
     for item in selected_items:
         thumb = sign_image_url(item.image_path) if item.image_path else None
-        selected_info.append({
-            "id": str(item.id),
-            "name": item.name or item.type or "衣物",
-            "thumbnail_url": thumb,
-            "category": _infer_category(item.type or "", item.name or "", item.ai_description or ""),
-        })
+        selected_info.append(
+            {
+                "id": str(item.id),
+                "name": item.name or item.type or "衣物",
+                "thumbnail_url": thumb,
+                "category": _infer_category(
+                    item.type or "", item.name or "", item.ai_description or ""
+                ),
+            }
+        )
 
     # 6. Search for products in each missing category
     _, user_gender = await _load_fit_context(db, current_user.id)
@@ -1458,20 +1551,59 @@ async def complete_outfit(
                 break
 
         _CAT_KEYWORDS_FEMALE = {
-            "shoes": {"formal": "高跟鞋", "elegant": "玛丽珍鞋", "casual": "运动鞋", "default": "单鞋"},
-            "accessories": {"formal": "手提包", "elegant": "斜挎包", "casual": "帆布包", "default": "女包"},
-            "outerwear": {"formal": "西装外套", "elegant": "针织开衫", "casual": "夹克", "default": "薄外套"},
+            "shoes": {
+                "formal": "高跟鞋",
+                "elegant": "玛丽珍鞋",
+                "casual": "运动鞋",
+                "default": "单鞋",
+            },
+            "accessories": {
+                "formal": "手提包",
+                "elegant": "斜挎包",
+                "casual": "帆布包",
+                "default": "女包",
+            },
+            "outerwear": {
+                "formal": "西装外套",
+                "elegant": "针织开衫",
+                "casual": "夹克",
+                "default": "薄外套",
+            },
             "top": {"formal": "衬衫", "elegant": "针织衫", "casual": "T恤", "default": "上衣"},
-            "bottom": {"formal": "西裤", "elegant": "阔腿裤", "casual": "牛仔裤", "default": "裤子"},
+            "bottom": {
+                "formal": "西裤",
+                "elegant": "阔腿裤",
+                "casual": "牛仔裤",
+                "default": "裤子",
+            },
         }
         _CAT_KEYWORDS_MALE = {
             "shoes": {"formal": "皮鞋", "elegant": "乐福鞋", "casual": "运动鞋", "default": "男鞋"},
-            "accessories": {"formal": "公文包", "elegant": "单肩包", "casual": "双肩包", "default": "男包"},
-            "outerwear": {"formal": "西装外套", "elegant": "风衣", "casual": "夹克", "default": "男士外套"},
+            "accessories": {
+                "formal": "公文包",
+                "elegant": "单肩包",
+                "casual": "双肩包",
+                "default": "男包",
+            },
+            "outerwear": {
+                "formal": "西装外套",
+                "elegant": "风衣",
+                "casual": "夹克",
+                "default": "男士外套",
+            },
             "top": {"formal": "衬衫", "elegant": "针织衫", "casual": "T恤", "default": "男士上衣"},
-            "bottom": {"formal": "西裤", "elegant": "直筒裤", "casual": "牛仔裤", "default": "休闲裤"},
+            "bottom": {
+                "formal": "西裤",
+                "elegant": "直筒裤",
+                "casual": "牛仔裤",
+                "default": "休闲裤",
+            },
         }
-        _cat_kw = _CAT_KEYWORDS_MALE if (user_gender or "").lower().startswith("m") else _CAT_KEYWORDS_FEMALE
+        _cat_kw = (
+            _CAT_KEYWORDS_MALE
+            if (user_gender or "").lower().startswith("m")
+            else _CAT_KEYWORDS_FEMALE
+        )
         specific_kw = _cat_kw.get(cat, {}).get(formality, cat_info.get("keywords", ["服装"])[0])
 
         parts = [p for p in [dominant_style, color_part, specific_kw] if p]
@@ -1503,29 +1635,34 @@ async def complete_outfit(
 
         reason = f"搭配你的{'、'.join(i.name or i.type for i in selected_items[:2])}"
 
-        groups.append(CategoryProducts(
-            category=cat,
-            label=cat_label,
-            reason=reason,
-            products=[
-                ProductResponse(
-                    title=p.title,
-                    pic_url=p.pic_url,
-                    price=p.price,
-                    original_price=p.original_price,
-                    volume=p.volume,
-                    shop_title=p.shop_title,
-                    item_url=p.item_url,
-                    category_name=p.category_name,
-                    related_items=related,
-                )
-                for p in products
-            ],
-        ))
+        groups.append(
+            CategoryProducts(
+                category=cat,
+                label=cat_label,
+                reason=reason,
+                products=[
+                    ProductResponse(
+                        title=p.title,
+                        pic_url=p.pic_url,
+                        price=p.price,
+                        original_price=p.original_price,
+                        volume=p.volume,
+                        shop_title=p.shop_title,
+                        item_url=p.item_url,
+                        category_name=p.category_name,
+                        related_items=related,
+                    )
+                    for p in products
+                ],
+            )
+        )
 
     logger.info(
         "Complete outfit: items=%d, missing_cats=%s, keywords=%s, groups=%d",
-        len(selected_items), list(missing_cats), all_keywords, len(groups),
+        len(selected_items),
+        list(missing_cats),
+        all_keywords,
+        len(groups),
     )
 
     return CompleteOutfitResponse(

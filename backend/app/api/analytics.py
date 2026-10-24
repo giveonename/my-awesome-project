@@ -16,24 +16,56 @@ from app.utils.signed_urls import sign_image_url
 
 # 颜色英文→中文映射（用于 AI 洞察生成）
 COLOR_CN = {
-    "black": "黑色", "white": "白色", "gray": "灰色", "grey": "灰色",
-    "navy": "藏青色", "blue": "蓝色", "light-blue": "浅蓝色",
-    "red": "红色", "burgundy": "酒红色", "pink": "粉色",
-    "green": "绿色", "olive": "橄榄绿", "yellow": "黄色",
-    "orange": "橙色", "purple": "紫色", "brown": "棕色",
-    "tan": "卡其色", "beige": "米色", "cream": "奶油色",
-    "gold": "金色", "silver": "银色", "khaki": "卡其色",
-    "maroon": "栗色", "teal": "青色", "charcoal": "炭灰色", "wine": "酒红色",
+    "black": "黑色",
+    "white": "白色",
+    "gray": "灰色",
+    "grey": "灰色",
+    "navy": "藏青色",
+    "blue": "蓝色",
+    "light-blue": "浅蓝色",
+    "red": "红色",
+    "burgundy": "酒红色",
+    "pink": "粉色",
+    "green": "绿色",
+    "olive": "橄榄绿",
+    "yellow": "黄色",
+    "orange": "橙色",
+    "purple": "紫色",
+    "brown": "棕色",
+    "tan": "卡其色",
+    "beige": "米色",
+    "cream": "奶油色",
+    "gold": "金色",
+    "silver": "银色",
+    "khaki": "卡其色",
+    "maroon": "栗色",
+    "teal": "青色",
+    "charcoal": "炭灰色",
+    "wine": "酒红色",
 }
 
 # 衣物类型英文→中文映射
 TYPE_CN = {
-    "shirt": "衬衫", "t-shirt": "T恤", "blouse": "衬衫", "top": "上衣",
-    "pants": "裤子", "jeans": "牛仔裤", "skirt": "裙子", "shorts": "短裤",
-    "dress": "连衣裙", "jacket": "夹克", "coat": "外套",
-    "sweater": "毛衣", "hoodie": "卫衣", "blazer": "西装外套",
-    "shoes": "鞋子", "sneakers": "运动鞋", "boots": "靴子",
-    "accessories": "配饰", "hat": "帽子", "bag": "包",
+    "shirt": "衬衫",
+    "t-shirt": "T恤",
+    "blouse": "衬衫",
+    "top": "上衣",
+    "pants": "裤子",
+    "jeans": "牛仔裤",
+    "skirt": "裙子",
+    "shorts": "短裤",
+    "dress": "连衣裙",
+    "jacket": "夹克",
+    "coat": "外套",
+    "sweater": "毛衣",
+    "hoodie": "卫衣",
+    "blazer": "西装外套",
+    "shoes": "鞋子",
+    "sneakers": "运动鞋",
+    "boots": "靴子",
+    "accessories": "配饰",
+    "hat": "帽子",
+    "bag": "包",
 }
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -365,9 +397,7 @@ async def get_analytics(
     else:
         # Wardrobe insights
         if len(never_worn) > 0:
-            insights.append(
-                f"你有 {len(never_worn)} 件从未穿过的衣物，试试给它们搭配一下吧！"
-            )
+            insights.append(f"你有 {len(never_worn)} 件从未穿过的衣物，试试给它们搭配一下吧！")
 
         # Color insights
         if color_distribution:
@@ -395,9 +425,7 @@ async def get_analytics(
             if tops > 0 and bottoms > 0:
                 ratio = tops / bottoms
                 if ratio > 3:
-                    insights.append(
-                        "上装远多于下装，建议添置几条裤子或裙子。"
-                    )
+                    insights.append("上装远多于下装，建议添置几条裤子或裙子。")
                 elif ratio < 0.5:
                     insights.append("下装多于上装，可以考虑添加一些上衣。")
 
@@ -406,14 +434,10 @@ async def get_analytics(
             if acceptance_rate > 80:
                 insights.append(f"品味不错！你采纳了 {acceptance_rate:.0f}% 的搭配推荐。")
             elif acceptance_rate < 50:
-                insights.append(
-                    "你拒绝了较多推荐，可以尝试更新风格偏好来获得更精准的搭配。"
-                )
+                insights.append("你拒绝了较多推荐，可以尝试更新风格偏好来获得更精准的搭配。")
 
         if outfits_this_week == 0 and total_outfits > 0:
-            insights.append(
-                "本周还没有搭配记录，试试去获取今日穿搭推荐吧！"
-            )
+            insights.append("本周还没有搭配记录，试试去获取今日穿搭推荐吧！")
 
     return AnalyticsResponse(
         wardrobe=wardrobe_stats,

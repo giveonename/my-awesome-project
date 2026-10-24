@@ -119,7 +119,9 @@ async def replenish_suggest_pool(ctx: dict, user_id: str, occasion: str | None =
         ready = await ready_count(db, uid, occasion)
         need = settings.suggest_pool_target - ready
         if need <= 0:
-            logger.info("Suggest pool already at target (%d/%d)", ready, settings.suggest_pool_target)
+            logger.info(
+                "Suggest pool already at target (%d/%d)", ready, settings.suggest_pool_target
+            )
             return {"status": "ok", "ready": ready, "need": 0}
 
         service = RecommendationService(db)
@@ -188,7 +190,9 @@ async def replenish_suggest_pool(ctx: dict, user_id: str, occasion: str | None =
                 title=f"新的 {generated} 套搭配已备好，快去搭配页看看吧",
                 target="suggest",
             )
-        logger.info("Suggest pool replenished for %s: created=%d generated=%d", uid, created, generated)
+        logger.info(
+            "Suggest pool replenished for %s: created=%d generated=%d", uid, created, generated
+        )
         return {"status": "ok", "created": created, "generated": generated}
     except Exception as e:  # noqa: BLE001
         logger.error("replenish_suggest_pool error for %s: %s", user_id, e, exc_info=True)

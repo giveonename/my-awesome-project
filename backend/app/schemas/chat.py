@@ -3,8 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---- Chat Session ----
+
 
 class ChatSessionCreate(BaseModel):
     title: str | None = Field(None, max_length=100)
@@ -30,6 +30,7 @@ class ChatSessionListResponse(BaseModel):
 
 # ---- Chat Message ----
 
+
 class ChatMessageCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
 
@@ -47,6 +48,7 @@ class ChatMessageResponse(BaseModel):
 
 class ChatSendMessageResponse(BaseModel):
     """Response after sending a message - includes user message + AI reply."""
+
     user_message: ChatMessageResponse
     ai_message: ChatMessageResponse
     outfit_suggestions: list[dict] | None = None
@@ -60,6 +62,7 @@ class ChatMessagesResponse(BaseModel):
 
 
 # ---- Onboarding ----
+
 
 class OnboardingStep1(BaseModel):
     gender: str = Field(..., pattern="^(male|female|non-binary|prefer-not-to-say)$")

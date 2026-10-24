@@ -133,29 +133,32 @@ async def tag_item_image(ctx: dict, item_id: str, image_path: str) -> dict[str, 
         tags = all_tags[0]
 
         # Post-process: if description/name is in English, force re-generate in Chinese
-        import re as _re
         def _is_english_text(text: str | None) -> bool:
             """Check if text contains mostly English characters."""
             if not text:
                 return False
             # If more than 60% ASCII letters, likely English
-            ascii_count = sum(1 for c in text if 'a' <= c.lower() <= 'z')
+            ascii_count = sum(1 for c in text if "a" <= c.lower() <= "z")
             return ascii_count / max(len(text), 1) > 0.4
 
         async def _ensure_chinese_description(item_tags: ClothingTags) -> None:
             """If description or name is English, regenerate in Chinese."""
             if _is_english_text(item_tags.description) or _is_english_text(item_tags.name):
-                logger.info(f"Detected English description for {item_tags.type}, regenerating in Chinese")
+                logger.info(
+                    f"Detected English description for {item_tags.type}, regenerating in Chinese"
+                )
                 try:
                     desc_service = AIService(endpoints=ai_endpoints)
                     item_info = f"{item_tags.name or item_tags.type}, {item_tags.primary_color or ''}, {item_tags.material or ''}"
-                    cn_prompt = f"请用中文写一段30-60字的衣物介绍描述。衣物信息：{item_info}。要求：用自然流畅的中文，提及款式、颜色、材质、适合场合。不要用英文，必须中文输出。不要用\"这是一件\"开头。"
+                    cn_prompt = f'请用中文写一段30-60字的衣物介绍描述。衣物信息：{item_info}。要求：用自然流畅的中文，提及款式、颜色、材质、适合场合。不要用英文，必须中文输出。不要用"这是一件"开头。'
                     cn_desc = await desc_service.generate_text(cn_prompt)
                     if cn_desc and not _is_english_text(cn_desc):
                         # Clean up quotes
                         cn_desc = cn_desc.strip().strip('"').strip("'")
                         item_tags.description = cn_desc
-                        item_tags.name = cn_desc[:15] if _is_english_text(item_tags.name) else item_tags.name
+                        item_tags.name = (
+                            cn_desc[:15] if _is_english_text(item_tags.name) else item_tags.name
+                        )
                         logger.info(f"Chinese description generated: {cn_desc[:50]}")
                 except Exception as e:
                     logger.warning(f"Failed to generate Chinese description: {e}")
@@ -286,5 +289,3 @@ async def tag_item_image(ctx: dict, item_id: str, image_path: str) -> dict[str, 
         logger.exception(f"Error tagging item {item_id}: {error_msg}")
         await update_item_status_to_error(ctx, item_id, error_msg)
         return {"status": "error", "error": error_msg}
-
-

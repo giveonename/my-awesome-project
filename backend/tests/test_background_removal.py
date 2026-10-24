@@ -1,10 +1,11 @@
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from PIL import Image
 
 from app.services.background_removal import (
+    AliyunVisionProvider,
     BackgroundRemovalProvider,
     HttpProvider,
     RembgProvider,
@@ -20,54 +21,31 @@ def _make_rgb_image(w=100, h=100):
     return Image.new("RGB", (w, h), (200, 150, 100))
 
 
-class TestRembgProvider:
-    def test_remove_calls_rembg(self):
-        provider = RembgProvider(model="u2net")
-        mock_result = _make_rgba_image()
-        mock_new_session = MagicMock(return_value="fake-session")
-        mock_remove = MagicMock(return_value=mock_result)
-        with (
-            patch.dict(
-                "sys.modules",
-                {"rembg": MagicMock(new_session=mock_new_session, remove=mock_remove)},
-            ),
+class TestRembgProviderStub:
+    """rembg 已退役 — RembgProvider 只是指路桩，引导调用方改用阿里云分割。"""
+
+    def test_stub_raises_with_redirect_hint(self):
+        provider = RembgProvider()
+        with pytest.raises(RuntimeError, match="AliyunVisionService"):
+            provider.remove(_make_rgb_image())
+
+
+class TestAliyunVisionProvider:
+    def test_remove_delegates_to_vision_service(self):
+        provider = AliyunVisionProvider()
+        png = BytesIO()
+        _make_rgba_image().save(png, format="PNG")
+
+        service = MagicMock()
+        service.segment_commodity = AsyncMock(return_value=png.getvalue())
+        with patch(
+            "app.services.aliyun_vision_service.AliyunVisionService",
+            return_value=service,
         ):
             result = provider.remove(_make_rgb_image())
 
-        mock_new_session.assert_called_once_with("u2net")
-        mock_remove.assert_called_once()
+        service.segment_commodity.assert_called_once()
         assert result.mode == "RGBA"
-
-    def test_session_is_cached(self):
-        provider = RembgProvider(model="u2net")
-        mock_result = _make_rgba_image()
-        mock_new_session = MagicMock(return_value="fake-session")
-        mock_remove = MagicMock(return_value=mock_result)
-        with (
-            patch.dict(
-                "sys.modules",
-                {"rembg": MagicMock(new_session=mock_new_session, remove=mock_remove)},
-            ),
-        ):
-            provider.remove(_make_rgb_image())
-            provider.remove(_make_rgb_image())
-
-        mock_new_session.assert_called_once()
-
-    def test_custom_model(self):
-        provider = RembgProvider(model="isnet-general-use")
-        mock_result = _make_rgba_image()
-        mock_new_session = MagicMock(return_value="fake-session")
-        mock_remove = MagicMock(return_value=mock_result)
-        with (
-            patch.dict(
-                "sys.modules",
-                {"rembg": MagicMock(new_session=mock_new_session, remove=mock_remove)},
-            ),
-        ):
-            provider.remove(_make_rgb_image())
-
-        mock_new_session.assert_called_once_with("isnet-general-use")
 
 
 class TestHttpProvider:
@@ -128,14 +106,19 @@ class TestGetProvider:
 
         mod._provider = None
 
-    def test_rembg_provider(self):
+    def test_rembg_alias_falls_back_to_aliyun(self):
         settings = MagicMock()
         settings.bg_removal_provider = "rembg"
-        settings.bg_removal_model = "u2net"
         with patch("app.services.background_removal.get_settings", return_value=settings):
             provider = get_provider()
-        assert isinstance(provider, RembgProvider)
-        assert provider.model == "u2net"
+        assert isinstance(provider, AliyunVisionProvider)
+
+    def test_aliyun_provider(self):
+        settings = MagicMock()
+        settings.bg_removal_provider = "aliyun"
+        with patch("app.services.background_removal.get_settings", return_value=settings):
+            provider = get_provider()
+        assert isinstance(provider, AliyunVisionProvider)
 
     def test_http_provider(self):
         settings = MagicMock()

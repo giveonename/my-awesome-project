@@ -265,7 +265,7 @@ class TestGetDailyForecast:
             "httpx.AsyncClient.get",
             side_effect=httpx.ConnectError("timeout"),
         ):
-            with pytest.raises(WeatherServiceError, match="Failed to fetch forecast"):
+            with pytest.raises(WeatherServiceError, match="Failed to fetch weather data"):
                 await weather_service.get_daily_forecast(40.71, -74.01)
 
 

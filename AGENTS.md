@@ -42,11 +42,13 @@ cd backend && ..\backend\.venv\Scripts\python.exe -m uvicorn app.main:app --relo
 # 另一终端启动 worker:
 backend\.venv\Scripts\python.exe -m arq app.workers.worker.WorkerSettings
 
-# === Lint & 格式化 ===
-ruff check --fix backend/app/ && ruff format backend/app/   # 后端（line-length=100, py311）
+# === Lint & 格式化（与 CI 同口径：整个 backend/，不只 app/）===
+cd backend && ruff check --fix . && ruff format .   # line-length=100, py311；CI 固定 ruff==0.16.10
 
-# === 测试（需要运行中的 PostgreSQL + Redis，conftest 会建 wardrobe_test 库并跑迁移）===
+# === 测试（需要运行中的 PostgreSQL + Redis；conftest 每会话强制重建 wardrobe_test 并按 ORM 元数据建表）===
 docker compose exec backend python -m pytest tests/ -v --tb=short
+# 本地宿主机跑法（绕过容器内旧代码）：
+# PYTHONUTF8=1 TEST_DATABASE_URL="postgresql+asyncpg://wardrobe:wardrobe@localhost:5432/wardrobe_test" REDIS_URL="redis://localhost:6379/0" backend/.venv/Scripts/python.exe -m pytest tests/ -q --tb=short
 
 # === 数据库迁移（图已损坏，务必先看 heads！）===
 docker compose exec backend alembic heads      # 查看所有 head（当前 5 个）
@@ -63,8 +65,8 @@ curl http://localhost:8000/api/v1/health
 `migrations/versions/` 现状：**5 个 head**（`a1b2c3d4e5f6`、`add_public_url`、`e1f2g3h4i5j6`、`d2b280660baa`、`f1a2b3c4d5e6`）+ **重复 revision ID**（`add_wash_tracking.py` 与 `a1b2c3d4e5f6_add_full_body_photo_url.py` 共用 `a1b2c3d4e5f6`，Alembic 加载时告警）+ `f1a2b3c4d5e6` 的 `down_revision=None` 是个假根。因此：
 
 - `alembic upgrade head` 只会升级其中一个 head，永远不完整
-- 正确做法：`alembic heads` 列出全部 → 逐个 `alembic upgrade <revision>`
-- 线上库是靠逐个 upgrade 打上来的；修复迁移图（线性化）属于高风险重构，需单独规划
+- 逐个 `alembic heads` → `upgrade <revision>` 只对「历史上增量打过」的库有效；**2026-10-24 实测从零建库走任何顺序都会在重复 revision 处炸 `KeyError: '_delete_version'`，迁移图已无法初始化全新环境**
+- 线上库是靠逐个 upgrade 打上来的；新环境只能从生产库 dump 恢复，或像测试那样用 ORM `Base.metadata.create_all` 建表（`tests/conftest.py` 即此做法）；修复迁移图（线性化）属于高风险重构，需单独规划
 
 ### ChatMessage.metadata 字段映射
 
@@ -267,7 +269,7 @@ Task store 在内存 `_tasks` dict 中，重启丢失（后续可改 Redis）。
 
 ## 已知问题
 
-- **数据库迁移图损坏**（见上"重要约定"），5 head + 重复 revision ID；新环境初始化务必逐个 upgrade
+- **数据库迁移图损坏**（见上"重要约定"），5 head + 重复 revision ID；新环境**无法**靠迁移图从零初始化（重复 revision 会让 upgrade 炸 KeyError），需从生产库 dump 恢复或用 ORM create_all（测试库的做法）
 - Docker 容器从镜像启动（不挂载源码）：改后端代码用 `docker compose up -d --build backend worker`（优选）；`sync-backend.cmd` 为遗留手动同步方式（曾导致容器与仓库代码漂移），不再推荐
 - 背景移除：rembg 已退役（`background_removal.py` 中 rembg 走桩会转阿里云）；`BG_REMOVAL_PROVIDER` 有效值为 `aliyun`（推荐）或 `http`
 - 图片服务已全面本地化：浏览/识别/试衣（本地图 Base64）/天气背景均不依赖 OSS；OSS 停服仅影响历史 public_url 与公网部署场景

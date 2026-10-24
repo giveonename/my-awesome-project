@@ -20,8 +20,12 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.add_column("clothing_items", sa.Column("public_url", sa.String(length=1000), nullable=True))
-    op.add_column("clothing_items", sa.Column("public_url_medium", sa.String(length=1000), nullable=True))
-    op.add_column("clothing_items", sa.Column("public_url_thumbnail", sa.String(length=1000), nullable=True))
+    op.add_column(
+        "clothing_items", sa.Column("public_url_medium", sa.String(length=1000), nullable=True)
+    )
+    op.add_column(
+        "clothing_items", sa.Column("public_url_thumbnail", sa.String(length=1000), nullable=True)
+    )
 
 
 def downgrade() -> None:

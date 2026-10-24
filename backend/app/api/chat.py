@@ -1,10 +1,8 @@
 import logging
-import re
-from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -38,6 +36,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 # ---- Onboarding ----
+
 
 @router.post("/onboarding", response_model=OnboardingResponse)
 async def save_onboarding(
@@ -93,6 +92,7 @@ async def save_onboarding(
 
 # ---- Chat Sessions ----
 
+
 @router.post("/sessions", response_model=ChatSessionResponse)
 async def create_session(
     request: ChatSessionCreate,
@@ -101,7 +101,9 @@ async def create_session(
 ) -> ChatSessionResponse:
     """Create a new chat session."""
     service = ChatService(db)
-    session = await service.create_session(current_user, title=request.title, context=request.context)
+    session = await service.create_session(
+        current_user, title=request.title, context=request.context
+    )
     await db.commit()
     return session
 
@@ -140,7 +142,9 @@ async def get_messages(
     """Get messages for a chat session."""
     # Verify access
     result = await db.execute(
-        select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
+        select(ChatSession).where(
+            ChatSession.id == session_id, ChatSession.user_id == current_user.id
+        )
     )
     session = result.scalar_one_or_none()
     if not session:
@@ -163,8 +167,9 @@ async def send_message(
 
     # Load session with user preferences
     result = await db.execute(
-        select(ChatSession)
-        .where(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
+        select(ChatSession).where(
+            ChatSession.id == session_id, ChatSession.user_id == current_user.id
+        )
     )
     session = result.scalar_one_or_none()
     if not session:
@@ -172,9 +177,7 @@ async def send_message(
 
     # Load user with preferences
     user_result = await db.execute(
-        select(User)
-        .where(User.id == current_user.id)
-        .options(selectinload(User.preferences))
+        select(User).where(User.id == current_user.id).options(selectinload(User.preferences))
     )
     user = user_result.scalar_one_or_none()
 
@@ -191,12 +194,20 @@ async def send_message(
     )
     user_msg = user_msg_result.scalar_one()
 
-    outfit_suggestions = ai_msg.extra_metadata.get("outfit_suggestions") if ai_msg.extra_metadata else None
+    outfit_suggestions = (
+        ai_msg.extra_metadata.get("outfit_suggestions") if ai_msg.extra_metadata else None
+    )
 
     # Handle [CONFIRMED:N] marker - create actual outfit record
     confirmed_outfit = None
-    confirmed_index = ai_msg.extra_metadata.get("confirmed_index") if ai_msg.extra_metadata else None
-    if confirmed_index is not None and outfit_suggestions and confirmed_index < len(outfit_suggestions):
+    confirmed_index = (
+        ai_msg.extra_metadata.get("confirmed_index") if ai_msg.extra_metadata else None
+    )
+    if (
+        confirmed_index is not None
+        and outfit_suggestions
+        and confirmed_index < len(outfit_suggestions)
+    ):
         suggestion = outfit_suggestions[confirmed_index]
         item_refs = suggestion.get("items", [])
         if item_refs:
@@ -229,17 +240,27 @@ async def send_message(
                 await db.flush()
 
                 for position, item in enumerate(matched_items):
-                    db.add(OutfitItem(
-                        outfit_id=outfit.id,
-                        item_id=item.id,
-                        position=position,
-                    ))
+                    db.add(
+                        OutfitItem(
+                            outfit_id=outfit.id,
+                            item_id=item.id,
+                            position=position,
+                        )
+                    )
                 await db.flush()
 
                 confirmed_outfit = {
                     "outfit_id": str(outfit.id),
                     "headline": suggestion.get("headline"),
-                    "items": [{"id": str(it.id), "name": it.name, "type": it.type, "primary_color": it.primary_color} for it in matched_items],
+                    "items": [
+                        {
+                            "id": str(it.id),
+                            "name": it.name,
+                            "type": it.type,
+                            "primary_color": it.primary_color,
+                        }
+                        for it in matched_items
+                    ],
                 }
 
     return ChatSendMessageResponse(
@@ -259,7 +280,9 @@ async def delete_session(
 ) -> None:
     """Delete a chat session."""
     result = await db.execute(
-        select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
+        select(ChatSession).where(
+            ChatSession.id == session_id, ChatSession.user_id == current_user.id
+        )
     )
     session = result.scalar_one_or_none()
     if not session:

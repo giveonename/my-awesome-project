@@ -93,7 +93,9 @@ class Settings(BaseSettings):
     aliyun_oss_bucket: str | None = Field(default=None)
     aliyun_oss_endpoint: str | None = Field(default=None)
     aliyun_oss_region: str | None = Field(default=None)
-    aliyun_oss_public_url: str | None = Field(default=None)  # e.g. https://bucket.oss-cn-chengdu.aliyuncs.com
+    aliyun_oss_public_url: str | None = Field(
+        default=None
+    )  # e.g. https://bucket.oss-cn-chengdu.aliyuncs.com
 
     # Taobao Union API
     taobao_app_key: str | None = Field(default=None)
@@ -157,5 +159,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
-

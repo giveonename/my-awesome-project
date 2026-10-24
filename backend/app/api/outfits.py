@@ -469,13 +469,13 @@ async def suggest_outfit(
             occasion = "casual"
 
     # Use request latitude/longitude if provided, otherwise fall back to user profile
-    user_for_weather = current_user
     if request.latitude is not None and request.longitude is not None:
         # Create a copy-like approach by setting temporarily
         # The service will use these if weather_override is not set
         if not weather_override:
             try:
                 from app.services.weather_service import WeatherService
+
                 ws = WeatherService()
                 weather_override = await ws.get_current_weather(request.latitude, request.longitude)
             except Exception as e:
@@ -546,6 +546,7 @@ async def suggest_batch(
     if request.latitude is not None and request.longitude is not None and not weather_override:
         try:
             from app.services.weather_service import WeatherService
+
             ws = WeatherService()
             weather_override = await ws.get_current_weather(request.latitude, request.longitude)
         except Exception as e:
@@ -565,13 +566,17 @@ async def suggest_batch(
 
     # Mode A: Get existing outfits with try-on images from try-on room (50% chance)
     import random
+
     use_existing = random.random() < 0.5
 
     if use_existing:
         # Find outfits that already have try-on images AND contain try-on room items
         # Try-on room items have source_scene = "avatar" or tryon_ready = true
         result = await db.execute(
-            select(Outfit).join(OutfitItem).join(ClothingItem).where(
+            select(Outfit)
+            .join(OutfitItem)
+            .join(ClothingItem)
+            .where(
                 and_(
                     Outfit.user_id == current_user.id,
                     Outfit.model_image_url.isnot(None),
@@ -599,8 +604,13 @@ async def suggest_batch(
             item_service = ItemService(db)
             total_items = await item_service.get_ready_item_count(current_user.id)
             is_starter = total_items <= 5
-            wore_instead_map = await fetch_wore_instead_items_map(db, existing_outfits, user_id=current_user.id)
-            return [outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in existing_outfits]
+            wore_instead_map = await fetch_wore_instead_items_map(
+                db, existing_outfits, user_id=current_user.id
+            )
+            return [
+                outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter)
+                for o in existing_outfits
+            ]
 
     # Mode B: AI recommendation from digital wardrobe (source_scene = "commodity")
     # Generate outfits with retry logic - if some fail due to AI returning text instead of numbers, skip and retry
@@ -658,7 +668,9 @@ async def suggest_batch(
     is_starter = total_items <= 5
 
     wore_instead_map = await fetch_wore_instead_items_map(db, outfits, user_id=current_user.id)
-    return [outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in outfits]
+    return [
+        outfit_to_response(o, wore_instead_map, is_starter_suggestion=is_starter) for o in outfits
+    ]
 
 
 class BatchCheckRequest(BaseModel):
@@ -905,7 +917,10 @@ async def accept_outfit(
     if outfit.status not in (OutfitStatus.pending, OutfitStatus.sent):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"message": f"Outfit is already {outfit.status}", "error_code": "OUTFIT_ALREADY_RESPONDED"},
+            detail={
+                "message": f"Outfit is already {outfit.status}",
+                "error_code": "OUTFIT_ALREADY_RESPONDED",
+            },
         )
 
     outfit.status = OutfitStatus.accepted
@@ -946,7 +961,10 @@ async def reject_outfit(
     if outfit.status not in (OutfitStatus.pending, OutfitStatus.sent):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail={"message": f"Outfit is already {outfit.status}", "error_code": "OUTFIT_ALREADY_RESPONDED"},
+            detail={
+                "message": f"Outfit is already {outfit.status}",
+                "error_code": "OUTFIT_ALREADY_RESPONDED",
+            },
         )
 
     outfit.status = OutfitStatus.rejected
@@ -1662,6 +1680,7 @@ async def delete_family_rating(
 
 # ===== Outfit Evaluate =====
 
+
 class EvaluateRequest(BaseModel):
     image_url: str = Field(..., description="URL of the outfit image to evaluate")
 
@@ -1730,8 +1749,7 @@ async def evaluate_outfit(
             strengths=parsed.get("strengths", []),
             suggestions=parsed.get("suggestions", []),
             radar=[
-                RadarDimension(label=d["label"], value=d["value"])
-                for d in parsed.get("radar", [])
+                RadarDimension(label=d["label"], value=d["value"]) for d in parsed.get("radar", [])
             ],
         )
     except Exception as e:

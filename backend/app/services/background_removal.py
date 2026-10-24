@@ -20,23 +20,27 @@ class RembgProvider(BackgroundRemovalProvider):
     """Stub – rembg has been removed. Raises an error directing callers to Aliyun."""
 
     def remove(self, image: Image.Image) -> Image.Image:
-        raise RuntimeError(
-            "rembg removed, use AliyunVisionService.segment_commodity instead"
-        )
+        raise RuntimeError("rembg removed, use AliyunVisionService.segment_commodity instead")
 
 
 class AliyunVisionProvider(BackgroundRemovalProvider):
-    """Background removal via Aliyun SegmentCommodity API."""
+    """Background removal via Aliyun SegmentCommodity API.
+
+    The sync provider contract predates the async vision service, so the
+    public async API is driven via asyncio.run — do not call remove() from
+    inside a running event loop.
+    """
 
     def remove(self, image: Image.Image) -> Image.Image:
-        from app.services.aliyun_vision_service import get_vision_service
+        import asyncio
+
+        from app.services.aliyun_vision_service import AliyunVisionService
 
         buf = BytesIO()
         image.save(buf, format="PNG")
-        buf.seek(0)
 
-        service = get_vision_service()
-        result_bytes = service.segment_commodity(buf.getvalue())
+        service = AliyunVisionService()
+        result_bytes = asyncio.run(service.segment_commodity(buf.getvalue()))
 
         return Image.open(BytesIO(result_bytes)).convert("RGBA")
 
@@ -87,8 +91,6 @@ def get_provider() -> BackgroundRemovalProvider:
             raise ValueError("BG_REMOVAL_URL is required when BG_REMOVAL_PROVIDER=http")
         _provider = HttpProvider(url=settings.bg_removal_url, api_key=settings.bg_removal_api_key)
     else:
-        raise ValueError(
-            f"Unknown BG_REMOVAL_PROVIDER: {provider_type}. Use 'aliyun' or 'http'."
-        )
+        raise ValueError(f"Unknown BG_REMOVAL_PROVIDER: {provider_type}. Use 'aliyun' or 'http'.")
 
     return _provider
